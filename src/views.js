@@ -1,0 +1,117 @@
+// Páginas HTML renderizadas pelo servidor (sem framework de template para
+// manter zero dependências extras). Identidade visual da Absolem: laranja
+// #F97316 sobre fundo grafite, com brilho de chama.
+
+function layout({ title, body }) {
+  return `<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>${title}</title>
+<style>
+  :root{
+    --brand:#F97316; --brand-2:#fb9a4b; --ink:#0f0d0c; --ink-2:#1b1917;
+    --line:rgba(249,115,22,.25); --text:#f4efe9; --muted:#b9a89b;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;
+    color:var(--text); background:radial-gradient(120% 90% at 50% 12%,#3a271b 0%,#1a1512 45%,#0c0a09 100%);
+    min-height:100dvh; display:flex; align-items:center; justify-content:center; padding:24px;
+  }
+  .card{
+    width:100%; max-width:400px; background:linear-gradient(180deg,rgba(29,25,22,.9),rgba(16,13,11,.92));
+    border:1px solid var(--line); border-radius:22px; padding:34px 26px 30px;
+    box-shadow:0 24px 60px rgba(0,0,0,.55), inset 0 1px 0 rgba(255,255,255,.04);
+    position:relative; overflow:hidden;
+  }
+  .card::before{ /* brilho da chama */
+    content:""; position:absolute; inset:-40% 15% auto 15%; height:220px;
+    background:radial-gradient(60% 60% at 50% 0,rgba(249,115,22,.5),transparent 70%);
+    filter:blur(28px); pointer-events:none;
+  }
+  .logo{ text-align:center; position:relative; z-index:1; margin-bottom:6px }
+  .logo b{ font-size:30px; font-weight:800; letter-spacing:.5px; color:var(--brand) }
+  .logo span{ display:block; font-size:11px; letter-spacing:7px; color:var(--muted); margin-top:2px }
+  .flame{ font-size:26px; line-height:1 }
+  h1{ font-size:19px; text-align:center; margin:18px 0 4px; font-weight:700 }
+  p.sub{ text-align:center; color:var(--muted); font-size:13.5px; margin:0 0 20px; line-height:1.5 }
+  .step{ display:flex; gap:12px; align-items:flex-start; margin:14px 0 }
+  .num{ flex:0 0 26px; height:26px; border-radius:50%; background:var(--brand);
+        color:#1a1109; font-weight:800; font-size:13px; display:grid; place-items:center; margin-top:1px }
+  .step div{ font-size:14px; line-height:1.45 }
+  .step small{ color:var(--muted); display:block; font-size:12.5px; margin-top:2px }
+  .ig{ display:flex; align-items:center; justify-content:center; gap:9px; width:100%;
+       text-decoration:none; margin:8px 0 20px; padding:13px; border-radius:13px; font-weight:700; font-size:15px;
+       color:#fff; background:linear-gradient(90deg,#f0983c,#e1306c 55%,#c13584);
+       box-shadow:0 8px 22px rgba(193,53,132,.28) }
+  .ig:active{ transform:translateY(1px) }
+  form{ position:relative; z-index:1 }
+  label{ font-size:12.5px; color:var(--muted); display:block; margin:0 0 7px 2px }
+  input[type=text]{
+    width:100%; padding:14px 15px; border-radius:13px; border:1px solid rgba(255,255,255,.12);
+    background:#0c0a09; color:var(--text); font-size:17px; letter-spacing:2px; text-transform:uppercase;
+    text-align:center; font-weight:700;
+  }
+  input[type=text]:focus{ outline:none; border-color:var(--brand); box-shadow:0 0 0 3px rgba(249,115,22,.18) }
+  button{
+    width:100%; margin-top:14px; padding:15px; border:0; border-radius:13px; cursor:pointer;
+    background:linear-gradient(180deg,var(--brand-2),var(--brand)); color:#180f07; font-weight:800; font-size:16px;
+    box-shadow:0 10px 24px rgba(249,115,22,.32);
+  }
+  button:active{ transform:translateY(1px) }
+  .err{ background:rgba(220,60,40,.14); border:1px solid rgba(220,60,40,.4); color:#ffb9ac;
+        padding:11px 13px; border-radius:11px; font-size:13px; margin:0 0 16px; text-align:center }
+  .foot{ text-align:center; color:var(--muted); font-size:11px; margin-top:20px; letter-spacing:.3px }
+  @media (prefers-reduced-motion:no-preference){
+    .card{ animation:rise .5s ease both } @keyframes rise{ from{opacity:0; transform:translateY(10px)} }
+  }
+</style>
+</head>
+<body><main class="card">${body}</main></body></html>`;
+}
+
+function hidden(ap) {
+  // Reenvia os parâmetros do AP no POST (além do cookie), por robustez.
+  return ['continue','ip','ap_mac','mac','radio','ssid','ts','redirect_uri','user_hash']
+    .map(k => `<input type="hidden" name="${k}" value="${escapeAttr(ap[k] || '')}">`).join('');
+}
+
+function escapeAttr(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+function renderPortal({ ap, instagram, error }) {
+  const body = `
+    <div class="logo"><div class="flame">🔥</div><b>absolem</b><span>TABACARIA</span></div>
+    <h1>Wi-Fi liberado</h1>
+    <p class="sub">Siga a gente no Instagram e use o código para conectar.</p>
+
+    <div class="step"><div class="num">1</div><div>Siga <b>@absolem</b> no Instagram
+      <small>Toque no botão abaixo, siga e volte aqui.</small></div></div>
+    <a class="ig" href="${escapeAttr(instagram)}" target="_blank" rel="noopener">📸 Seguir no Instagram</a>
+
+    <div class="step"><div class="num">2</div><div>Digite o código de acesso
+      <small>Pergunte no balcão ou veja nos nossos stories.</small></div></div>
+
+    ${error ? `<div class="err">${escapeAttr(error)}</div>` : ''}
+    <form method="post" action="/auth">
+      ${hidden(ap)}
+      <label for="code">Código de acesso</label>
+      <input id="code" name="code" type="text" autocomplete="off" autocapitalize="characters"
+             inputmode="text" placeholder="EX: ABSOLEM" maxlength="40" required>
+      <button type="submit">Conectar à internet</button>
+    </form>
+    <div class="foot">Ao conectar você concorda com nossos termos de uso.</div>`;
+  return layout({ title: 'Absolem Tabacaria — Wi-Fi', body });
+}
+
+function renderResult({ ok, title, msg }) {
+  const body = `
+    <div class="logo"><div class="flame">🔥</div><b>absolem</b><span>TABACARIA</span></div>
+    <h1>${escapeAttr(title)}</h1>
+    <p class="sub">${escapeAttr(msg)}</p>`;
+  return layout({ title: `Absolem — ${title}`, body });
+}
+
+module.exports = { renderPortal, renderResult };
