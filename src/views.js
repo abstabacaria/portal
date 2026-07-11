@@ -64,6 +64,9 @@ function layout({ title, body }) {
   button:active{ transform:translateY(1px) }
   .err{ background:rgba(220,60,40,.14); border:1px solid rgba(220,60,40,.4); color:#ffb9ac;
         padding:11px 13px; border-radius:11px; font-size:13px; margin:0 0 16px; text-align:center }
+  .ighint{ text-align:center; font-size:13.5px; color:#ffd7b0; background:rgba(249,115,22,.10);
+           border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin:0 0 20px; line-height:1.5 }
+  .ighint b{ color:var(--brand) }
   .foot{ text-align:center; color:var(--muted); font-size:11px; margin-top:20px; letter-spacing:.3px }
   @media (prefers-reduced-motion:no-preference){
     .card{ animation:rise .5s ease both } @keyframes rise{ from{opacity:0; transform:translateY(10px)} }
@@ -82,24 +85,20 @@ function hidden(ap) {
 function escapeAttr(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
 function renderPortal({ ap, instagram, error }) {
+  const igHandle = (instagram || '').replace(/^https?:\/\/(www\.)?instagram\.com\//, '@').replace(/\/$/, '') || '@absolem';
   const body = `
     <div class="logo"><div class="flame">🔥</div><b>absolem</b><span>TABACARIA</span></div>
     <h1>Wi-Fi liberado</h1>
-    <p class="sub">Siga a gente no Instagram e use o código para conectar.</p>
+    <p class="sub">Digite o código de acesso para conectar à internet.</p>
 
-    <div class="step"><div class="num">1</div><div>Siga <b>@absolem</b> no Instagram
-      <small>Toque no botão abaixo, siga e volte aqui.</small></div></div>
-    <a class="ig" href="${escapeAttr(instagram)}" target="_blank" rel="noopener">📸 Seguir no Instagram</a>
-
-    <div class="step"><div class="num">2</div><div>Digite o código de acesso
-      <small>Pergunte no balcão ou veja nos nossos stories.</small></div></div>
+    <div class="ighint">Siga <b>${escapeAttr(igHandle)}</b> no Instagram e pegue o código na bio ou nos stories 🔥</div>
 
     ${error ? `<div class="err">${escapeAttr(error)}</div>` : ''}
     <form method="post" action="/auth">
       ${hidden(ap)}
       <label for="code">Código de acesso</label>
       <input id="code" name="code" type="text" autocomplete="off" autocapitalize="characters"
-             inputmode="text" placeholder="EX: ABSOLEM" maxlength="40" required>
+             inputmode="text" placeholder="EX: ABSOLEM" maxlength="40" required autofocus>
       <button type="submit">Conectar à internet</button>
     </form>
     <div class="foot">Ao conectar você concorda com nossos termos de uso.</div>`;
