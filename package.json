@@ -1,7 +1,7 @@
 {
   "name": "absolem-captive-portal",
   "version": "1.0.0",
-  "description": "Autenticador de Captive Portal Externo (Intelbras Zeus OS / AP 360) para a Absolem Tabacaria - liberação via código validado no SQL Server",
+  "description": "Autenticador de Captive Portal Externo (Intelbras Zeus OS / AP 360) para a Absolem Tabacaria - liberação via código validado no Supabase (REST/service key)",
   "main": "src/server.js",
   "type": "commonjs",
   "scripts": {
@@ -10,7 +10,6 @@
   },
   "dependencies": {
     "express": "^4.19.2",
-    "pg": "^8.12.0",
     "dotenv": "^16.4.5"
   }
 }
