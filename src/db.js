@@ -61,4 +61,18 @@ async function logAccess(entry) {
   }
 }
 
-module.exports = { validateCode, logAccess };
+/** Busca as métricas agregadas via função get_metrics no Supabase. */
+async function getMetrics() {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/get_metrics`, {
+    method: 'POST',
+    headers: baseHeaders,
+    body: JSON.stringify({}),
+  });
+  if (!res.ok) {
+    const t = await res.text().catch(() => '');
+    throw new Error(`RPC get_metrics falhou: ${res.status} ${t}`);
+  }
+  return res.json();
+}
+
+module.exports = { validateCode, logAccess, getMetrics };
