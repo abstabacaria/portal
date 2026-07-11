@@ -67,6 +67,13 @@ function layout({ title, body }) {
   .ighint{ text-align:center; font-size:13.5px; color:#ffd7b0; background:rgba(249,115,22,.10);
            border:1px solid var(--line); border-radius:12px; padding:12px 14px; margin:0 0 20px; line-height:1.5 }
   .ighint b{ color:var(--brand) }
+  .igbtn{ display:flex; align-items:center; justify-content:center; gap:10px; width:100%;
+       border:0; cursor:pointer; margin:6px 0 16px; padding:17px; border-radius:14px; font-weight:800; font-size:16px;
+       color:#fff; background:linear-gradient(90deg,#f0983c,#e1306c 55%,#c13584);
+       box-shadow:0 10px 26px rgba(193,53,132,.32) }
+  .igbtn:active{ transform:translateY(1px) }
+  .hint{ text-align:center; font-size:12.5px; color:var(--muted); margin:0 0 4px; line-height:1.5 }
+  .hint b{ color:var(--brand-2) }
   .foot{ text-align:center; color:var(--muted); font-size:11px; margin-top:20px; letter-spacing:.3px }
   @media (prefers-reduced-motion:no-preference){
     .card{ animation:rise .5s ease both } @keyframes rise{ from{opacity:0; transform:translateY(10px)} }
@@ -84,23 +91,21 @@ function hidden(ap) {
 
 function escapeAttr(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-function renderPortal({ ap, instagram, error }) {
+function renderPortal({ ap, instagram, autoCode, error }) {
   const igHandle = (instagram || '').replace(/^https?:\/\/(www\.)?instagram\.com\//, '@').replace(/\/$/, '') || '@absolem';
   const body = `
     <div class="logo"><div class="flame">🔥</div><b>absolem</b><span>TABACARIA</span></div>
     <h1>Wi-Fi liberado</h1>
-    <p class="sub">Digite o código de acesso para conectar à internet.</p>
-
-    <div class="ighint">Siga <b>${escapeAttr(igHandle)}</b> no Instagram e pegue o código na bio ou nos stories 🔥</div>
+    <p class="sub">Toque no botão abaixo para seguir a gente e conectar à internet.</p>
 
     ${error ? `<div class="err">${escapeAttr(error)}</div>` : ''}
-    <form method="post" action="/auth">
+    <form method="post" action="/auth" id="f">
       ${hidden(ap)}
-      <label for="code">Código de acesso</label>
-      <input id="code" name="code" type="text" autocomplete="off" autocapitalize="characters"
-             inputmode="text" placeholder="EX: ABSOLEM" maxlength="40" required autofocus>
-      <button type="submit">Conectar à internet</button>
+      <input type="hidden" name="code" value="${escapeAttr(autoCode || '')}">
+      <input type="hidden" name="go" value="instagram">
+      <button type="submit" class="igbtn">📸 Seguir no Instagram e conectar</button>
     </form>
+    <div class="hint">Você será direcionado ao nosso Instagram <b>${escapeAttr(igHandle)}</b> com a internet já liberada.</div>
     <div class="foot">Ao conectar você concorda com nossos termos de uso.</div>`;
   return layout({ title: 'Absolem Tabacaria — Wi-Fi', body });
 }
