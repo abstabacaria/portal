@@ -29,6 +29,7 @@ const {
   UPLOAD_KBPS = '0',
   INSTAGRAM_URL = 'https://instagram.com/absolem',
   REDIRECT_AFTER = '',
+  AUTO_CODE = 'ABSOLEM',
 } = process.env;
 
 /* -------------------------------------------------------------------------
@@ -82,7 +83,7 @@ app.get('/', (req, res) => {
   // Guardamos os parâmetros do AP em cookie curto para reusar no POST.
   res.setHeader('Set-Cookie',
     `apx=${encodeURIComponent(JSON.stringify(p))}; HttpOnly; Path=/; Max-Age=600; SameSite=Lax`);
-  res.send(renderPortal({ ap: p, instagram: INSTAGRAM_URL, error: null }));
+  res.send(renderPortal({ ap: p, instagram: INSTAGRAM_URL, autoCode: AUTO_CODE, error: null }));
 });
 
 // Envio do formulário (código digitado).
@@ -96,7 +97,7 @@ app.post('/auth', async (req, res) => {
 
   if (!code) {
     await logAccess({ ...base, result: 'denied', reason: 'Código vazio' });
-    return res.send(renderPortal({ ap, instagram: INSTAGRAM_URL, error: 'Digite o código para liberar o Wi-Fi.' }));
+    return res.send(renderPortal({ ap, instagram: INSTAGRAM_URL, autoCode: AUTO_CODE, error: 'Digite o código para liberar o Wi-Fi.' }));
   }
 
   if (!ap.redirect_uri) {
@@ -115,16 +116,21 @@ app.post('/auth', async (req, res) => {
   } catch (err) {
     console.error('[auth] Erro no SQL:', err.message);
     await logAccess({ ...base, result: 'denied', reason: 'Erro no banco' });
-    return res.send(renderPortal({ ap, instagram: INSTAGRAM_URL, error: 'Sistema indisponível no momento. Tente novamente em instantes.' }));
+    return res.send(renderPortal({ ap, instagram: INSTAGRAM_URL, autoCode: AUTO_CODE, error: 'Sistema indisponível no momento. Tente novamente em instantes.' }));
   }
 
   if (!outcome.granted) {
     await logAccess({ ...base, result: 'denied', reason: outcome.reason });
-    return res.send(renderPortal({ ap, instagram: INSTAGRAM_URL, error: `Código inválido: ${outcome.reason.toLowerCase()}.` }));
+    return res.send(renderPortal({ ap, instagram: INSTAGRAM_URL, autoCode: AUTO_CODE, error: `Código inválido: ${outcome.reason.toLowerCase()}.` }));
   }
 
   // Liberado! Registra e manda o navegador de volta ao AP para soltar a internet.
   await logAccess({ ...base, result: 'granted', reason: outcome.reason });
+  // Se veio do botão do Instagram, após liberar a internet o AP manda o cliente
+  // para o Instagram (que abre normalmente, já com internet).
+  if (req.body.go === 'instagram' && INSTAGRAM_URL) {
+    ap.continue = INSTAGRAM_URL;
+  }
   const releaseUrl = buildReleaseUrl(ap);
   res.setHeader('Set-Cookie', 'apx=; HttpOnly; Path=/; Max-Age=0');
   return res.redirect(302, releaseUrl);
