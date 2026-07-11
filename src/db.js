@@ -1,39 +1,64 @@
-const { Pool } = require('pg');
+// Conexão com o Supabase via API REST (PostgREST), usando a SERVICE ROLE KEY.
+// Não usa a senha do banco — funciona por HTTPS, igual ao site da loja.
+// Requer as variáveis: SUPABASE_URL e SUPABASE_SERVICE_KEY.
 
-// Conexão com Supabase (PostgreSQL). Use a connection string do painel:
-// Supabase > Project Settings > Database > Connection string (URI).
-// Prefira a porta 6543 (pooler/pgBouncer) para apps serverless/free.
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: { rejectUnauthorized: false }, // Supabase exige SSL
-  max: 5,
-  idleTimeoutMillis: 30000,
-});
+const SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || '';
 
-pool.on('error', (err) => console.error('[db] erro no pool:', err.message));
+if (!SUPABASE_URL || !SERVICE_KEY) {
+  console.warn('[db] AVISO: SUPABASE_URL ou SUPABASE_SERVICE_KEY não configurados.');
+}
+
+const baseHeaders = {
+  'apikey': SERVICE_KEY,
+  'Authorization': `Bearer ${SERVICE_KEY}`,
+  'Content-Type': 'application/json',
+};
 
 /**
- * Valida e consome um código chamando a função validate_code().
+ * Valida e consome um código chamando a função validate_code via RPC.
  * @returns {Promise<{granted: boolean, reason: string}>}
  */
 async function validateCode(code) {
-  const { rows } = await pool.query('SELECT granted, reason FROM validate_code($1)', [code]);
-  const row = rows[0] || { granted: false, reason: 'Erro interno' };
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/validate_code`, {
+    method: 'POST',
+    headers: baseHeaders,
+    body: JSON.stringify({ p_code: code }),
+  });
+  if (!res.ok) {
+    const t = await res.text().catch(() => '');
+    throw new Error(`RPC validate_code falhou: ${res.status} ${t}`);
+  }
+  const data = await res.json();
+  // A função retorna TABLE(granted, reason) -> array de objetos
+  const row = Array.isArray(data) ? data[0] : data;
+  if (!row) return { granted: false, reason: 'Erro interno' };
   return { granted: row.granted === true, reason: row.reason };
 }
 
 /** Registra tentativa de acesso (não derruba o fluxo se falhar). */
 async function logAccess(entry) {
   try {
-    await pool.query(
-      `INSERT INTO access_log (code, client_mac, ap_mac, ssid, user_hash, result, reason)
-       VALUES ($1,$2,$3,$4,$5,$6,$7)`,
-      [entry.code || null, entry.client_mac || null, entry.ap_mac || null,
-       entry.ssid || null, entry.user_hash || null, entry.result, entry.reason || null]
-    );
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/access_log`, {
+      method: 'POST',
+      headers: { ...baseHeaders, 'Prefer': 'return=minimal' },
+      body: JSON.stringify({
+        code: entry.code || null,
+        client_mac: entry.client_mac || null,
+        ap_mac: entry.ap_mac || null,
+        ssid: entry.ssid || null,
+        user_hash: entry.user_hash || null,
+        result: entry.result,
+        reason: entry.reason || null,
+      }),
+    });
+    if (!res.ok) {
+      const t = await res.text().catch(() => '');
+      console.error('[db] Falha ao gravar log:', res.status, t);
+    }
   } catch (err) {
     console.error('[db] Falha ao gravar log:', err.message);
   }
 }
 
-module.exports = { pool, validateCode, logAccess };
+module.exports = { validateCode, logAccess };
