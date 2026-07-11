@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const crypto = require('crypto');
 const path = require('path');
-const { validateCode, logAccess } = require('./db');
+const { validateCode, logAccess, getMetrics } = require('./db');
 const { renderPortal, renderResult } = require('./views');
 
 const app = express();
@@ -30,6 +30,7 @@ const {
   INSTAGRAM_URL = 'https://instagram.com/absolem',
   REDIRECT_AFTER = '',
   AUTO_CODE = 'ABSOLEM',
+  METRICS_KEY = '',
 } = process.env;
 
 /* -------------------------------------------------------------------------
@@ -138,6 +139,24 @@ app.post('/auth', async (req, res) => {
 
 // Saúde do serviço (útil pra monitorar na VPS).
 app.get('/health', (req, res) => res.json({ ok: true, ts: Date.now() }));
+
+// API de métricas — protegida por METRICS_KEY, com CORS liberado para o widget.
+app.get('/api/metrics', async (req, res) => {
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.setHeader('Cache-Control', 'no-store');
+
+  const key = req.query.key || req.headers['x-metrics-key'] || '';
+  if (!METRICS_KEY || key !== METRICS_KEY) {
+    return res.status(401).json({ error: 'Chave inválida' });
+  }
+  try {
+    const data = await getMetrics();
+    return res.json(data);
+  } catch (err) {
+    console.error('[metrics] Erro:', err.message);
+    return res.status(500).json({ error: 'Falha ao obter métricas' });
+  }
+});
 
 app.listen(PORT, () => {
   console.log(`[absolem] Autenticador ouvindo na porta ${PORT}`);
