@@ -33,6 +33,14 @@ const {
   METRICS_KEY = '',
 } = process.env;
 
+// Extrai o @handle do Instagram e monta o link do APP (deep link) + fallback web.
+const IG_HANDLE = (INSTAGRAM_URL || '')
+  .replace(/^https?:\/\/(www\.)?instagram\.com\//i, '')
+  .replace(/[\/?#].*$/, '')
+  .replace(/^@/, '') || 'abstabacaria';
+const IG_APP_LINK = 'instagram://user?username=' + IG_HANDLE;
+const IG_WEB_LINK = 'https://instagram.com/' + IG_HANDLE;
+
 /* -------------------------------------------------------------------------
    PROTOCOLO INTELBRAS ZEUS OS — Captive Portal Externo (modo "Externo")
    1) O AP redireciona o cliente para cá (GET) com os parâmetros do device.
@@ -129,8 +137,9 @@ app.post('/auth', async (req, res) => {
   await logAccess({ ...base, result: 'granted', reason: outcome.reason });
   // Se veio do botão do Instagram, após liberar a internet o AP manda o cliente
   // para o Instagram (que abre normalmente, já com internet).
-  if (req.body.go === 'instagram' && INSTAGRAM_URL) {
-    ap.continue = INSTAGRAM_URL;
+  if (req.body.go === 'instagram') {
+    // Manda pro /ig do próprio portal, que abre o APP do Instagram (evita o "restrito" do navegador).
+    ap.continue = 'https://' + (req.headers.host || 'wifi.absolemtabacaria.com') + '/ig';
   }
   const releaseUrl = buildReleaseUrl(ap);
   res.setHeader('Set-Cookie', 'apx=; HttpOnly; Path=/; Max-Age=0');
@@ -139,6 +148,33 @@ app.post('/auth', async (req, res) => {
 
 // Saúde do serviço (útil pra monitorar na VPS).
 app.get('/health', (req, res) => res.json({ ok: true, ts: Date.now() }));
+
+// Página que abre o APP do Instagram (deep link), com fallback pro navegador.
+app.get('/ig', (req, res) => {
+  res.setHeader('Content-Type', 'text/html; charset=utf-8');
+  res.send(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Abrindo o Instagram…</title>
+<style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0d0d0f;color:#fff;font-family:system-ui,-apple-system,sans-serif;text-align:center;padding:24px}
+.box{max-width:340px}h1{font-size:20px;margin:0 0 10px}p{color:#aaa;font-size:14px;line-height:1.5;margin:0}
+a{display:inline-block;margin-top:20px;background:linear-gradient(135deg,#ff6a1a,#e1306c);color:#fff;text-decoration:none;padding:15px 26px;border-radius:999px;font-weight:800;font-size:15px}</style></head>
+<body><div class="box">
+<h1>📸 Abrindo o Instagram…</h1>
+<p>Estamos te levando pro nosso Instagram. Se não abrir sozinho, toque no botão abaixo.</p>
+<a href="${IG_APP_LINK}">Abrir Instagram</a>
+</div>
+<script>
+(function(){
+  var app=${JSON.stringify(IG_APP_LINK)}, web=${JSON.stringify(IG_WEB_LINK)};
+  var t=setTimeout(function(){ window.location.href=web; }, 1400);
+  function cancel(){ clearTimeout(t); }
+  window.addEventListener('pagehide', cancel);
+  window.addEventListener('blur', cancel);
+  document.addEventListener('visibilitychange', function(){ if(document.hidden) cancel(); });
+  window.location.href = app;
+})();
+</script></body></html>`);
+});
 
 // API de métricas — protegida por METRICS_KEY, com CORS liberado para o widget.
 app.get('/api/metrics', async (req, res) => {
