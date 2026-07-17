@@ -116,6 +116,7 @@ app.post('/auth', async (req, res) => {
       ok: false,
       title: 'Abra pelo Wi-Fi da loja',
       msg: 'Esta página precisa ser aberta ao conectar na rede da Absolem. Conecte-se ao Wi-Fi e tente de novo.',
+      link: { href: '/ig', label: '📸 Ir pro Instagram assim mesmo' },
     }));
   }
 
@@ -142,7 +143,8 @@ app.post('/auth', async (req, res) => {
     ap.continue = 'https://' + (req.headers.host || 'wifi.absolemtabacaria.com') + '/ig';
   }
   const releaseUrl = buildReleaseUrl(ap);
-  res.setHeader('Set-Cookie', 'apx=; HttpOnly; Path=/; Max-Age=0');
+  // NÃO apagamos o cookie do AP aqui: se a pessoa voltar e tocar de novo,
+  // sem ele o portal não sabe o redirect_uri e cai na tela de erro.
   return res.redirect(302, releaseUrl);
 });
 
