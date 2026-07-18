@@ -201,8 +201,15 @@ function campos(l){
       <label class="fld"><span>Identificador <small>(curto, sem espaço)</small></span><input id="f_slug" value="${esc(l.slug)}" placeholder="ex: lojafulano"></label>
     </div>
     <label class="fld"><span>Domínio do Wi-Fi <small>(ex: wifi.lojafulano.com.br)</small></span><input id="f_dominio" value="${esc(l.dominio)}"></label>
+    <label class="fld"><span>Pra onde o botão leva o cliente?</span>
+      <select id="f_destino" onchange="trocaDestino()">
+        <option value="instagram" ${(l.destino_tipo||'instagram')==='instagram'?'selected':''}>📸 Seguir no Instagram</option>
+        <option value="whatsapp" ${l.destino_tipo==='whatsapp'?'selected':''}>💬 Entrar no grupo do WhatsApp</option>
+      </select>
+    </label>
     <div class="row2">
-      <label class="fld"><span>@ do Instagram <small>(sem @)</small></span><input id="f_instagram" value="${esc(l.instagram)}"></label>
+      <label class="fld" id="wrap_insta"><span>@ do Instagram <small>(sem @)</small></span><input id="f_instagram" value="${esc(l.instagram)}"></label>
+      <label class="fld" id="wrap_wpp" style="display:none"><span>Link do grupo <small>(chat.whatsapp.com/...)</small></span><input id="f_wpp" value="${esc(l.whatsapp_link)}" placeholder="https://chat.whatsapp.com/XXXX"></label>
       <label class="fld"><span>Cor do tema</span><input id="f_cor" type="color" value="${esc(l.cor||'#ff6a1a')}" style="height:42px;padding:4px"></label>
     </div>
     <label class="fld"><span>Logo <small>(link da imagem)</small></span><input id="f_logo" value="${esc(l.logo_url)}" placeholder="https://..."></label>
@@ -217,6 +224,11 @@ function campos(l){
     <label class="fld"><span>Observações</span><textarea id="f_obs" rows="2">${esc(l.obs)}</textarea></label>`;
 }
 
+function trocaDestino(){
+  const t=document.getElementById('f_destino').value;
+  document.getElementById('wrap_insta').style.display=t==='instagram'?'':'none';
+  document.getElementById('wrap_wpp').style.display=t==='whatsapp'?'':'none';
+}
 function abrirNova(){abrirModal(null);}
 function editar(id){abrirModal(LOJAS.find(l=>l.id===id));}
 
@@ -235,6 +247,7 @@ function abrirModal(l){
   </div>`;
   bg.addEventListener('click',e=>{if(e.target===bg)fecharModal();});
   document.body.appendChild(bg);
+  trocaDestino();
 }
 function fecharModal(){const m=document.getElementById('modalBg');if(m)m.remove();}
 
@@ -245,7 +258,9 @@ async function salvar(id){
   const payload={
     nome:v('nome'),slug,dominio:v('dominio')||null,instagram:v('instagram').replace(/^@/,'')||null,
     cor:v('cor'),logo_url:v('logo')||null,codigo_wifi:v('codigo')||null,ap_secret:v('secret')||null,
-    vencimento:v('venc')||null,plano:v('plano')||null,obs:v('obs')||null
+    vencimento:v('venc')||null,plano:v('plano')||null,obs:v('obs')||null,
+    destino_tipo:document.getElementById('f_destino').value,
+    whatsapp_link:v('wpp')||null
   };
   let error;
   if(id){({error}=await sb.from('portal_lojas').update(payload).eq('id',id));}
