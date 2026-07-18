@@ -111,10 +111,14 @@ function hidden(ap) {
 
 function escapeAttr(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
-function renderPortal({ ap, instagram, autoCode, error }) {
-  const igHandle = (instagram || '').replace(/^https?:\/\/(www\.)?instagram\.com\//, '@').replace(/\/$/, '') || '@absolem';
+function renderPortal({ ap, instagram, autoCode, error, marca }) {
+  marca = marca || {};
+  const cor = marca.cor || '#F97316';
+  const logo = marca.logo || LOGO;
+  const nome = marca.nome || 'Absolem Tabacaria';
+  const igHandle = (instagram || '').replace(/^https?:\/\/(www\.)?instagram\.com\//, '@').replace(/\/$/, '') || ('@' + (marca.igHandle || 'absolem'));
   const body = `
-    <div class="logo"><img src="${LOGO}" alt="Absolem Tabacaria"></div>
+    <div class="logo"><img src="${escapeAttr(logo)}" alt="${escapeAttr(nome)}"></div>
     <h1>Wi-Fi liberado</h1>
     <p class="sub">Toque no botão abaixo para seguir a gente e conectar à internet.</p>
 
@@ -161,8 +165,13 @@ function renderPortal({ ap, instagram, autoCode, error }) {
       }
       window.addEventListener('pageshow',function(ev){ if(ev.persisted)liberar(); });
     })();
-    </script>`;
-  return layout({ title: 'Absolem Tabacaria — Wi-Fi', body });
+    </script>
+    <style>:root{ --brand:${cor}; --brand-2:${cor} }
+      .igbtn,.igbtn2{ background:${cor} !important }
+      .num{ background:${cor} }
+      .ring{ border-top-color:${cor} }
+    </style>`;
+  return layout({ title: escapeAttr(nome) + ' — Wi-Fi', body });
 }
 
 function renderResult({ ok, title, msg, link }) {
