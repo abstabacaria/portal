@@ -48,6 +48,29 @@ async function lojaPorDominio(host) {
   return loja;
 }
 
+// Busca a loja pelo SLUG (identificador) — usado pra testar via ?loja=xxx,
+// sem precisar de domínio configurado.
+async function lojaPorSlug(slug) {
+  slug = String(slug || '').toLowerCase().trim();
+  if (!slug) return null;
+  const chave = '__slug__' + slug;
+  const cached = CACHE.get(chave);
+  if (cached && Date.now() - cached.t < TTL) return cached.v;
+  let loja = null;
+  try {
+    const url = `${SUPABASE_URL}/rest/v1/portal_lojas?slug=eq.${encodeURIComponent(slug)}&select=*&limit=1`;
+    const r = await fetch(url, { headers: H });
+    if (r.ok) {
+      const rows = await r.json();
+      loja = Array.isArray(rows) && rows[0] ? rows[0] : null;
+    }
+  } catch (e) {
+    console.warn('[lojas] erro ao buscar slug', slug, e.message);
+  }
+  CACHE.set(chave, { t: Date.now(), v: loja });
+  return loja;
+}
+
 // Valida o código digitado contra o código daquela loja.
 // granted=false com motivo claro. Nunca deixa o código de uma loja liberar outra.
 function validarCodigoDaLoja(loja, code) {
@@ -88,4 +111,4 @@ function limparCache(host) {
   else CACHE.clear();
 }
 
-module.exports = { lojaPorDominio, validarCodigoDaLoja, registrarAcesso, limparCache };
+module.exports = { lojaPorDominio, lojaPorSlug, validarCodigoDaLoja, registrarAcesso, limparCache };
