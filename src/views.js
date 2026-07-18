@@ -120,10 +120,16 @@ function renderPortal({ ap, instagram, autoCode, error, marca }) {
   const logo = marca.logo || LOGO;
   const nome = marca.nome || 'Absolem Tabacaria';
   const igHandle = (instagram || '').replace(/^https?:\/\/(www\.)?instagram\.com\//, '@').replace(/\/$/, '') || ('@' + (marca.igHandle || 'absolem'));
+  const ehWpp = marca.destinoTipo === 'whatsapp' && marca.whatsappLink;
+  const btnLabel = ehWpp ? '💬 Entrar no grupo e conectar' : '📸 Seguir no Instagram e conectar';
+  const subTxt = ehWpp ? 'Toque no botão abaixo para entrar no nosso grupo e conectar à internet.'
+                       : 'Toque no botão abaixo para seguir a gente e conectar à internet.';
+  const hintTxt = ehWpp ? 'Você vai entrar no nosso grupo de WhatsApp com a internet já liberada.'
+                        : `Você será direcionado ao nosso Instagram <b>${escapeAttr(igHandle)}</b> com a internet já liberada.`;
   const body = `
     <div class="logo"><img src="${escapeAttr(logo)}" alt="${escapeAttr(nome)}"></div>
     <h1>Wi-Fi liberado</h1>
-    <p class="sub">Toque no botão abaixo para seguir a gente e conectar à internet.</p>
+    <p class="sub">${subTxt}</p>
 
     ${error ? `<div class="err">${escapeAttr(error)}</div>` : ''}
     <form method="post" action="/auth" id="f">
@@ -132,10 +138,10 @@ function renderPortal({ ap, instagram, autoCode, error, marca }) {
       <input type="hidden" name="go" value="instagram">
       <button type="submit" class="igbtn" id="btn">
         <span class="spin" aria-hidden="true"></span>
-        <span class="lbl">📸 Seguir no Instagram e conectar</span>
+        <span class="lbl">${btnLabel}</span>
       </button>
     </form>
-    <div class="hint" id="hint">Você será direcionado ao nosso Instagram <b>${escapeAttr(igHandle)}</b> com a internet já liberada.</div>
+    <div class="hint" id="hint">${hintTxt}</div>
     <div class="foot">Ao conectar você concorda com nossos termos de uso.</div>
 
     <div class="load" id="load" aria-hidden="true">
@@ -157,13 +163,13 @@ function renderPortal({ ap, instagram, autoCode, error, marca }) {
         b.disabled=true;
         b.querySelector('.lbl').textContent='Conectando…';
         ld.classList.add('on');
-        setTimeout(function(){ if(ls)ls.textContent='Quase lá… o Instagram abre em seguida.'; },2500);
+        setTimeout(function(){ if(ls)ls.textContent=${JSON.stringify(ehWpp?'Quase lá… o grupo abre em seguida.':'Quase lá… o Instagram abre em seguida.')}; },2500);
         setTimeout(function(){ if(ls)ls.innerHTML='Tá demorando mais que o normal. Se não abrir, <b>toque no botão de novo</b>.'; liberar(); },9000);
       });
       // se a pessoa voltar pra essa página (botão voltar), destrava tudo
       function liberar(){
         enviando=false; b.disabled=false; b.classList.remove('carregando');
-        b.querySelector('.lbl').textContent='📸 Seguir no Instagram e conectar';
+        b.querySelector('.lbl').textContent=${JSON.stringify(btnLabel)};
         ld.classList.remove('on');
       }
       window.addEventListener('pageshow',function(ev){ if(ev.persisted)liberar(); });

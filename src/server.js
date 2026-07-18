@@ -115,6 +115,8 @@ function marcaDaLoja(loja, host) {
       mensagem: loja.mensagem || '',
       autoCode: loja.codigo_wifi || AUTO_CODE,   // liberação automática: nunca deixa vazio
       apSecret: loja.ap_secret || AP_SECRET,
+      destinoTipo: loja.destino_tipo || 'instagram',
+      whatsappLink: loja.whatsapp_link || '',
       ativo: loja.ativo !== false,
       achou: true,
     };
