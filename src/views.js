@@ -117,6 +117,7 @@ function renderPortal({ ap, instagram, autoCode, error, marca }) {
   // senão o AP não libera. Ordem: o que veio > o da marca > o global do ambiente.
   autoCode = autoCode || marca.autoCode || process.env.AUTO_CODE || 'ABSOLEM';
   const cor = marca.cor || '#F97316';
+  const cor2 = marca.cor2 || cor;
   const logo = marca.logo || LOGO;
   const nome = marca.nome || 'Absolem Tabacaria';
   const igHandle = (instagram || '').replace(/^https?:\/\/(www\.)?instagram\.com\//, '@').replace(/\/$/, '') || ('@' + (marca.igHandle || 'absolem'));
@@ -175,8 +176,8 @@ function renderPortal({ ap, instagram, autoCode, error, marca }) {
       window.addEventListener('pageshow',function(ev){ if(ev.persisted)liberar(); });
     })();
     </script>
-    <style>:root{ --brand:${cor}; --brand-2:${cor} }
-      .igbtn,.igbtn2{ background:${cor} !important }
+    <style>:root{ --brand:${cor}; --brand-2:${cor2} }
+      .igbtn,.igbtn2{ background:linear-gradient(135deg,${cor},${cor2}) !important }
       .num{ background:${cor} }
       .ring{ border-top-color:${cor} }
     </style>`;
