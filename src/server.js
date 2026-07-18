@@ -3,6 +3,7 @@ const express = require('express');
 const crypto = require('crypto');
 const path = require('path');
 const { validateCode, logAccess, getMetrics } = require('./db');
+const { lojaPorDominio, validarCodigoDaLoja, registrarAcesso } = require('./lojas');
 const { renderPortal, renderResult } = require('./views');
 
 const app = express();
@@ -86,13 +87,50 @@ function buildReleaseUrl(p) {
   return `${p.redirect_uri}?${params.toString()}`;
 }
 
+// Constrói a "marca" a partir da loja achada pelo domínio.
+// Se não achar (ex: domínio novo ainda não cadastrado), usa o padrão da Absolem
+// pra nunca deixar o cliente na mão.
+function marcaDaLoja(loja, host) {
+  if (loja) {
+    const ig = String(loja.instagram || '').replace(/^@/, '');
+    return {
+      nome: loja.nome || 'Wi-Fi',
+      instagram: ig ? 'https://instagram.com/' + ig : INSTAGRAM_URL,
+      igHandle: ig || IG_HANDLE,
+      cor: loja.cor || '#ff6a1a',
+      logo: loja.logo_url || '/static/logo.png',
+      mensagem: loja.mensagem || '',
+      autoCode: loja.codigo_wifi || '',
+      apSecret: loja.ap_secret || AP_SECRET,
+      ativo: loja.ativo !== false,
+      achou: true,
+    };
+  }
+  return {
+    nome: 'Absolem Tabacaria', instagram: INSTAGRAM_URL, igHandle: IG_HANDLE,
+    cor: '#ff6a1a', logo: '/static/logo.png', mensagem: '', autoCode: AUTO_CODE,
+    apSecret: AP_SECRET, ativo: true, achou: false,
+  };
+}
+
 // Página inicial — o AP redireciona o cliente para cá (GET).
-app.get('/', (req, res) => {
+app.get('/', async (req, res) => {
   const p = extractApParams(req.query);
-  // Guardamos os parâmetros do AP em cookie curto para reusar no POST.
+  const loja = await lojaPorDominio(req.headers.host);
+  const marca = marcaDaLoja(loja, req.headers.host);
+
+  // loja cadastrada mas DESLIGADA no painel: portal fora do ar
+  if (marca.achou && !marca.ativo) {
+    return res.send(renderResult({
+      ok: false,
+      title: marca.nome,
+      msg: 'O Wi-Fi deste local está temporariamente indisponível. Tente novamente mais tarde.',
+    }));
+  }
+
   res.setHeader('Set-Cookie',
     `apx=${encodeURIComponent(JSON.stringify(p))}; HttpOnly; Path=/; Max-Age=600; SameSite=Lax`);
-  res.send(renderPortal({ ap: p, instagram: INSTAGRAM_URL, autoCode: AUTO_CODE, error: null }));
+  res.send(renderPortal({ ap: p, instagram: marca.instagram, autoCode: marca.autoCode, error: null, marca }));
 });
 
 // Envio do formulário (código digitado).
@@ -101,12 +139,14 @@ app.post('/auth', async (req, res) => {
   try { ap = JSON.parse(req.cookies.apx || '{}'); } catch { ap = {}; }
   ap = extractApParams({ ...ap, ...req.body }); // body pode reenviar campos ocultos
 
+  const loja = await lojaPorDominio(req.headers.host);
+  const marca = marcaDaLoja(loja, req.headers.host);
   const code = String(req.body.code || '').trim().toUpperCase();
   const base = { code, client_mac: ap.mac, ap_mac: ap.ap_mac, ssid: ap.ssid, user_hash: ap.user_hash };
 
   if (!code) {
     await logAccess({ ...base, result: 'denied', reason: 'Código vazio' });
-    return res.send(renderPortal({ ap, instagram: INSTAGRAM_URL, autoCode: AUTO_CODE, error: 'Digite o código para liberar o Wi-Fi.' }));
+    return res.send(renderPortal({ ap, instagram: marca.instagram, autoCode: marca.autoCode, error: 'Digite o código para liberar o Wi-Fi.', marca }));
   }
 
   if (!ap.redirect_uri) {
@@ -115,24 +155,33 @@ app.post('/auth', async (req, res) => {
     return res.send(renderResult({
       ok: false,
       title: 'Abra pelo Wi-Fi da loja',
-      msg: 'Esta página precisa ser aberta ao conectar na rede da Absolem. Conecte-se ao Wi-Fi e tente de novo.',
+      msg: 'Esta página precisa ser aberta ao conectar na rede do Wi-Fi. Conecte-se e tente de novo.',
       link: { href: '/ig', label: '📸 Ir pro Instagram assim mesmo' },
     }));
   }
 
+  // Multi-marca: valida o código contra a LOJA deste domínio.
+  // Se o domínio não estiver cadastrado, cai no código global (compatibilidade com a Absolem atual).
   let outcome;
-  try {
-    outcome = await validateCode(code);
-  } catch (err) {
-    console.error('[auth] Erro no SQL:', err.message);
-    await logAccess({ ...base, result: 'denied', reason: 'Erro no banco' });
-    return res.send(renderPortal({ ap, instagram: INSTAGRAM_URL, autoCode: AUTO_CODE, error: 'Sistema indisponível no momento. Tente novamente em instantes.' }));
+  if (marca.achou) {
+    outcome = validarCodigoDaLoja(loja, code);
+  } else {
+    try {
+      outcome = await validateCode(code);
+    } catch (err) {
+      console.error('[auth] Erro no SQL:', err.message);
+      await logAccess({ ...base, result: 'denied', reason: 'Erro no banco' });
+      return res.send(renderPortal({ ap, instagram: marca.instagram, autoCode: marca.autoCode, error: 'Sistema indisponível no momento. Tente novamente em instantes.', marca }));
+    }
   }
 
   if (!outcome.granted) {
     await logAccess({ ...base, result: 'denied', reason: outcome.reason });
-    return res.send(renderPortal({ ap, instagram: INSTAGRAM_URL, autoCode: AUTO_CODE, error: `Código inválido: ${outcome.reason.toLowerCase()}.` }));
+    return res.send(renderPortal({ ap, instagram: marca.instagram, autoCode: marca.autoCode, error: `${outcome.reason}.`, marca }));
   }
+
+  // registra o acesso marcado por loja (pro painel contar)
+  registrarAcesso(loja, ap.mac, /mobile|android|iphone/i.test(req.headers['user-agent']||'') ? 'celular' : 'computador');
 
   // Liberado! Registra e manda o navegador de volta ao AP para soltar a internet.
   await logAccess({ ...base, result: 'granted', reason: outcome.reason });
