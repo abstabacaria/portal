@@ -113,6 +113,9 @@ function escapeAttr(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<'
 
 function renderPortal({ ap, instagram, autoCode, error, marca }) {
   marca = marca || {};
+  // liberação automática: o código vai escondido no botão. Nunca pode ficar vazio,
+  // senão o AP não libera. Ordem: o que veio > o da marca > o global do ambiente.
+  autoCode = autoCode || marca.autoCode || process.env.AUTO_CODE || 'ABSOLEM';
   const cor = marca.cor || '#F97316';
   const logo = marca.logo || LOGO;
   const nome = marca.nome || 'Absolem Tabacaria';
