@@ -1,0 +1,269 @@
+<!DOCTYPE html><html lang="pt-BR"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Painel de Portais Wi-Fi</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#0d0e12;--surface:#16181f;--surface-2:#1e212b;--border:#2a2e3a;--border-2:#363b4a;
+  --text:#eef0f5;--text-dim:#9aa0ae;--text-faint:#646b7a;
+  --accent:#3b82f6;--accent-2:#60a5fa;--success:#22c55e;--warn:#f59e0b;--danger:#ef4444;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
+.hidden{display:none!important}
+button{font-family:inherit;cursor:pointer}
+input,select,textarea{font-family:inherit;font-size:13px;width:100%;padding:10px 12px;border-radius:9px;background:var(--surface-2);border:1px solid var(--border);color:var(--text)}
+input:focus,select:focus,textarea:focus{outline:none;border-color:var(--accent)}
+label.fld{display:block;margin-bottom:12px}
+label.fld span{display:block;font-size:12px;color:var(--text-dim);font-weight:600;margin-bottom:5px}
+label.fld small{color:var(--text-faint);font-weight:400}
+.btn{border:0;border-radius:9px;padding:11px 18px;font-weight:700;font-size:13px;background:var(--surface-2);color:var(--text);border:1px solid var(--border);transition:.15s}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{background:var(--accent-2)}
+.btn.danger{background:transparent;border-color:var(--danger);color:var(--danger)}
+.btn.danger:hover{background:var(--danger);color:#fff}
+.btn.sm{padding:7px 12px;font-size:12px}
+.btn.ghost{background:transparent}
+
+/* login */
+#login{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
+.login-card{width:100%;max-width:360px;background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:34px 28px}
+.login-card h1{font-size:20px;font-weight:900;margin-bottom:4px}
+.login-card p{color:var(--text-dim);font-size:13px;margin-bottom:22px}
+.login-card .btn{width:100%;margin-top:8px;justify-content:center}
+.err{color:var(--danger);font-size:12.5px;margin-top:10px;min-height:16px}
+
+/* app */
+#app{max-width:1100px;margin:0 auto;padding:22px 18px 60px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:14px;margin-bottom:24px;flex-wrap:wrap}
+.top h1{font-size:19px;font-weight:900}
+.top .sub{color:var(--text-faint);font-size:12.5px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:24px}
+.kpi{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px}
+.kpi .l{font-size:11.5px;color:var(--text-dim);font-weight:600;margin-bottom:6px}
+.kpi .v{font-size:26px;font-weight:900;letter-spacing:-.5px}
+.kpi .s{font-size:11px;color:var(--text-faint);margin-top:3px}
+
+.lojas{display:flex;flex-direction:column;gap:12px}
+.loja{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 18px;display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.loja.off{opacity:.55}
+.loja .dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
+.loja .info{flex:1;min-width:180px}
+.loja .nome{font-weight:800;font-size:15px;display:flex;align-items:center;gap:8px}
+.loja .meta{font-size:12px;color:var(--text-dim);margin-top:3px}
+.loja .meta a{color:var(--accent-2);text-decoration:none}
+.loja .nums{text-align:right;font-size:12px;color:var(--text-dim)}
+.loja .nums b{color:var(--text);font-size:17px;display:block}
+.loja .acts{display:flex;gap:7px;flex-wrap:wrap}
+.badge{font-size:10.5px;font-weight:700;padding:2px 8px;border-radius:6px}
+.badge.on{background:rgba(34,197,94,.15);color:#4ade80}
+.badge.off{background:rgba(239,68,68,.15);color:#f87171}
+.badge.venc{background:rgba(245,158,11,.15);color:#fbbf24}
+
+/* modal */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.6);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:20px;z-index:50}
+.modal{width:100%;max-width:520px;max-height:90vh;overflow-y:auto;background:var(--surface);border:1px solid var(--border);border-radius:18px;padding:26px}
+.modal h2{font-size:17px;font-weight:900;margin-bottom:4px}
+.modal .hint{color:var(--text-dim);font-size:12.5px;margin-bottom:18px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.modal-acts{display:flex;gap:10px;justify-content:flex-end;margin-top:8px}
+.vazio{text-align:center;padding:60px 20px;color:var(--text-dim)}
+.vazio .big{font-size:40px;margin-bottom:12px}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--surface-2);border:1px solid var(--border);padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:99;box-shadow:0 8px 30px rgba(0,0,0,.4)}
+@media(max-width:560px){.row2{grid-template-columns:1fr}.loja .nums{text-align:left}}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login">
+  <div class="login-card">
+    <h1>📶 Painel de Portais</h1>
+    <p>Gerencie os captive portals dos seus clientes.</p>
+    <label class="fld"><span>E-mail</span><input id="email" type="email" autocomplete="username"></label>
+    <label class="fld"><span>Senha</span><input id="senha" type="password" autocomplete="current-password"></label>
+    <button class="btn primary" onclick="entrar()">Entrar</button>
+    <div class="err" id="loginErr"></div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app" class="hidden">
+  <div class="top">
+    <div><h1>📶 Portais Wi-Fi</h1><div class="sub" id="userInfo"></div></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn primary" onclick="abrirNova()">➕ Nova loja</button>
+      <button class="btn ghost sm" onclick="sair()">Sair</button>
+    </div>
+  </div>
+
+  <div class="kpis" id="kpis"></div>
+  <div class="lojas" id="lojas"></div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL='https://iekxuehdrxsimqtfejxm.supabase.co';
+const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlla3h1ZWhkcnhzaW1xdGZlanhtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1MDk0NzAsImV4cCI6MjA5MTA4NTQ3MH0.61zaRoTBK2XorXgAcGXcsN8yOY0MTRS4bIJ_X4vPjyA';
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+let LOJAS=[];
+
+function toast(m){const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),2600);}
+function esc(s){return String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));}
+
+async function entrar(){
+  const email=document.getElementById('email').value.trim();
+  const password=document.getElementById('senha').value;
+  const err=document.getElementById('loginErr'); err.textContent='';
+  const {data,error}=await sb.auth.signInWithPassword({email,password});
+  if(error){err.textContent='E-mail ou senha inválidos.';return}
+  mostrarApp(data.user);
+}
+async function sair(){await sb.auth.signOut();location.reload();}
+
+function mostrarApp(user){
+  document.getElementById('login').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  document.getElementById('userInfo').textContent=user.email;
+  carregar();
+}
+
+async function carregar(){
+  const {data,error}=await sb.from('portal_lojas').select('*').order('criado_em',{ascending:false});
+  if(error){toast('Erro: '+error.message);return}
+  LOJAS=data||[];
+  // acessos por loja (últimos 30 dias)
+  const ini=new Date(Date.now()-30*864e5).toISOString();
+  const {data:ac}=await sb.from('portal_acessos').select('loja_id,criado_em').gte('criado_em',ini);
+  const cont={},cont7={};
+  const lim7=Date.now()-7*864e5;
+  (ac||[]).forEach(a=>{cont[a.loja_id]=(cont[a.loja_id]||0)+1;if(new Date(a.criado_em).getTime()>lim7)cont7[a.loja_id]=(cont7[a.loja_id]||0)+1;});
+  render(cont,cont7);
+}
+
+function render(cont,cont7){
+  cont=cont||{};cont7=cont7||{};
+  const ativas=LOJAS.filter(l=>l.ativo).length;
+  const totalAcessos=Object.values(cont).reduce((a,b)=>a+b,0);
+  const hoje=new Date().toISOString().slice(0,10);
+  const vencendo=LOJAS.filter(l=>l.vencimento&&l.vencimento<=hoje&&l.ativo).length;
+
+  document.getElementById('kpis').innerHTML=[
+    ['Lojas ativas',ativas,LOJAS.length+' no total'],
+    ['Acessos (30 dias)',totalAcessos.toLocaleString('pt-BR'),'somando todas'],
+    ['Vencidas',vencendo,vencendo?'precisam de atenção':'tudo em dia ✅'],
+  ].map(k=>`<div class="kpi"><div class="l">${k[0]}</div><div class="v">${k[1]}</div><div class="s">${k[2]}</div></div>`).join('');
+
+  const box=document.getElementById('lojas');
+  if(!LOJAS.length){
+    box.innerHTML='<div class="vazio"><div class="big">📶</div><h3>Nenhuma loja ainda</h3><p>Clique em "➕ Nova loja" pra cadastrar seu primeiro cliente.</p></div>';
+    return;
+  }
+  box.innerHTML=LOJAS.map(l=>{
+    const venc=l.vencimento&&l.vencimento<=hoje;
+    return `<div class="loja ${l.ativo?'':'off'}">
+      <div class="dot" style="background:${esc(l.cor||'#3b82f6')}"></div>
+      <div class="info">
+        <div class="nome">${esc(l.nome)}
+          <span class="badge ${l.ativo?'on':'off'}">${l.ativo?'ativa':'desligada'}</span>
+          ${venc?'<span class="badge venc">vencida</span>':''}
+        </div>
+        <div class="meta">
+          ${l.dominio?`🌐 ${esc(l.dominio)}`:'<span style="color:var(--warn)">⚠️ sem domínio</span>'}
+          ${l.instagram?` · 📸 @${esc(l.instagram)}`:''}
+          ${l.vencimento?` · 📅 vence ${l.vencimento.split('-').reverse().join('/')}`:''}
+        </div>
+      </div>
+      <div class="nums"><b>${(cont[l.id]||0).toLocaleString('pt-BR')}</b>acessos 30d<br><small>${cont7[l.id]||0} nos últimos 7</small></div>
+      <div class="acts">
+        <button class="btn sm" onclick="editar(${l.id})">✏️ Editar</button>
+        <button class="btn sm ${l.ativo?'danger':'primary'}" onclick="toggleAtiva(${l.id},${!l.ativo})">${l.ativo?'Desligar':'Ligar'}</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function toggleAtiva(id,novo){
+  const {error}=await sb.from('portal_lojas').update({ativo:novo}).eq('id',id);
+  if(error){toast('Erro: '+error.message);return}
+  toast(novo?'Loja ligada ✅':'Loja desligada');
+  carregar();
+}
+
+// ---------- modal nova/editar ----------
+function campos(l){
+  l=l||{};
+  return `
+    <div class="row2">
+      <label class="fld"><span>Nome da loja</span><input id="f_nome" value="${esc(l.nome)}"></label>
+      <label class="fld"><span>Identificador <small>(curto, sem espaço)</small></span><input id="f_slug" value="${esc(l.slug)}" placeholder="ex: lojafulano"></label>
+    </div>
+    <label class="fld"><span>Domínio do Wi-Fi <small>(ex: wifi.lojafulano.com.br)</small></span><input id="f_dominio" value="${esc(l.dominio)}"></label>
+    <div class="row2">
+      <label class="fld"><span>@ do Instagram <small>(sem @)</small></span><input id="f_instagram" value="${esc(l.instagram)}"></label>
+      <label class="fld"><span>Cor do tema</span><input id="f_cor" type="color" value="${esc(l.cor||'#ff6a1a')}" style="height:42px;padding:4px"></label>
+    </div>
+    <label class="fld"><span>Logo <small>(link da imagem)</small></span><input id="f_logo" value="${esc(l.logo_url)}" placeholder="https://..."></label>
+    <div class="row2">
+      <label class="fld"><span>Código do Wi-Fi <small>(libera a internet)</small></span><input id="f_codigo" value="${esc(l.codigo_wifi)}" placeholder="ex: FULANO2026"></label>
+      <label class="fld"><span>Segredo do AP <small>(mesma senha no roteador)</small></span><input id="f_secret" value="${esc(l.ap_secret)}" placeholder="senha forte"></label>
+    </div>
+    <div class="row2">
+      <label class="fld"><span>Vencimento da mensalidade</span><input id="f_venc" type="date" value="${esc(l.vencimento)}"></label>
+      <label class="fld"><span>Plano <small>(só seu controle)</span><input id="f_plano" value="${esc(l.plano||'mensal')}"></label>
+    </div>
+    <label class="fld"><span>Observações</span><textarea id="f_obs" rows="2">${esc(l.obs)}</textarea></label>`;
+}
+
+function abrirNova(){abrirModal(null);}
+function editar(id){abrirModal(LOJAS.find(l=>l.id===id));}
+
+function abrirModal(l){
+  const editando=!!l;
+  const bg=document.createElement('div');bg.className='modal-bg';bg.id='modalBg';
+  bg.innerHTML=`<div class="modal">
+    <h2>${editando?'✏️ Editar loja':'➕ Nova loja'}</h2>
+    <div class="hint">Esses dados alimentam o portal do cliente e o seu controle.</div>
+    ${campos(l||{})}
+    <div class="modal-acts">
+      ${editando?`<button class="btn danger" onclick="excluir(${l.id})" style="margin-right:auto">🗑️ Excluir</button>`:''}
+      <button class="btn ghost" onclick="fecharModal()">Cancelar</button>
+      <button class="btn primary" onclick="salvar(${editando?l.id:'null'})">Salvar</button>
+    </div>
+  </div>`;
+  bg.addEventListener('click',e=>{if(e.target===bg)fecharModal();});
+  document.body.appendChild(bg);
+}
+function fecharModal(){const m=document.getElementById('modalBg');if(m)m.remove();}
+
+async function salvar(id){
+  const v=x=>document.getElementById('f_'+x).value.trim();
+  const slug=v('slug').toLowerCase().replace(/[^a-z0-9]/g,'');
+  if(!v('nome')||!slug){toast('Nome e identificador são obrigatórios');return}
+  const payload={
+    nome:v('nome'),slug,dominio:v('dominio')||null,instagram:v('instagram').replace(/^@/,'')||null,
+    cor:v('cor'),logo_url:v('logo')||null,codigo_wifi:v('codigo')||null,ap_secret:v('secret')||null,
+    vencimento:v('venc')||null,plano:v('plano')||null,obs:v('obs')||null
+  };
+  let error;
+  if(id){({error}=await sb.from('portal_lojas').update(payload).eq('id',id));}
+  else{({error}=await sb.from('portal_lojas').insert(payload));}
+  if(error){toast('Erro: '+(error.message.includes('duplicate')?'esse identificador ou domínio já existe':error.message));return}
+  toast(id?'Loja atualizada ✅':'Loja criada ✅');
+  fecharModal();carregar();
+}
+
+async function excluir(id){
+  if(!confirm('Excluir essa loja e todos os acessos dela? Não dá pra desfazer.'))return;
+  const {error}=await sb.from('portal_lojas').delete().eq('id',id);
+  if(error){toast('Erro: '+error.message);return}
+  toast('Loja excluída');fecharModal();carregar();
+}
+
+// sessão persistente
+sb.auth.getSession().then(({data})=>{if(data.session)mostrarApp(data.session.user);});
+document.getElementById('senha').addEventListener('keydown',e=>{if(e.key==='Enter')entrar();});
+</script>
+</body></html>
