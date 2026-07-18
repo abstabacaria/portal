@@ -5,9 +5,10 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#0d0e12;--surface:#16181f;--surface-2:#1e212b;--border:#2a2e3a;--border-2:#363b4a;
-  --text:#eef0f5;--text-dim:#9aa0ae;--text-faint:#646b7a;
-  --accent:#3b82f6;--accent-2:#60a5fa;--success:#22c55e;--warn:#f59e0b;--danger:#ef4444;
+  --bg:#0b0d13;--surface:#151823;--surface-2:#1c2030;--border:#282d3f;--border-2:#39405a;
+  --text:#eef1f8;--text-dim:#98a0b6;--text-faint:#5f6780;
+  --accent:#6366f1;--accent-2:#818cf8;--accent-3:#22d3ee;--success:#22c55e;--warn:#f59e0b;--danger:#ef4444;
+  --grad:linear-gradient(135deg,#6366f1,#22d3ee);
 }
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
@@ -73,6 +74,58 @@ label.fld small{color:var(--text-faint);font-weight:400}
 .vazio .big{font-size:40px;margin-bottom:12px}
 .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--surface-2);border:1px solid var(--border);padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;z-index:99;box-shadow:0 8px 30px rgba(0,0,0,.4)}
 @media(max-width:560px){.row2{grid-template-columns:1fr}.loja .nums{text-align:left}}
+
+/* marca ConectaY */
+.brand{display:flex;align-items:center;gap:11px}
+.brand-mark{width:38px;height:38px;border-radius:11px;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:19px;box-shadow:0 6px 18px rgba(99,102,241,.35)}
+.brand-name{font-size:23px;font-weight:900;letter-spacing:-.5px;background:var(--grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.brand-name span{-webkit-text-fill-color:var(--accent-3)}
+.login-card .btn.primary{background:var(--grad);border:0}
+.top .btn.primary{background:var(--grad);border:0}
+.kpi{position:relative;overflow:hidden}
+.kpi::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;background:var(--grad);opacity:.7}
+.kpi.hero .v{background:var(--grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+
+/* mini gráfico de barras (sparkline) */
+.spark{display:flex;align-items:flex-end;gap:3px;height:44px;margin-top:10px}
+.spark .bar{flex:1;background:var(--grad);border-radius:3px 3px 0 0;min-height:3px;opacity:.85;transition:.2s}
+.spark .bar:hover{opacity:1}
+.spark-wrap{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:16px 18px;margin-bottom:24px}
+.spark-wrap h3{font-size:13px;font-weight:700;color:var(--text-dim);margin-bottom:2px}
+.spark-lbls{display:flex;justify-content:space-between;font-size:10px;color:var(--text-faint);margin-top:6px}
+
+/* loja clicável */
+.loja{cursor:default}
+.loja .info{cursor:pointer}
+.loja .trend{font-size:11px;font-weight:700;margin-top:2px}
+.trend.up{color:var(--success)}.trend.down{color:var(--danger)}.trend.flat{color:var(--text-faint)}
+
+/* detalhe da loja (modal grande) */
+.det h2{font-size:20px;margin-bottom:2px}
+.det .dom{color:var(--text-dim);font-size:12.5px;margin-bottom:18px}
+.det-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:18px}
+.det-kpi{background:var(--surface-2);border-radius:12px;padding:13px}
+.det-kpi .l{font-size:10.5px;color:var(--text-dim);font-weight:600}
+.det-kpi .v{font-size:22px;font-weight:900;margin-top:3px}
+.det-share{background:var(--surface-2);border:1px dashed var(--border-2);border-radius:12px;padding:14px;font-size:12.5px;color:var(--text-dim);margin-top:6px}
+
+
+/* upload de logo */
+.logo-up{border:2px dashed var(--border-2);border-radius:14px;padding:18px;text-align:center;cursor:pointer;transition:.15s;margin-bottom:6px;background:var(--surface-2)}
+.logo-up:hover{border-color:var(--accent)}
+.logo-up img{max-height:70px;max-width:100%;border-radius:8px}
+.lu-ico{font-size:30px;margin-bottom:6px}
+.logo-up small{color:var(--text-faint);display:block;margin-top:3px}
+/* paleta */
+.paleta{display:flex;align-items:center;gap:14px;margin-bottom:12px;flex-wrap:wrap}
+.pcor{display:flex;flex-direction:column;align-items:center;gap:5px}
+.pcor input[type=color]{width:52px;height:52px;border-radius:50%;border:3px solid var(--border-2);padding:0;cursor:pointer;background:none}
+.pcor span{font-size:10.5px;color:var(--text-dim);font-weight:600}
+.pgrad{flex:1;min-width:120px;height:52px;border-radius:12px;border:1px solid var(--border)}
+.preset-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.preset{width:34px;height:26px;border-radius:7px;cursor:pointer;border:2px solid transparent;transition:.12s}
+.preset:hover{transform:scale(1.1);border-color:#fff}
+
 </style>
 </head>
 <body>
@@ -80,8 +133,8 @@ label.fld small{color:var(--text-faint);font-weight:400}
 <!-- LOGIN -->
 <div id="login">
   <div class="login-card">
-    <h1>📶 Painel de Portais</h1>
-    <p>Gerencie os captive portals dos seus clientes.</p>
+    <div class="brand"><span class="brand-mark">📶</span><h1 class="brand-name">Conecta<span>Y</span></h1></div>
+    <p>O Wi-Fi que trabalha pra sua loja. Entre pra gerenciar.</p>
     <label class="fld"><span>E-mail</span><input id="email" type="email" autocomplete="username"></label>
     <label class="fld"><span>Senha</span><input id="senha" type="password" autocomplete="current-password"></label>
     <button class="btn primary" onclick="entrar()">Entrar</button>
@@ -92,7 +145,7 @@ label.fld small{color:var(--text-faint);font-weight:400}
 <!-- APP -->
 <div id="app" class="hidden">
   <div class="top">
-    <div><h1>📶 Portais Wi-Fi</h1><div class="sub" id="userInfo"></div></div>
+    <div class="brand"><span class="brand-mark">📶</span><div><h1 class="brand-name" style="font-size:20px">Conecta<span>Y</span></h1><div class="sub" id="userInfo"></div></div></div>
     <div style="display:flex;gap:8px">
       <button class="btn primary" onclick="abrirNova()">➕ Nova loja</button>
       <button class="btn ghost sm" onclick="sair()">Sair</button>
@@ -100,6 +153,7 @@ label.fld small{color:var(--text-faint);font-weight:400}
   </div>
 
   <div class="kpis" id="kpis"></div>
+  <div class="spark-wrap" id="grafico" style="display:none"></div>
   <div class="lojas" id="lojas"></div>
 </div>
 
@@ -130,31 +184,61 @@ function mostrarApp(user){
   carregar();
 }
 
+let ACESSOS=[];
 async function carregar(){
   const {data,error}=await sb.from('portal_lojas').select('*').order('criado_em',{ascending:false});
   if(error){toast('Erro: '+error.message);return}
   LOJAS=data||[];
-  // acessos por loja (últimos 30 dias)
   const ini=new Date(Date.now()-30*864e5).toISOString();
   const {data:ac}=await sb.from('portal_acessos').select('loja_id,criado_em').gte('criado_em',ini);
-  const cont={},cont7={};
-  const lim7=Date.now()-7*864e5;
-  (ac||[]).forEach(a=>{cont[a.loja_id]=(cont[a.loja_id]||0)+1;if(new Date(a.criado_em).getTime()>lim7)cont7[a.loja_id]=(cont7[a.loja_id]||0)+1;});
-  render(cont,cont7);
+  ACESSOS=ac||[];
+  const cont={},cont7={},contPrev7={};
+  const lim7=Date.now()-7*864e5, lim14=Date.now()-14*864e5;
+  ACESSOS.forEach(a=>{
+    const t=new Date(a.criado_em).getTime();
+    cont[a.loja_id]=(cont[a.loja_id]||0)+1;
+    if(t>lim7)cont7[a.loja_id]=(cont7[a.loja_id]||0)+1;
+    else if(t>lim14)contPrev7[a.loja_id]=(contPrev7[a.loja_id]||0)+1;
+  });
+  window.__cont=cont;window.__cont7=cont7;
+  renderGrafico();
+  render(cont,cont7,contPrev7);
 }
 
-function render(cont,cont7){
-  cont=cont||{};cont7=cont7||{};
+// gráfico geral: acessos por dia (14 dias)
+function renderGrafico(){
+  const dias=14, hoje=new Date(); hoje.setHours(0,0,0,0);
+  const buckets=Array(dias).fill(0);
+  ACESSOS.forEach(a=>{
+    const d=new Date(a.criado_em); d.setHours(0,0,0,0);
+    const idx=dias-1-Math.round((hoje-d)/864e5);
+    if(idx>=0&&idx<dias)buckets[idx]++;
+  });
+  const max=Math.max(1,...buckets);
+  const el=document.getElementById('grafico'); if(!el)return;
+  const total=buckets.reduce((a,b)=>a+b,0);
+  if(total===0){ el.style.display='none'; return; }
+  el.style.display='block';
+  const fmt=d=>d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'});
+  const d0=new Date(hoje-13*864e5);
+  el.innerHTML='<h3>Conexões por dia — últimas 2 semanas</h3>'
+    +'<div class="spark">'+buckets.map((v,i)=>`<div class="bar" style="height:${Math.max(3,v/max*100)}%" title="${v} conexões"></div>`).join('')+'</div>'
+    +`<div class="spark-lbls"><span>${fmt(d0)}</span><span><b style="color:var(--text)">${total.toLocaleString('pt-BR')}</b> no total</span><span>${fmt(hoje)}</span></div>`;
+}
+
+function render(cont,cont7,contPrev7){
+  cont=cont||{};cont7=cont7||{};contPrev7=contPrev7||{};
   const ativas=LOJAS.filter(l=>l.ativo).length;
   const totalAcessos=Object.values(cont).reduce((a,b)=>a+b,0);
+  const total7=Object.values(cont7).reduce((a,b)=>a+b,0);
   const hoje=new Date().toISOString().slice(0,10);
   const vencendo=LOJAS.filter(l=>l.vencimento&&l.vencimento<=hoje&&l.ativo).length;
 
   document.getElementById('kpis').innerHTML=[
-    ['Lojas ativas',ativas,LOJAS.length+' no total'],
-    ['Acessos (30 dias)',totalAcessos.toLocaleString('pt-BR'),'somando todas'],
-    ['Vencidas',vencendo,vencendo?'precisam de atenção':'tudo em dia ✅'],
-  ].map(k=>`<div class="kpi"><div class="l">${k[0]}</div><div class="v">${k[1]}</div><div class="s">${k[2]}</div></div>`).join('');
+    ['hero','Conexões (30 dias)',totalAcessos.toLocaleString('pt-BR'),total7.toLocaleString('pt-BR')+' nos últimos 7'],
+    ['','Lojas ativas',ativas,LOJAS.length+' no total'],
+    ['','Vencidas',vencendo,vencendo?'⚠️ precisam de atenção':'tudo em dia ✅'],
+  ].map(k=>`<div class="kpi ${k[0]}"><div class="l">${k[1]}</div><div class="v">${k[2]}</div><div class="s">${k[3]}</div></div>`).join('');
 
   const box=document.getElementById('lojas');
   if(!LOJAS.length){
@@ -165,18 +249,19 @@ function render(cont,cont7){
     const venc=l.vencimento&&l.vencimento<=hoje;
     return `<div class="loja ${l.ativo?'':'off'}">
       <div class="dot" style="background:${esc(l.cor||'#3b82f6')}"></div>
-      <div class="info">
+      <div class="info" onclick="abrirDetalhe(${l.id})">
         <div class="nome">${esc(l.nome)}
           <span class="badge ${l.ativo?'on':'off'}">${l.ativo?'ativa':'desligada'}</span>
           ${venc?'<span class="badge venc">vencida</span>':''}
+          ${l.destino_tipo==='whatsapp'?'<span class="badge" style="background:rgba(34,197,94,.15);color:#4ade80">💬 grupo</span>':'<span class="badge" style="background:rgba(129,140,248,.15);color:var(--accent-2)">📸 insta</span>'}
         </div>
         <div class="meta">
           ${l.dominio?`🌐 ${esc(l.dominio)}`:'<span style="color:var(--warn)">⚠️ sem domínio</span>'}
-          ${l.instagram?` · 📸 @${esc(l.instagram)}`:''}
           ${l.vencimento?` · 📅 vence ${l.vencimento.split('-').reverse().join('/')}`:''}
         </div>
+        ${tendencia(cont7[l.id]||0,contPrev7[l.id]||0)}
       </div>
-      <div class="nums"><b>${(cont[l.id]||0).toLocaleString('pt-BR')}</b>acessos 30d<br><small>${cont7[l.id]||0} nos últimos 7</small></div>
+      <div class="nums"><b>${(cont[l.id]||0).toLocaleString('pt-BR')}</b>conexões 30d<br><small>${cont7[l.id]||0} nos últimos 7</small></div>
       <div class="acts">
         <button class="btn sm" onclick="editar(${l.id})">✏️ Editar</button>
         <button class="btn sm ${l.ativo?'danger':'primary'}" onclick="toggleAtiva(${l.id},${!l.ativo})">${l.ativo?'Desligar':'Ligar'}</button>
@@ -185,11 +270,53 @@ function render(cont,cont7){
   }).join('');
 }
 
+function tendencia(atual,anterior){
+  if(atual===0&&anterior===0)return '<div class="trend flat">— sem conexões ainda</div>';
+  if(anterior===0)return '<div class="trend up">▲ começou a receber conexões</div>';
+  const pct=Math.round((atual-anterior)/anterior*100);
+  if(pct>5)return `<div class="trend up">▲ ${pct}% vs semana anterior</div>`;
+  if(pct<-5)return `<div class="trend down">▼ ${Math.abs(pct)}% vs semana anterior</div>`;
+  return '<div class="trend flat">≈ estável vs semana anterior</div>';
+}
 async function toggleAtiva(id,novo){
   const {error}=await sb.from('portal_lojas').update({ativo:novo}).eq('id',id);
   if(error){toast('Erro: '+error.message);return}
   toast(novo?'Loja ligada ✅':'Loja desligada');
   carregar();
+}
+
+// ---------- detalhe da loja (o que você mostra pro cliente) ----------
+function abrirDetalhe(id){
+  const l=LOJAS.find(x=>x.id===id); if(!l)return;
+  const meus=ACESSOS.filter(a=>a.loja_id===id);
+  const dias=14, hoje=new Date(); hoje.setHours(0,0,0,0);
+  const buckets=Array(dias).fill(0);
+  meus.forEach(a=>{const d=new Date(a.criado_em);d.setHours(0,0,0,0);const i=dias-1-Math.round((hoje-d)/864e5);if(i>=0&&i<dias)buckets[i]++;});
+  const max=Math.max(1,...buckets);
+  const total30=(window.__cont||{})[id]||0;
+  const total7=(window.__cont7||{})[id]||0;
+  const hojeC=meus.filter(a=>{const d=new Date(a.criado_em);d.setHours(0,0,0,0);return +d===+hoje;}).length;
+  const destino=l.destino_tipo==='whatsapp'?'entraram no grupo':'foram pro Instagram';
+
+  const bg=document.createElement('div');bg.className='modal-bg';bg.id='modalBg';
+  bg.innerHTML=`<div class="modal det">
+    <h2>${esc(l.nome)}</h2>
+    <div class="dom">${l.dominio?'🌐 '+esc(l.dominio):'⚠️ sem domínio configurado'}${l.destino_tipo==='whatsapp'?' · 💬 grupo de WhatsApp':' · 📸 @'+esc(l.instagram||'')}</div>
+    <div class="det-kpis">
+      <div class="det-kpi"><div class="l">Hoje</div><div class="v">${hojeC}</div></div>
+      <div class="det-kpi"><div class="l">7 dias</div><div class="v">${total7}</div></div>
+      <div class="det-kpi"><div class="l">30 dias</div><div class="v">${total30}</div></div>
+    </div>
+    ${buckets.reduce((a,b)=>a+b,0)?`<div class="spark-wrap" style="margin:0 0 6px"><h3>Conexões por dia</h3><div class="spark">${buckets.map(v=>`<div class="bar" style="height:${Math.max(3,v/max*100)}%" title="${v}"></div>`).join('')}</div></div>`:'<div class="det-share">Ainda sem conexões registradas. Assim que o Wi-Fi começar a ser usado, os números aparecem aqui.</div>'}
+    <div class="det-share">📣 <b>Pra mostrar pro cliente:</b> "Nos últimos 30 dias, <b>${total30} pessoas</b> conectaram no seu Wi-Fi e ${destino}."</div>
+    <div class="modal-acts" style="margin-top:16px">
+      <button class="btn danger" onclick="excluir(${l.id})" style="margin-right:auto">🗑️ Excluir</button>
+      <button class="btn ghost" onclick="fecharModal()">Fechar</button>
+      <button class="btn primary" onclick="fecharModal();editar(${l.id})">✏️ Editar</button>
+    </div>
+  </div>`;
+  bg.addEventListener('click',e=>{if(e.target===bg)fecharModal();});
+  document.body.appendChild(bg);
 }
 
 // ---------- modal nova/editar ----------
@@ -207,12 +334,33 @@ function campos(l){
         <option value="whatsapp" ${l.destino_tipo==='whatsapp'?'selected':''}>💬 Entrar no grupo do WhatsApp</option>
       </select>
     </label>
-    <div class="row2">
-      <label class="fld" id="wrap_insta"><span>@ do Instagram <small>(sem @)</small></span><input id="f_instagram" value="${esc(l.instagram)}"></label>
-      <label class="fld" id="wrap_wpp" style="display:none"><span>Link do grupo <small>(chat.whatsapp.com/...)</small></span><input id="f_wpp" value="${esc(l.whatsapp_link)}" placeholder="https://chat.whatsapp.com/XXXX"></label>
-      <label class="fld"><span>Cor do tema</span><input id="f_cor" type="color" value="${esc(l.cor||'#ff6a1a')}" style="height:42px;padding:4px"></label>
+    <label class="fld" id="wrap_insta"><span>@ do Instagram <small>(sem @)</small></span><input id="f_instagram" value="${esc(l.instagram)}"></label>
+    <label class="fld" id="wrap_wpp" style="display:none"><span>Link do grupo <small>(chat.whatsapp.com/...)</small></span><input id="f_wpp" value="${esc(l.whatsapp_link)}" placeholder="https://chat.whatsapp.com/XXXX"></label>
+
+    <label class="fld"><span>Logo da loja <small>(clica pra enviar uma imagem)</small></span></label>
+    <div class="logo-up" id="logoUp" onclick="document.getElementById('f_logo_file').click()">
+      <img id="logoPrev" src="${esc(l.logo_url)}" alt="" style="${l.logo_url?'':'display:none'}">
+      <div id="logoPlaceholder" style="${l.logo_url?'display:none':''}">
+        <div class="lu-ico">🖼️</div><div>Clique pra enviar a logo</div><small>PNG ou JPG</small>
+      </div>
+      <input type="file" id="f_logo_file" accept="image/*" style="display:none" onchange="subirLogo(this)">
     </div>
-    <label class="fld"><span>Logo <small>(link da imagem)</small></span><input id="f_logo" value="${esc(l.logo_url)}" placeholder="https://..."></label>
+    <input type="hidden" id="f_logo" value="${esc(l.logo_url)}">
+    <div id="logoStatus" style="font-size:11.5px;color:var(--text-dim);margin:-6px 0 12px"></div>
+
+    <label class="fld"><span>Paleta de cores do portal <small>(clica em cada bolinha)</small></span></label>
+    <div class="paleta">
+      <div class="pcor">
+        <input id="f_cor" type="color" value="${esc(l.cor||'#6366f1')}" oninput="previewPaleta()">
+        <span>Principal</span>
+      </div>
+      <div class="pcor">
+        <input id="f_cor2" type="color" value="${esc(l.cor2||l.cor||'#22d3ee')}" oninput="previewPaleta()">
+        <span>Secundária</span>
+      </div>
+      <div class="pgrad" id="pgrad"></div>
+    </div>
+    <div class="preset-row" id="presets"></div>
     <div class="row2">
       <label class="fld"><span>Código do Wi-Fi <small>(libera a internet)</small></span><input id="f_codigo" value="${esc(l.codigo_wifi)}" placeholder="ex: FULANO2026"></label>
       <label class="fld"><span>Segredo do AP <small>(mesma senha no roteador)</small></span><input id="f_secret" value="${esc(l.ap_secret)}" placeholder="senha forte"></label>
@@ -224,6 +372,39 @@ function campos(l){
     <label class="fld"><span>Observações</span><textarea id="f_obs" rows="2">${esc(l.obs)}</textarea></label>`;
 }
 
+const PRESETS=[
+  ['#6366f1','#22d3ee'],['#ff6a1a','#ffb347'],['#22c55e','#a3e635'],
+  ['#ec4899','#f9a8d4'],['#ef4444','#f97316'],['#0ea5e9','#6366f1'],
+  ['#d4af37','#fde68a'],['#111827','#4b5563']
+];
+function previewPaleta(){
+  const c1=document.getElementById('f_cor').value, c2=document.getElementById('f_cor2').value;
+  const g=document.getElementById('pgrad'); if(g)g.style.background='linear-gradient(135deg,'+c1+','+c2+')';
+}
+function montarPresets(){
+  const box=document.getElementById('presets'); if(!box)return;
+  box.innerHTML=PRESETS.map(([a,b])=>`<div class="preset" style="background:linear-gradient(135deg,${a},${b})" onclick="aplicarPreset('${a}','${b}')" title="${a} → ${b}"></div>`).join('');
+}
+function aplicarPreset(a,b){
+  document.getElementById('f_cor').value=a;
+  document.getElementById('f_cor2').value=b;
+  previewPaleta();
+}
+async function subirLogo(input){
+  const file=input.files&&input.files[0]; if(!file)return;
+  if(file.size>2*1024*1024){toast('Imagem muito grande (máx 2MB)');return}
+  const st=document.getElementById('logoStatus'); st.textContent='Enviando…';
+  const ext=(file.name.split('.').pop()||'png').toLowerCase();
+  const nome='loja_'+Date.now()+'.'+ext;
+  const {data,error}=await sb.storage.from('logos').upload(nome,file,{upsert:true,contentType:file.type});
+  if(error){st.textContent='';toast('Erro no upload: '+error.message);return}
+  const {data:pub}=sb.storage.from('logos').getPublicUrl(nome);
+  const url=pub.publicUrl;
+  document.getElementById('f_logo').value=url;
+  const img=document.getElementById('logoPrev'); img.src=url; img.style.display='';
+  document.getElementById('logoPlaceholder').style.display='none';
+  st.textContent='Logo enviada ✅';
+}
 function trocaDestino(){
   const t=document.getElementById('f_destino').value;
   document.getElementById('wrap_insta').style.display=t==='instagram'?'':'none';
@@ -248,6 +429,8 @@ function abrirModal(l){
   bg.addEventListener('click',e=>{if(e.target===bg)fecharModal();});
   document.body.appendChild(bg);
   trocaDestino();
+  montarPresets();
+  previewPaleta();
 }
 function fecharModal(){const m=document.getElementById('modalBg');if(m)m.remove();}
 
@@ -257,7 +440,7 @@ async function salvar(id){
   if(!v('nome')||!slug){toast('Nome e identificador são obrigatórios');return}
   const payload={
     nome:v('nome'),slug,dominio:v('dominio')||null,instagram:v('instagram').replace(/^@/,'')||null,
-    cor:v('cor'),logo_url:v('logo')||null,codigo_wifi:v('codigo')||null,ap_secret:v('secret')||null,
+    cor:v('cor'),cor2:v('cor2')||null,logo_url:v('logo')||null,codigo_wifi:v('codigo')||null,ap_secret:v('secret')||null,
     vencimento:v('venc')||null,plano:v('plano')||null,obs:v('obs')||null,
     destino_tipo:document.getElementById('f_destino').value,
     whatsapp_link:v('wpp')||null
