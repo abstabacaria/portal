@@ -111,6 +111,7 @@ function marcaDaLoja(loja, host) {
       instagram: ig ? 'https://instagram.com/' + ig : INSTAGRAM_URL,
       igHandle: ig || IG_HANDLE,
       cor: loja.cor || '#ff6a1a',
+      cor2: loja.cor2 || loja.cor || '#ff6a1a',
       logo: loja.logo_url || '/static/logo.png',
       mensagem: loja.mensagem || '',
       autoCode: loja.codigo_wifi || AUTO_CODE,   // liberação automática: nunca deixa vazio
