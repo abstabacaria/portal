@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Absolem — Métricas do Wi-Fi</title>
+<style>
+  :root{ --brand:#F97316; --brand-2:#fb9a4b; --bg:#141210; --card:#1e1a17; --line:rgba(249,115,22,.22); --text:#f4efe9; --muted:#b9a89b; }
+  *{box-sizing:border-box}
+  body{ margin:0; font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;
+        background:var(--bg); color:var(--text); padding:20px; }
+  .wrap{ max-width:820px; margin:0 auto }
+  .head{ display:flex; align-items:center; justify-content:space-between; margin-bottom:18px; flex-wrap:wrap; gap:10px }
+  .head h1{ font-size:18px; margin:0; font-weight:800 }
+  .head h1 span{ color:var(--brand) }
+  .upd{ font-size:12px; color:var(--muted) }
+  .cards{ display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:12px; margin-bottom:18px }
+  .card{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px 18px }
+  .card .n{ font-size:30px; font-weight:800; color:var(--brand) }
+  .card .l{ font-size:12px; color:var(--muted); margin-top:2px; text-transform:uppercase; letter-spacing:.5px }
+  .panel{ background:var(--card); border:1px solid var(--line); border-radius:14px; padding:16px 18px; margin-bottom:16px }
+  .panel h2{ font-size:14px; margin:0 0 14px; font-weight:700; color:var(--text) }
+  .bars{ display:flex; align-items:flex-end; gap:6px; height:150px }
+  .bar{ flex:1; display:flex; flex-direction:column; justify-content:flex-end; align-items:center; gap:6px; min-width:0 }
+  .bar .v{ width:100%; background:linear-gradient(180deg,var(--brand-2),var(--brand)); border-radius:5px 5px 0 0; min-height:2px;
+           transition:height .4s ease; position:relative }
+  .bar .v:hover::after{ content:attr(data-v); position:absolute; top:-20px; left:50%; transform:translateX(-50%);
+           background:#000; color:#fff; font-size:11px; padding:2px 6px; border-radius:5px; white-space:nowrap }
+  .bar .x{ font-size:10px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; max-width:100% }
+  .loading,.error{ text-align:center; color:var(--muted); padding:40px 0 }
+  .error{ color:#ff9b8a }
+  .foot{ text-align:center; color:var(--muted); font-size:11px; margin-top:8px }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="head">
+    <h1>📶 Wi-Fi <span>Absolem</span> — Métricas</h1>
+    <div class="upd" id="upd"></div>
+  </div>
+  <div id="content"><div class="loading">Carregando métricas…</div></div>
+  <div class="foot">Atualiza automaticamente a cada 60s.</div>
+</div>
+
+<script>
+  // ===== CONFIGURAÇÃO — preencha estes 2 valores =====
+  const API_URL = 'https://portal-production-9ce9.up.railway.app/api/metrics';
+  const METRICS_KEY = 'COLE_AQUI_A_METRICS_KEY';
+  // ===================================================
+
+  const el = (id) => document.getElementById(id);
+  const esc = (s) => String(s).replace(/[<>&]/g, c => ({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
+
+  function card(n, l){ return `<div class="card"><div class="n">${n}</div><div class="l">${l}</div></div>`; }
+
+  function barChart(items, labelFn, valueKey){
+    if(!items || !items.length) return '<div class="loading">Sem dados ainda.</div>';
+    const max = Math.max(...items.map(i => i[valueKey]), 1);
+    return '<div class="bars">' + items.map(i => {
+      const h = Math.round((i[valueKey]/max)*100);
+      return `<div class="bar"><div class="v" style="height:${h}%" data-v="${i[valueKey]}"></div><div class="x">${esc(labelFn(i))}</div></div>`;
+    }).join('') + '</div>';
+  }
+
+  function dayLabel(d){ const p = d.day.split('-'); return p[2]+'/'+p[1]; }
+  function hourLabel(h){ return String(h.hour).padStart(2,'0')+'h'; }
+
+  async function load(){
+    try{
+      const res = await fetch(`${API_URL}?key=${encodeURIComponent(METRICS_KEY)}`);
+      if(!res.ok) throw new Error('HTTP '+res.status);
+      const m = await res.json();
+      el('upd').textContent = 'Atualizado: ' + (m.updated_at || '');
+      el('content').innerHTML = `
+        <div class="cards">
+          ${card(m.granted_today ?? 0, 'Hoje')}
+          ${card(m.granted_week ?? 0, 'Últimos 7 dias')}
+          ${card(m.granted_month ?? 0, 'Últimos 30 dias')}
+          ${card(m.granted_total ?? 0, 'Total')}
+          ${card(m.unique_devices ?? 0, 'Visitantes únicos')}
+        </div>
+        <div class="panel"><h2>📈 Acessos por dia (últimos 14 dias)</h2>${barChart(m.by_day, dayLabel, 'total')}</div>
+        <div class="panel"><h2>🕐 Horários de pico</h2>${barChart(m.by_hour, hourLabel, 'total')}</div>`;
+    }catch(err){
+      el('content').innerHTML = `<div class="error">Não foi possível carregar as métricas.<br><small>${esc(err.message)}</small><br><small>Confira a METRICS_KEY e a URL da API.</small></div>`;
+    }
+  }
+  load();
+  setInterval(load, 60000);
+</script>
+</body>
+</html>
