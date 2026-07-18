@@ -3,7 +3,7 @@ const express = require('express');
 const crypto = require('crypto');
 const path = require('path');
 const { validateCode, logAccess, getMetrics } = require('./db');
-const { lojaPorDominio, validarCodigoDaLoja, registrarAcesso } = require('./lojas');
+const { lojaPorDominio, lojaPorSlug, validarCodigoDaLoja, registrarAcesso } = require('./lojas');
 const { renderPortal, renderResult } = require('./views');
 
 const app = express();
@@ -63,6 +63,7 @@ function extractApParams(src) {
     ts: src.ts || '',
     redirect_uri: src.redirect_uri || '',
     user_hash: src.user_hash || '',
+    loja: src.loja || '',
   };
 }
 
@@ -87,7 +88,19 @@ function buildReleaseUrl(p) {
   return `${p.redirect_uri}?${params.toString()}`;
 }
 
-// Constrói a "marca" a partir da loja achada pelo domínio.
+// Acha a loja: primeiro por ?loja=slug (teste sem domínio), senão pelo domínio.
+// O slug, quando usado, precisa "grudar" nos próximos passos — por isso ele
+// também entra no cookie e nos campos ocultos do form.
+async function acharLoja(req) {
+  const slug = (req.query && req.query.loja) || (req.body && req.body.loja) || '';
+  if (slug) {
+    const l = await lojaPorSlug(slug);
+    if (l) return l;
+  }
+  return await lojaPorDominio(req.headers.host);
+}
+
+// Constrói a \"marca\" a partir da loja achada pelo domínio.
 // Se não achar (ex: domínio novo ainda não cadastrado), usa o padrão da Absolem
 // pra nunca deixar o cliente na mão.
 function marcaDaLoja(loja, host) {
@@ -117,8 +130,9 @@ function marcaDaLoja(loja, host) {
 app.get('/', async (req, res) => {
   const p = extractApParams(req.query);
   let loja = null;
-  try { loja = await lojaPorDominio(req.headers.host); } catch (e) { console.error('[get] lojaPorDominio:', e.message); }
+  try { loja = await acharLoja(req); } catch (e) { console.error('[get] acharLoja:', e.message); }
   const marca = marcaDaLoja(loja, req.headers.host);
+  if (req.query && req.query.loja) p.loja = req.query.loja;  // carrega o slug adiante
 
   // loja cadastrada mas DESLIGADA no painel: portal fora do ar
   if (marca.achou && !marca.ativo) {
