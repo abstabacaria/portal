@@ -3,7 +3,7 @@ const express = require('express');
 const crypto = require('crypto');
 const path = require('path');
 const { validateCode, logAccess, getMetrics } = require('./db');
-const { lojaPorDominio, lojaPorSlug, validarCodigoDaLoja, registrarAcesso } = require('./lojas');
+const { lojaPorDominio, lojaPorSlug, validarCodigoDaLoja, registrarAcesso, registrarLead } = require('./lojas');
 const { renderPortal, renderResult } = require('./views');
 
 const app = express();
@@ -118,6 +118,8 @@ function marcaDaLoja(loja, host) {
       apSecret: loja.ap_secret || AP_SECRET,
       destinoTipo: loja.destino_tipo || 'instagram',
       whatsappLink: loja.whatsapp_link || '',
+      formCampos: loja.form_campos || null,
+      formTitulo: loja.form_titulo || '',
       ativo: loja.ativo !== false,
       achou: true,
     };
@@ -201,6 +203,15 @@ app.post('/auth', async (req, res) => {
 
     // registra o acesso (não espera, não derruba se falhar)
     try { registrarAcesso(loja, ap.mac, /mobile|android|iphone/i.test(req.headers['user-agent']||'') ? 'celular' : 'computador'); } catch (e) {}
+
+  // modo formulário: coleta os campos lead_* e salva como lead da loja
+  if (req.body.go === 'form') {
+    const dados = {};
+    for (const k in req.body) {
+      if (k.startsWith('lead_') && req.body[k]) dados[k.slice(5)] = String(req.body[k]).slice(0, 200);
+    }
+    if (Object.keys(dados).length) { try { registrarLead(loja, dados, ap.mac); } catch (e) {} }
+  }
 
     // Liberado! Registra e manda o navegador de volta ao AP para soltar a internet.
     await logAccess({ ...base, result: 'granted', reason: outcome.reason });
