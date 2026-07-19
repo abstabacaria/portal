@@ -1,0 +1,165 @@
+<!DOCTYPE html><html lang="pt-BR"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Como instalar o Wi-Fi do cliente — ConectaY</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b0d13;--surface:#151823;--surface-2:#1c2030;--border:#282d3f;--text:#eef1f8;--dim:#98a0b6;--faint:#5f6780;--accent:#6366f1;--accent2:#818cf8;--cyan:#22d3ee;--ok:#22c55e;--warn:#f59e0b;--danger:#ef4444;--grad:linear-gradient(135deg,#6366f1,#22d3ee)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.6;font-size:15px}
+.wrap{max-width:720px;margin:0 auto;padding:24px 18px 60px}
+.brand{display:flex;align-items:center;gap:11px;margin-bottom:8px}
+.brand-mark{width:40px;height:40px;border-radius:11px;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:20px}
+.brand-name{font-size:24px;font-weight:900;background:var(--grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.brand-name span{-webkit-text-fill-color:var(--cyan)}
+h1{font-size:23px;font-weight:900;margin:20px 0 6px;letter-spacing:-.5px}
+.intro{color:var(--dim);margin-bottom:8px}
+.chips{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0 28px}
+.chip{background:var(--surface-2);border:1px solid var(--border);border-radius:20px;padding:6px 14px;font-size:12.5px;font-weight:600;color:var(--dim)}
+.step{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px;margin-bottom:16px;position:relative}
+.step-n{position:absolute;top:-12px;left:20px;width:32px;height:32px;border-radius:50%;background:var(--grad);display:flex;align-items:center;justify-content:center;font-weight:900;font-size:15px;color:#fff}
+.step h2{font-size:17px;font-weight:800;margin:6px 0 12px;padding-left:4px}
+.step p{margin-bottom:10px}
+.step ul{margin:8px 0 8px 4px;list-style:none}
+.step li{padding:7px 0 7px 26px;position:relative}
+.step li::before{content:"→";position:absolute;left:0;color:var(--accent2);font-weight:800}
+.k{display:inline-block;background:var(--surface-2);border:1px solid var(--border);border-radius:6px;padding:1px 8px;font-family:ui-monospace,monospace;font-size:13px;color:var(--cyan);font-weight:600}
+.menu{display:inline-block;background:rgba(99,102,241,.15);border-radius:6px;padding:1px 9px;font-weight:700;font-size:13.5px;color:var(--accent2)}
+.callout{border-radius:12px;padding:14px 16px;margin:14px 0;font-size:13.5px;display:flex;gap:10px}
+.callout .i{font-size:18px;flex-shrink:0}
+.warn{background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3)}
+.danger{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3)}
+.ok{background:rgba(34,197,94,.1);border:1px solid rgba(34,197,94,.3)}
+.tip{background:rgba(99,102,241,.1);border:1px solid rgba(99,102,241,.3)}
+.field{background:var(--surface-2);border-radius:10px;padding:12px 14px;margin:8px 0;font-size:13.5px}
+.field b{color:var(--cyan)}
+.divider{height:1px;background:var(--border);margin:32px 0}
+.check{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px;margin-top:24px}
+.check h2{font-size:17px;margin-bottom:14px}
+.check-item{display:flex;gap:11px;padding:9px 0;border-bottom:1px solid var(--border);font-size:14px}
+.check-item:last-child{border:0}
+.check-item .box{width:20px;height:20px;border:2px solid var(--accent);border-radius:5px;flex-shrink:0;margin-top:1px}
+.foot{text-align:center;color:var(--faint);font-size:12.5px;margin-top:30px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand"><span class="brand-mark">📶</span><span class="brand-name">Conecta<span>Y</span></span></div>
+  <h1>Como instalar o Wi-Fi do cliente</h1>
+  <p class="intro">Guia passo a passo pra configurar o roteador (AP) na loja do cliente e ligar ao portal ConectaY. Serve pro <b>AP 310</b> e <b>AP 360</b> da Intelbras — a configuração é a mesma.</p>
+  <div class="chips"><span class="chip">⏱️ ~20 minutos</span><span class="chip">🔧 Intelbras AP 310 / 360</span><span class="chip">📶 Zeus OS</span></div>
+
+  <div class="callout tip"><span class="i">💡</span><div><b>Antes de sair de casa:</b> cadastre o cliente no painel ConectaY e anote 3 coisas — o <b>domínio</b> dele (ex: loja.conectay.com.br), o <b>código do Wi-Fi</b> e o <b>segredo do AP</b>. Você vai precisar deles no meio do caminho.</div></div>
+
+  <!-- 1 -->
+  <div class="step"><div class="step-n">1</div>
+    <h2>Ligar o roteador e conectar nele</h2>
+    <p>Liga o AP na tomada e no cabo de internet da loja. Espere 1 minuto ligar.</p>
+    <ul>
+      <li>No seu celular/notebook, conecte no Wi-Fi que o AP cria (nome tipo <span class="k">Intelbras</span>)</li>
+      <li>Abra o navegador e digite <span class="k">10.0.0.1</span></li>
+      <li>Usuário e senha padrão: <span class="k">admin</span> / <span class="k">admin</span></li>
+    </ul>
+    <div class="callout warn"><span class="i">⚠️</span><div>Na primeira vez ele pede pra <b>criar uma senha nova</b>. Crie uma e <b>anote</b> — você vai usar ela toda vez que mexer nesse AP. Guarde no painel, nas observações do cliente.</div></div>
+  </div>
+
+  <!-- 2 -->
+  <div class="step"><div class="step-n">2</div>
+    <h2>Configurar o modo de operação</h2>
+    <p>No menu da esquerda, vá em <span class="menu">Rede</span> → <span class="menu">Modo de Operação</span>.</p>
+    <ul>
+      <li>Deixe no modo <b>Roteador</b> (ou <b>Bridge</b>, se a loja já tem um roteador principal e o AP é só pra distribuir o Wi-Fi)</li>
+    </ul>
+    <div class="callout danger"><span class="i">🛑</span><div><b>NÃO clique em "Aplicar" ainda!</b> Se aplicar agora, você perde o acesso ao AP. Configure tudo primeiro e aplique só no final.</div></div>
+  </div>
+
+  <!-- 3 -->
+  <div class="step"><div class="step-n">3</div>
+    <h2>Criar o Wi-Fi da loja</h2>
+    <p>No menu, vá em <span class="menu">Wireless</span> (ou <span class="menu">Rede Sem Fio</span>).</p>
+    <ul>
+      <li>No campo <b>SSID</b>, coloque o nome do Wi-Fi que os clientes vão ver — ex: <span class="k">Loja do Fulano</span></li>
+      <li><b>Deixe SEM senha</b> (rede aberta) — quem controla o acesso é o portal, não uma senha</li>
+      <li>Salve</li>
+    </ul>
+    <div class="callout tip"><span class="i">💡</span><div>Rede aberta = o cliente conecta fácil e cai direto no portal. É assim que tem que ser.</div></div>
+  </div>
+
+  <!-- 4 -->
+  <div class="step"><div class="step-n">4</div>
+    <h2>Ligar o Captive Portal Externo</h2>
+    <p>Essa é a parte principal. No menu, vá em <span class="menu">Wi-Fi Marketing</span> → <span class="menu">Captive Portal Externo</span>.</p>
+    <ul>
+      <li><b>Habilitar:</b> ligue a opção</li>
+      <li><b>Rede (SSID):</b> selecione o Wi-Fi que você criou no passo 3</li>
+    </ul>
+    <p style="margin-top:14px">Agora preencha os campos com os dados do <b>cliente</b> (que você anotou):</p>
+    <div class="field">🌐 <b>Endereço do Captive Portal (Autenticador):</b><br>o domínio do cliente — ex: <span class="k">https://loja.conectay.com.br</span></div>
+    <div class="field">⏱️ <b>Tempo de sessão:</b> 3 horas &nbsp;·&nbsp; <b>Tempo de inatividade:</b> 15 minutos</div>
+    <div class="field">🔑 <b>Tipo de autenticação:</b> conforme o padrão do ConectaY (o que você usa na Absolem)</div>
+    <div class="callout tip"><span class="i">💡</span><div>O <b>domínio</b>, o <b>código</b> e o <b>segredo</b> são únicos de cada cliente — você pega no cadastro dele no painel ConectaY. Nunca use o de outra loja.</div></div>
+  </div>
+
+  <!-- 5 -->
+  <div class="step"><div class="step-n">5</div>
+    <h2>Liberar os sites do portal (Walled Garden)</h2>
+    <p>O <b>Walled Garden</b> é a lista de sites que o cliente pode abrir <b>antes</b> de se conectar — senão o portal nem carrega.</p>
+    <p>Adicione nessa lista:</p>
+    <ul>
+      <li>O domínio do portal — ex: <span class="k">loja.conectay.com.br</span></li>
+      <li><span class="k">*.conectay.com.br</span> (o portal)</li>
+      <li><span class="k">*.instagram.com</span> e <span class="k">*.whatsapp.com</span> (pro cliente ser direcionado)</li>
+      <li><span class="k">*.supabase.co</span> (onde o portal valida)</li>
+    </ul>
+    <div class="callout warn"><span class="i">⚠️</span><div>Esse passo é o que mais causa "o portal não abre". Se esquecer o Walled Garden, o cliente conecta mas fica numa tela branca. Confira com atenção.</div></div>
+  </div>
+
+  <!-- 6 -->
+  <div class="step"><div class="step-n">6</div>
+    <h2>Registrar o AP (MAC Address)</h2>
+    <p>O portal precisa saber que <b>esse</b> roteador tem permissão pra pedir liberação.</p>
+    <ul>
+      <li>Ache o <b>MAC Address</b> do AP — está na <b>etiqueta embaixo do aparelho</b> (ex: <span class="k">AA:BB:CC:DD:EE:FF</span>)</li>
+      <li>Anote e guarde no cadastro do cliente, no painel ConectaY</li>
+    </ul>
+    <div class="callout tip"><span class="i">💡</span><div>Guarde sempre o MAC de cada AP junto do cliente. Se der problema, é a primeira coisa que você vai querer conferir.</div></div>
+  </div>
+
+  <!-- 7 -->
+  <div class="step"><div class="step-n">7</div>
+    <h2>Aplicar e testar</h2>
+    <p>Agora sim: clique em <span class="menu">Aplicar Alterações</span> (canto superior direito). O AP vai reiniciar — espere 1-2 minutos.</p>
+    <ul>
+      <li>Pegue <b>outro celular</b> (não o que você configurou)</li>
+      <li>Conecte no Wi-Fi da loja</li>
+      <li>O portal do cliente deve <b>abrir sozinho</b>, com a cor e a logo dele</li>
+      <li>Toque no botão → deve liberar a internet</li>
+    </ul>
+    <div class="callout ok"><span class="i">✅</span><div>Abriu com a cara do cliente e liberou a internet? <b>Instalação concluída!</b> 🎉</div></div>
+  </div>
+
+  <!-- checklist -->
+  <div class="check">
+    <h2>✅ Antes de ir embora, confira</h2>
+    <div class="check-item"><div class="box"></div><div>O portal abre sozinho ao conectar</div></div>
+    <div class="check-item"><div class="box"></div><div>Aparece a cor e a logo <b>do cliente</b> (não a Absolem)</div></div>
+    <div class="check-item"><div class="box"></div><div>O botão libera a internet</div></div>
+    <div class="check-item"><div class="box"></div><div>A navegação funciona depois de liberar</div></div>
+    <div class="check-item"><div class="box"></div><div>Anotou no painel: senha do AP, MAC, e confirmou o domínio</div></div>
+    <div class="check-item"><div class="box"></div><div>No painel ConectaY, a loja aparece recebendo o acesso de teste</div></div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- problemas -->
+  <div class="step" style="border-color:rgba(245,158,11,.3)">
+    <h2>🔧 Deu problema? Soluções rápidas</h2>
+    <div class="field"><b>Portal não abre (tela branca):</b><br>Quase sempre é o <b>Walled Garden</b> (passo 5). Confira se o domínio do portal está lá.</div>
+    <div class="field"><b>Abre a Absolem em vez do cliente:</b><br>O <b>domínio</b> no AP (passo 4) está errado, ou a loja não está cadastrada com esse domínio no painel.</div>
+    <div class="field"><b>Abre o portal mas não libera:</b><br>O <b>segredo do AP</b> não bate. Confira se é o mesmo no AP e no cadastro do cliente.</div>
+    <div class="field"><b>"Informação não segura":</b><br>Atualize o firmware do AP (Zeus OS) pra versão mais recente — versões antigas davam esse aviso.</div>
+    <div class="field"><b>Esqueceu a senha do AP:</b><br>Segure o botão <b>reset</b> por 15 segundos — volta de fábrica (IP 10.0.0.1, admin/admin). Aí refaz a config.</div>
+  </div>
+
+  <div class="foot">ConectaY · Guia de instalação · Use junto com o cadastro do cliente no painel</div>
+</div>
+</body></html>
