@@ -122,17 +122,39 @@ function renderPortal({ ap, instagram, autoCode, error, marca }) {
   const nome = marca.nome || 'Absolem Tabacaria';
   const igHandle = (instagram || '').replace(/^https?:\/\/(www\.)?instagram\.com\//, '@').replace(/\/$/, '') || ('@' + (marca.igHandle || 'absolem'));
   const ehWpp = marca.destinoTipo === 'whatsapp' && marca.whatsappLink;
+  const ehForm = marca.destinoTipo === 'formulario' && Array.isArray(marca.formCampos) && marca.formCampos.length;
   const btnLabel = ehWpp ? '💬 Entrar no grupo e conectar' : '📸 Seguir no Instagram e conectar';
   const subTxt = ehWpp ? 'Toque no botão abaixo para entrar no nosso grupo e conectar à internet.'
                        : 'Toque no botão abaixo para seguir a gente e conectar à internet.';
   const hintTxt = ehWpp ? 'Você vai entrar no nosso grupo de WhatsApp com a internet já liberada.'
                         : `Você será direcionado ao nosso Instagram <b>${escapeAttr(igHandle)}</b> com a internet já liberada.`;
+  // se for modo formulário, monta os campos que o cliente escolheu
+  const tiposInput = { nome:'text', telefone:'tel', email:'email', aniversario:'date', cpf:'text', cep:'text', bairro:'text' };
+  const camposHtml = ehForm ? marca.formCampos.map(c =>
+    `<input class="fld-form" type="${tiposInput[c.campo]||'text'}" name="lead_${c.campo}" placeholder="${escapeAttr(c.label)}${c.obrigatorio?' *':''}" ${c.obrigatorio?'required':''}>`
+  ).join('') : '';
+  const formTitulo = marca.formTitulo || 'Cadastre-se para usar o Wi-Fi';
+
   const body = `
     <div class="logo"><img src="${escapeAttr(logo)}" alt="${escapeAttr(nome)}"></div>
     <h1>Wi-Fi liberado</h1>
     <p class="sub">${subTxt}</p>
 
     ${error ? `<div class="err">${escapeAttr(error)}</div>` : ''}
+    ${ehForm ? `
+    <form method="post" action="/auth" id="f">
+      ${hidden(ap)}
+      <input type="hidden" name="code" value="${escapeAttr(autoCode || '')}">
+      <input type="hidden" name="go" value="form">
+      <div class="form-titulo">${escapeAttr(formTitulo)}</div>
+      ${camposHtml}
+      <button type="submit" class="igbtn" id="btn">
+        <span class="spin" aria-hidden="true"></span>
+        <span class="lbl">✅ Cadastrar e conectar</span>
+      </button>
+    </form>
+    <div class="hint" id="hint">Seus dados vão só pra ${escapeAttr(nome)}. Ao cadastrar, a internet libera na hora.</div>
+    ` : `
     <form method="post" action="/auth" id="f">
       ${hidden(ap)}
       <input type="hidden" name="code" value="${escapeAttr(autoCode || '')}">
@@ -143,6 +165,7 @@ function renderPortal({ ap, instagram, autoCode, error, marca }) {
       </button>
     </form>
     <div class="hint" id="hint">${hintTxt}</div>
+    `}
     <div class="foot">Ao conectar você concorda com nossos termos de uso.</div>
 
     <div class="load" id="load" aria-hidden="true">
@@ -178,6 +201,9 @@ function renderPortal({ ap, instagram, autoCode, error, marca }) {
     </script>
     <style>:root{ --brand:${cor}; --brand-2:${cor2} }
       .igbtn,.igbtn2{ background:linear-gradient(135deg,${cor},${cor2}) !important }
+      .fld-form{width:100%;box-sizing:border-box;padding:14px 16px;margin:0 0 10px;border:1.5px solid #e5e7eb;border-radius:12px;font-size:16px;background:#fff;color:#111}
+      .fld-form:focus{outline:none;border-color:${cor}}
+      .form-titulo{font-weight:800;font-size:17px;margin:4px 0 14px;color:#1a1a1a}
       .num{ background:${cor} }
       .ring{ border-top-color:${cor} }
     </style>`;
@@ -185,6 +211,13 @@ function renderPortal({ ap, instagram, autoCode, error, marca }) {
 }
 
 function renderResult({ ok, title, msg, link }) {
+  // se for modo formulário, monta os campos que o cliente escolheu
+  const tiposInput = { nome:'text', telefone:'tel', email:'email', aniversario:'date', cpf:'text', cep:'text', bairro:'text' };
+  const camposHtml = ehForm ? marca.formCampos.map(c =>
+    `<input class="fld-form" type="${tiposInput[c.campo]||'text'}" name="lead_${c.campo}" placeholder="${escapeAttr(c.label)}${c.obrigatorio?' *':''}" ${c.obrigatorio?'required':''}>`
+  ).join('') : '';
+  const formTitulo = marca.formTitulo || 'Cadastre-se para usar o Wi-Fi';
+
   const body = `
     <div class="logo"><img src="${LOGO}" alt="Absolem Tabacaria"></div>
     <h1>${escapeAttr(title)}</h1>
