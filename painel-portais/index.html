@@ -125,6 +125,11 @@ label.fld small{color:var(--text-faint);font-weight:400}
 .preset-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
 .secao{font-size:13px;font-weight:800;color:var(--accent-2);margin:20px 0 12px;padding-bottom:7px;border-bottom:1px solid var(--border)}
 .secao:first-child{margin-top:0}
+.fb-row{display:flex;justify-content:space-between;align-items:center;padding:9px 12px;border:1px solid var(--border);border-radius:9px;margin-bottom:7px;background:var(--surface-2)}
+.fb-row.on{border-color:var(--accent)}
+.fb-check{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;cursor:pointer}
+.fb-obrig{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--warn);cursor:pointer}
+.form-hint{font-size:11.5px;color:var(--text-faint);margin-top:4px}
 .secao small{color:var(--text-faint);font-weight:400}
 .preset{width:34px;height:26px;border-radius:7px;cursor:pointer;border:2px solid transparent;transition:.12s}
 .preset:hover{transform:scale(1.1);border-color:#fff}
@@ -329,7 +334,7 @@ function abrirDetalhe(id){
   const total30=(window.__cont||{})[id]||0;
   const total7=(window.__cont7||{})[id]||0;
   const hojeC=meus.filter(a=>{const d=new Date(a.criado_em);d.setHours(0,0,0,0);return +d===+hoje;}).length;
-  const destino=l.destino_tipo==='whatsapp'?'entraram no grupo':'foram pro Instagram';
+  const destino=l.destino_tipo==='whatsapp'?'entraram no grupo':(l.destino_tipo==='formulario'?'deixaram seus dados':'foram pro Instagram');
 
   const bg=document.createElement('div');bg.className='modal-bg';bg.id='modalBg';
   bg.innerHTML=`<div class="modal det">
@@ -343,6 +348,7 @@ function abrirDetalhe(id){
     ${buckets.reduce((a,b)=>a+b,0)?`<div class="spark-wrap" style="margin:0 0 6px"><h3>Conexões por dia</h3><div class="spark">${buckets.map(v=>`<div class="bar" style="height:${Math.max(3,v/max*100)}%" title="${v}"></div>`).join('')}</div></div>`:'<div class="det-share">Ainda sem conexões registradas. Assim que o Wi-Fi começar a ser usado, os números aparecem aqui.</div>'}
     ${(l.responsavel||l.contato||l.documento||l.endereco)?`<div class="det-share" style="border-style:solid;border-color:var(--border)">📋 <b>Cadastro</b><br>${l.responsavel?'👤 '+esc(l.responsavel)+'<br>':''}${l.contato?'📱 '+esc(l.contato)+'<br>':''}${l.documento?'📄 '+esc(l.documento)+'<br>':''}${l.email_cliente?'✉️ '+esc(l.email_cliente)+'<br>':''}${l.endereco?'📍 '+esc(l.endereco):''}</div>`:''}
     <div class="det-share">📣 <b>Pra mostrar pro cliente:</b> "Nos últimos 30 dias, <b>${total30} pessoas</b> conectaram no seu Wi-Fi e ${destino}."</div>
+    ${l.destino_tipo==='formulario'?`<div class="det-share" style="border-style:solid;border-color:var(--border)">📝 <b>Formulário de leads</b> — <span id="leadCount">carregando…</span><div style="margin-top:8px"><button class="btn sm primary" onclick="verLeads(${l.id},'${esc(l.nome)}')">Ver leads coletados</button> <button class="btn sm" onclick="baixarLeads(${l.id},'${esc(l.slug)}')">⬇️ Baixar CSV</button></div></div>`:''}
     ${l.valor_mensal?`<div class="det-share" style="border-style:solid;border-color:var(--border)">💰 <b>Cobrança:</b> R$ ${Number(l.valor_mensal).toLocaleString('pt-BR',{minimumFractionDigits:2})}/mês${l.dia_vencimento?', vence dia '+l.dia_vencimento:''} — <b class="trend ${statusCobranca(l).cls}" style="display:inline">${statusCobranca(l).txt}</b>${l.ultimo_pagamento?'<br>Último pagamento: '+l.ultimo_pagamento.split('-').reverse().join('/'):''}</div>`:''}
     <div class="modal-acts" style="margin-top:16px;flex-wrap:wrap">
       <button class="btn danger" onclick="excluir(${l.id})" style="margin-right:auto">🗑️ Excluir</button>
@@ -353,6 +359,38 @@ function abrirDetalhe(id){
   </div>`;
   bg.addEventListener('click',e=>{if(e.target===bg)fecharModal();});
   document.body.appendChild(bg);
+}
+
+async function verLeads(id,nome){
+  const {data,error}=await sb.from('portal_leads').select('dados,criado_em').eq('loja_id',id).order('criado_em',{ascending:false}).limit(200);
+  if(error){toast('Erro: '+error.message);return}
+  const leads=data||[];
+  const bg=document.createElement('div');bg.className='modal-bg';bg.id='modalBg2';
+  const linhas=leads.length?leads.map(l=>{
+    const d=l.dados||{};
+    const campos=Object.entries(d).map(([k,v])=>`<b>${esc(k)}:</b> ${esc(v)}`).join(' · ');
+    return `<div style="padding:9px 0;border-bottom:1px solid var(--border);font-size:13px">${campos}<div style="font-size:10.5px;color:var(--text-faint);margin-top:2px">${new Date(l.criado_em).toLocaleString('pt-BR')}</div></div>`;
+  }).join(''):'<div class="vazio" style="padding:30px"><div class="big">📝</div>Ainda nenhum lead coletado.</div>';
+  bg.innerHTML=`<div class="modal"><h2>📝 Leads — ${esc(nome)}</h2><div class="hint">${leads.length} cadastro(s). Os mais recentes primeiro.</div><div style="max-height:50vh;overflow-y:auto">${linhas}</div><div class="modal-acts" style="margin-top:14px"><button class="btn ghost" onclick="document.getElementById('modalBg2').remove()">Fechar</button></div></div>`;
+  bg.addEventListener('click',e=>{if(e.target===bg)bg.remove();});
+  document.body.appendChild(bg);
+}
+async function baixarLeads(id,slug){
+  const {data,error}=await sb.from('portal_leads').select('dados,criado_em').eq('loja_id',id).order('criado_em',{ascending:false});
+  if(error){toast('Erro: '+error.message);return}
+  const leads=data||[];
+  if(!leads.length){toast('Nenhum lead pra baixar ainda');return}
+  const cols=[...new Set(leads.flatMap(l=>Object.keys(l.dados||{})))];
+  const head=['data',...cols];
+  const linhas=leads.map(l=>[new Date(l.criado_em).toLocaleString('pt-BR'),...cols.map(c=>(l.dados||{})[c]||'')]);
+  const csv=[head,...linhas].map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
+  const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='leads_'+slug+'.csv';a.click();
+  toast('CSV baixado ✅');
+}
+async function contarLeads(id){
+  try{const {count}=await sb.from('portal_leads').select('id',{count:'exact',head:true}).eq('loja_id',id);
+    const el=document.getElementById('leadCount'); if(el)el.innerHTML='<b>'+(count||0)+'</b> cadastro(s) coletado(s)';}catch(e){}
 }
 
 // ---------- modal nova/editar ----------
@@ -380,10 +418,18 @@ function campos(l){
       <select id="f_destino" onchange="trocaDestino()">
         <option value="instagram" ${(l.destino_tipo||'instagram')==='instagram'?'selected':''}>📸 Seguir no Instagram</option>
         <option value="whatsapp" ${l.destino_tipo==='whatsapp'?'selected':''}>💬 Entrar no grupo do WhatsApp</option>
+        <option value="formulario" ${l.destino_tipo==='formulario'?'selected':''}>📝 Preencher um formulário (coletar dados)</option>
       </select>
     </label>
     <label class="fld" id="wrap_insta"><span>@ do Instagram <small>(sem @)</small></span><input id="f_instagram" value="${esc(l.instagram)}"></label>
     <label class="fld" id="wrap_wpp" style="display:none"><span>Link do grupo <small>(chat.whatsapp.com/...)</small></span><input id="f_wpp" value="${esc(l.whatsapp_link)}" placeholder="https://chat.whatsapp.com/XXXX"></label>
+
+    <div id="wrap_form" style="display:none">
+      <label class="fld"><span>Título do formulário <small>(o que aparece no topo)</small></span><input id="f_form_titulo" value="${esc(l.form_titulo)}" placeholder="Ex: Cadastre-se e ganhe Wi-Fi grátis"></label>
+      <label class="fld"><span>Quais dados pedir? <small>(marque o que quer; a chavinha exige o campo)</small></span></label>
+      <div id="formBuilder"></div>
+      <div class="form-hint">💡 Quanto menos campos, mais gente preenche. Peça só o essencial.</div>
+    </div>
 
     <label class="fld"><span>Logo da loja <small>(clica pra enviar uma imagem)</small></span></label>
     <div class="logo-up" id="logoUp" onclick="document.getElementById('f_logo_file').click()">
@@ -455,10 +501,42 @@ async function subirLogo(input){
   document.getElementById('logoPlaceholder').style.display='none';
   st.textContent='Logo enviada ✅';
 }
+const CAMPOS_FORM=[
+  {campo:'nome',label:'Nome',fixo:false},
+  {campo:'telefone',label:'Telefone / WhatsApp',fixo:false},
+  {campo:'email',label:'E-mail',fixo:false},
+  {campo:'aniversario',label:'Aniversário',fixo:false},
+  {campo:'cpf',label:'CPF',fixo:false},
+  {campo:'cep',label:'CEP',fixo:false},
+  {campo:'bairro',label:'Bairro',fixo:false},
+];
+let FORM_ATUAL=[];
 function trocaDestino(){
   const t=document.getElementById('f_destino').value;
   document.getElementById('wrap_insta').style.display=t==='instagram'?'':'none';
   document.getElementById('wrap_wpp').style.display=t==='whatsapp'?'':'none';
+  const wf=document.getElementById('wrap_form'); if(wf)wf.style.display=t==='formulario'?'':'none';
+  if(t==='formulario')montarFormBuilder();
+}
+function montarFormBuilder(){
+  const box=document.getElementById('formBuilder'); if(!box)return;
+  box.innerHTML=CAMPOS_FORM.map(c=>{
+    const sel=FORM_ATUAL.find(x=>x.campo===c.campo);
+    const ativo=!!sel, obrig=sel&&sel.obrigatorio;
+    return `<div class="fb-row ${ativo?'on':''}">
+      <label class="fb-check"><input type="checkbox" ${ativo?'checked':''} onchange="toggleCampo('${c.campo}',this.checked)"> ${c.label}</label>
+      <label class="fb-obrig" style="${ativo?'':'visibility:hidden'}"><input type="checkbox" ${obrig?'checked':''} onchange="toggleObrig('${c.campo}',this.checked)"> obrigatório</label>
+    </div>`;
+  }).join('');
+}
+function toggleCampo(campo,on){
+  const c=CAMPOS_FORM.find(x=>x.campo===campo);
+  if(on){ if(!FORM_ATUAL.find(x=>x.campo===campo))FORM_ATUAL.push({campo,label:c.label,obrigatorio:false}); }
+  else FORM_ATUAL=FORM_ATUAL.filter(x=>x.campo!==campo);
+  montarFormBuilder();
+}
+function toggleObrig(campo,on){
+  const f=FORM_ATUAL.find(x=>x.campo===campo); if(f)f.obrigatorio=on;
 }
 function abrirNova(){abrirModal(null);}
 function editar(id){abrirModal(LOJAS.find(l=>l.id===id));}
@@ -478,6 +556,7 @@ function abrirModal(l){
   </div>`;
   bg.addEventListener('click',e=>{if(e.target===bg)fecharModal();});
   document.body.appendChild(bg);
+  FORM_ATUAL=(l&&l.form_campos)?JSON.parse(JSON.stringify(l.form_campos)):[{campo:'nome',label:'Nome',obrigatorio:true},{campo:'telefone',label:'Telefone / WhatsApp',obrigatorio:true}];
   trocaDestino();
   montarPresets();
   previewPaleta();
@@ -494,7 +573,9 @@ async function salvar(id){
     cor:v('cor'),cor2:v('cor2')||null,logo_url:v('logo')||null,codigo_wifi:v('codigo')||null,ap_secret:v('secret')||null,
     valor_mensal:v('valor')?parseFloat(v('valor')):null,dia_vencimento:v('diavenc')?parseInt(v('diavenc')):null,plano:v('plano')||null,obs:v('obs')||null,
     destino_tipo:document.getElementById('f_destino').value,
-    whatsapp_link:v('wpp')||null
+    whatsapp_link:v('wpp')||null,
+    form_titulo:v('form_titulo')||null,
+    form_campos:FORM_ATUAL.length?FORM_ATUAL:null
   };
   let error;
   if(id){({error}=await sb.from('portal_lojas').update(payload).eq('id',id));}
