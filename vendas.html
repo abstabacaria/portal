@@ -147,8 +147,8 @@ footer .logo{justify-content:center;margin-bottom:10px;font-size:17px}
 <header class="hero"><div class="wrap hero-grid">
   <div>
     <span class="eyebrow">📶 Wi-Fi que trabalha pra você</span>
-    <h1>Seu Wi-Fi grátis pode <span class="g">encher seu Instagram e seu grupo</span> — sozinho.</h1>
-    <p class="lead">Toda vez que um cliente conecta no Wi-Fi da sua loja, ele vira seguidor, entra no seu grupo ou deixa o contato. Você não faz nada. A gente cuida de tudo.</p>
+    <h1><span id="heroT1">Seu Wi-Fi grátis pode</span> <span class="g" id="heroT2">encher seu Instagram e seu grupo</span> <span id="heroT3">— sozinho.</span></h1>
+    <p class="lead" id="heroTexto">Toda vez que um cliente conecta no Wi-Fi da sua loja, ele vira seguidor, entra no seu grupo ou deixa o contato. Você não faz nada. A gente cuida de tudo.</p>
     <div class="hero-cta">
       <a class="btn btn-p" href="#falar">Falar no WhatsApp →</a>
       <a class="btn btn-g" href="#como">Ver como funciona</a>
@@ -214,13 +214,13 @@ footer .logo{justify-content:center;margin-bottom:10px;font-size:17px}
   <div class="kicker reveal">Prova real</div>
   <h2 class="reveal">Já está funcionando numa loja de verdade.</h2>
   <div class="prova-box reveal">
-    <div class="quote">"O Wi-Fi da minha tabacaria virou <span class="g">uma máquina de seguidor</span>. Cada cliente que conecta já me segue. Não mexo em nada."</div>
+    <div class="quote">"<span id="provaF1">O Wi-Fi da minha tabacaria virou</span> <span class="g" id="provaFC">uma máquina de seguidor</span><span id="provaF2">. Cada cliente que conecta já me segue. Não mexo em nada.</span>"</div>
     <div class="prova-nums">
-      <div><div class="n" data-count="340">340</div><div class="l">conexões por mês</div></div>
+      <div><div class="n" data-count="340">340</div><div class="l" id="provaNumLabel">conexões por mês</div></div>
       <div><div class="n" style="color:var(--neon)">+1 clique</div><div class="l">pra virar seguidor</div></div>
       <div><div class="n">R$ 0</div><div class="l">de esforço do dono</div></div>
     </div>
-    <div class="prova-selo">🏪 Absolem Tabacaria · Rio de Janeiro</div>
+    <div class="prova-selo" id="provaLoja">🏪 Absolem Tabacaria · Rio de Janeiro</div>
   </div>
 </div></section>
 
@@ -249,7 +249,7 @@ footer .logo{justify-content:center;margin-bottom:10px;font-size:17px}
     <h2>Bora fazer seu Wi-Fi trabalhar?</h2>
     <p>Me chama no WhatsApp. Explico tudo, sem compromisso.</p>
     <a class="btn btn-p" id="waBtn" href="#">💬 Falar no WhatsApp agora</a>
-    <div class="garantia">✨ Primeiro mês pra testar · Não gostou, é só avisar</div>
+    <div class="garantia" id="garantia">✨ Primeiro mês pra testar · Não gostou, é só avisar</div>
   </div>
 </div></section>
 
@@ -259,11 +259,64 @@ footer .logo{justify-content:center;margin-bottom:10px;font-size:17px}
 </div></footer>
 
 <script>
-// >>> TROQUE pelo seu número (com DDD, só números) <<<
-const WHATSAPP = '5521986440075';
-const MSG = 'Oi! Vi a página do ConectaY e quero saber como funciona pra minha loja.';
-document.getElementById('waBtn').href = 'https://wa.me/'+WHATSAPP+'?text='+encodeURIComponent(MSG);
-document.querySelector('.nav-cta').href = 'https://wa.me/'+WHATSAPP+'?text='+encodeURIComponent(MSG);
+/* ============================================================
+   ⚙️  EDITE AQUI  —  tudo que você troca fica nesta caixa.
+   Não precisa mexer em mais nada no arquivo. Depois de editar,
+   salve e suba de novo no GitHub.
+   ============================================================ */
+const CONFIG = {
+
+  // 📱 SEU WHATSAPP (com DDD, só números, sem espaço nem traço)
+  whatsapp: '5521987654321',
+
+  // 💬 A mensagem que já vem escrita quando o cliente clica
+  mensagem: 'Oi! Vi a página do ConectaY e quero saber como funciona pra minha loja.',
+
+  // ✏️ TEXTOS DA PÁGINA — troque à vontade
+  heroTitulo1: 'Seu Wi-Fi grátis pode',
+  heroTitulo2: 'encher seu Instagram e seu grupo',      // essa parte fica colorida
+  heroTitulo3: '— sozinho.',
+  heroTexto: 'Toda vez que um cliente conecta no Wi-Fi da sua loja, ele vira seguidor, entra no seu grupo ou deixa o contato. Você não faz nada. A gente cuida de tudo.',
+
+  // 🏪 A PROVA (case) — troque pelos seus números reais
+  provaFrase1: 'O Wi-Fi da minha tabacaria virou',
+  provaFraseColorida: 'uma máquina de seguidor',        // parte colorida
+  provaFrase2: '. Cada cliente que conecta já me segue. Não mexo em nada.',
+  provaNumero: 340,                                      // o número que sobe na tela
+  provaNumeroLabel: 'conexões por mês',
+  provaLoja: '🏪 Absolem Tabacaria · Rio de Janeiro',
+
+  // ✨ A garantia embaixo do botão final
+  garantia: '✨ Primeiro mês pra testar · Não gostou, é só avisar',
+
+  // 🔗 LOGO (opcional) — cole o link de uma imagem pra trocar o ícone 📶
+  //     Deixe '' (vazio) pra manter o ícone padrão.
+  logoUrl: '',
+};
+/* ===== fim da parte que você edita ===== */
+
+
+// --- daqui pra baixo é o motor da página (não precisa mexer) ---
+const zap = 'https://wa.me/'+CONFIG.whatsapp+'?text='+encodeURIComponent(CONFIG.mensagem);
+document.getElementById('waBtn').href = zap;
+document.querySelector('.nav-cta').href = zap;
+
+// aplica os textos configuráveis
+function setTxt(sel,txt){const e=document.querySelector(sel);if(e&&txt!=null)e.textContent=txt;}
+setTxt('#heroT1',CONFIG.heroTitulo1);
+setTxt('#heroT2',CONFIG.heroTitulo2);
+setTxt('#heroT3',CONFIG.heroTitulo3);
+setTxt('#heroTexto',CONFIG.heroTexto);
+setTxt('#provaF1',CONFIG.provaFrase1);
+setTxt('#provaFC',CONFIG.provaFraseColorida);
+setTxt('#provaF2',CONFIG.provaFrase2);
+setTxt('#provaNumLabel',CONFIG.provaNumeroLabel);
+setTxt('#provaLoja',CONFIG.provaLoja);
+setTxt('#garantia',CONFIG.garantia);
+// logo opcional
+if(CONFIG.logoUrl){
+  document.querySelectorAll('.logo .m').forEach(m=>{m.innerHTML='<img src="'+CONFIG.logoUrl+'" style="width:100%;height:100%;object-fit:contain;border-radius:8px">';});
+}
 
 // reveal no scroll
 const io=new IntersectionObserver((es)=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target)}}),{threshold:.15});
@@ -271,6 +324,7 @@ document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
 
 // conta o número da prova
 const cn=document.querySelector('[data-count]');
+if(cn)cn.dataset.count=CONFIG.provaNumero;
 if(cn){const alvo=+cn.dataset.count;const io2=new IntersectionObserver((es)=>es.forEach(e=>{if(e.isIntersecting){let v=0;const t=setInterval(()=>{v+=Math.ceil(alvo/40);if(v>=alvo){v=alvo;clearInterval(t)}cn.textContent=v},28);io2.unobserve(e.target)}}),{threshold:.5});io2.observe(cn);}
 </script>
 </body></html>
