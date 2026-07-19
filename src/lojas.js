@@ -105,10 +105,22 @@ async function registrarAcesso(loja, mac, dispositivo) {
   }
 }
 
+// grava um lead coletado pelo formulário (isolado por loja)
+async function registrarLead(loja, dados, mac) {
+  if (!loja) return;
+  try {
+    await fetch(`${SUPABASE_URL}/rest/v1/portal_leads`, {
+      method: 'POST',
+      headers: { ...H, Prefer: 'return=minimal' },
+      body: JSON.stringify({ loja_id: loja.id, slug: loja.slug, dados: dados || {}, mac: mac || null }),
+    });
+  } catch (e) { /* silencioso */ }
+}
+
 // limpa o cache de um domínio (útil quando você edita a loja no painel)
 function limparCache(host) {
   if (host) CACHE.delete(norm(host));
   else CACHE.clear();
 }
 
-module.exports = { lojaPorDominio, lojaPorSlug, validarCodigoDaLoja, registrarAcesso, limparCache };
+module.exports = { lojaPorDominio, lojaPorSlug, validarCodigoDaLoja, registrarAcesso, registrarLead, limparCache };
