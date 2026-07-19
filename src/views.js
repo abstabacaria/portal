@@ -136,7 +136,7 @@ function renderPortal({ ap, instagram, autoCode, error, marca }) {
   const formTitulo = marca.formTitulo || 'Cadastre-se para usar o Wi-Fi';
 
   const body = `
-    <div class="logo"><img src="${escapeAttr(logo)}" alt="${escapeAttr(nome)}"></div>
+    <div class="logo">${(logo && !logo.endsWith('/static/logo.png')) ? `<img src="${escapeAttr(logo)}" alt="${escapeAttr(nome)}">` : `<div class="logo-nome">${escapeAttr(nome)}</div>`}</div>
     <h1>Wi-Fi liberado</h1>
     <p class="sub">${subTxt}</p>
 
@@ -204,6 +204,7 @@ function renderPortal({ ap, instagram, autoCode, error, marca }) {
       .fld-form{width:100%;box-sizing:border-box;padding:14px 16px;margin:0 0 10px;border:1.5px solid #e5e7eb;border-radius:12px;font-size:16px;background:#fff;color:#111}
       .fld-form:focus{outline:none;border-color:${cor}}
       .form-titulo{font-weight:800;font-size:17px;margin:4px 0 14px;color:#1a1a1a}
+      .logo-nome{font-size:26px;font-weight:900;background:linear-gradient(135deg,${cor},${cor2});-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;padding:8px 0}
       .num{ background:${cor} }
       .ring{ border-top-color:${cor} }
     </style>`;
