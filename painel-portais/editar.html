@@ -1,0 +1,179 @@
+<!DOCTYPE html><html lang="pt-BR"><head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Personalizar meu Wi-Fi — ConectaY</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0b0d13;--surface:#151823;--surface-2:#1c2030;--border:#282d3f;--border-2:#39405a;--text:#eef1f8;--text-dim:#98a0b6;--text-faint:#5f6780;--accent:#6366f1;--accent-2:#818cf8;--accent-3:#22d3ee;--success:#22c55e;--warn:#f59e0b;--danger:#ef4444;--grad:linear-gradient(135deg,#6366f1,#22d3ee)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:Inter,system-ui,sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;padding:20px}
+.wrap{max-width:520px;margin:0 auto}
+.brand{display:flex;align-items:center;gap:10px;margin-bottom:6px}
+.brand-mark{width:34px;height:34px;border-radius:10px;background:var(--grad);display:flex;align-items:center;justify-content:center;font-size:17px}
+.brand-name{font-size:20px;font-weight:900;background:var(--grad);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.brand-name span{-webkit-text-fill-color:var(--accent-3)}
+h1{font-size:18px;font-weight:800;margin:18px 0 3px}
+.sub{color:var(--text-dim);font-size:13px;margin-bottom:22px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:22px;margin-bottom:16px}
+label.fld{display:block;margin-bottom:14px}
+label.fld>span{display:block;font-size:12.5px;color:var(--text-dim);font-weight:600;margin-bottom:6px}
+input,select{width:100%;padding:12px 14px;border-radius:10px;background:var(--surface-2);border:1px solid var(--border);color:var(--text);font-family:inherit;font-size:14px}
+input:focus,select:focus{outline:none;border-color:var(--accent)}
+.secao{font-size:13px;font-weight:800;color:var(--accent-2);margin:4px 0 14px}
+.btn{border:0;border-radius:10px;padding:14px 22px;font-weight:800;font-size:15px;cursor:pointer;width:100%;background:var(--grad);color:#fff}
+.btn:disabled{opacity:.5}
+.paleta{display:flex;align-items:center;gap:14px;margin-bottom:12px;flex-wrap:wrap}
+.pcor{display:flex;flex-direction:column;align-items:center;gap:5px}
+.pcor input[type=color]{width:52px;height:52px;border-radius:50%;border:3px solid var(--border-2);padding:0;cursor:pointer;background:none}
+.pcor span{font-size:10.5px;color:var(--text-dim);font-weight:600}
+.pgrad{flex:1;min-width:110px;height:52px;border-radius:12px;border:1px solid var(--border)}
+.logo-up{border:2px dashed var(--border-2);border-radius:14px;padding:20px;text-align:center;cursor:pointer;background:var(--surface-2)}
+.logo-up:hover{border-color:var(--accent)}
+.logo-up img{max-height:70px;max-width:100%;border-radius:8px}
+.lu-ico{font-size:28px;margin-bottom:6px}
+.fb-row{display:flex;justify-content:space-between;align-items:center;padding:10px 12px;border:1px solid var(--border);border-radius:9px;margin-bottom:7px;background:var(--surface-2)}
+.fb-row.on{border-color:var(--accent)}
+.fb-check{display:flex;align-items:center;gap:8px;font-size:13.5px;font-weight:600;cursor:pointer}
+.fb-obrig{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--warn);cursor:pointer}
+.preview{background:var(--surface-2);border-radius:12px;padding:18px;text-align:center;margin-top:10px}
+.pv-btn{display:inline-block;padding:13px 20px;border-radius:12px;color:#fff;font-weight:800;font-size:14px;margin-top:10px}
+.msg{padding:14px;border-radius:10px;text-align:center;font-weight:600;margin-bottom:16px}
+.msg.err{background:rgba(239,68,68,.12);color:#f87171}
+.msg.ok{background:rgba(34,197,94,.12);color:#4ade80}
+.hidden{display:none!important}
+.center{text-align:center;padding:40px 20px;color:var(--text-dim)}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--surface-2);border:1px solid var(--border);padding:12px 20px;border-radius:10px;font-size:13px;font-weight:600;box-shadow:0 8px 30px rgba(0,0,0,.4)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="brand"><span class="brand-mark">📶</span><span class="brand-name">Conecta<span>Y</span></span></div>
+
+  <div id="loading" class="center">Carregando…</div>
+  <div id="erro" class="center hidden"><div style="font-size:40px;margin-bottom:12px">🔒</div><h1>Link inválido</h1><p class="sub">Esse link de edição não é válido ou expirou. Fale com quem cuida do seu Wi-Fi.</p></div>
+
+  <div id="app" class="hidden">
+    <h1>Personalizar o Wi-Fi da <span id="nomeLoja"></span></h1>
+    <p class="sub">Ajuste a aparência e pra onde seus clientes vão. As mudanças valem na hora. ✨</p>
+    <div id="msg"></div>
+
+    <div class="card">
+      <div class="secao">🎯 Pra onde levar seu cliente?</div>
+      <label class="fld"><select id="destino" onchange="troca()">
+        <option value="instagram">📸 Seguir no Instagram</option>
+        <option value="whatsapp">💬 Entrar no grupo do WhatsApp</option>
+        <option value="formulario">📝 Preencher um formulário</option>
+      </select></label>
+      <label class="fld" id="w_insta"><span>@ do seu Instagram (sem @)</span><input id="instagram" placeholder="minhaloja"></label>
+      <label class="fld hidden" id="w_wpp"><span>Link do grupo (chat.whatsapp.com/...)</span><input id="whatsapp" placeholder="https://chat.whatsapp.com/..."></label>
+      <div class="hidden" id="w_form">
+        <label class="fld"><span>Título do formulário</span><input id="form_titulo" placeholder="Cadastre-se e ganhe Wi-Fi grátis"></label>
+        <span style="font-size:12.5px;color:var(--text-dim);font-weight:600;display:block;margin-bottom:8px">Quais dados pedir?</span>
+        <div id="formBuilder"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="secao">🎨 Cores</div>
+      <div class="paleta">
+        <div class="pcor"><input id="cor" type="color" oninput="prev()"><span>Principal</span></div>
+        <div class="pcor"><input id="cor2" type="color" oninput="prev()"><span>Secundária</span></div>
+        <div class="pgrad" id="pgrad"></div>
+      </div>
+      <div class="secao" style="margin-top:8px">🖼️ Logo</div>
+      <div class="logo-up" onclick="document.getElementById('logofile').click()">
+        <img id="logoPrev" style="display:none">
+        <div id="logoPh"><div class="lu-ico">🖼️</div>Toque pra enviar sua logo</div>
+        <input type="file" id="logofile" accept="image/*" style="display:none" onchange="subirLogo(this)">
+      </div>
+      <div id="logoStatus" style="font-size:11.5px;color:var(--text-dim);margin-top:6px"></div>
+    </div>
+
+    <button class="btn" id="salvar" onclick="salvar()">Salvar mudanças</button>
+  </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL='https://iekxuehdrxsimqtfejxm.supabase.co';
+const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlla3h1ZWhkcnhzaW1xdGZlanhtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1MDk0NzAsImV4cCI6MjA5MTA4NTQ3MH0.61zaRoTBK2XorXgAcGXcsN8yOY0MTRS4bIJ_X4vPjyA';
+const sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
+const params=new URLSearchParams(location.search);
+const SLUG=params.get('loja'), TOKEN=params.get('token');
+let FORM_ATUAL=[];
+const CAMPOS=[{campo:'nome',label:'Nome'},{campo:'telefone',label:'Telefone / WhatsApp'},{campo:'email',label:'E-mail'},{campo:'aniversario',label:'Aniversário'},{campo:'cpf',label:'CPF'},{campo:'cep',label:'CEP'},{campo:'bairro',label:'Bairro'}];
+
+function toast(m){const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),2600);}
+
+async function carregar(){
+  if(!SLUG||!TOKEN){mostrarErro();return;}
+  const {data,error}=await sb.rpc('portal_cliente_ler',{p_slug:SLUG,p_token:TOKEN});
+  if(error||!data){mostrarErro();return;}
+  document.getElementById('loading').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  document.getElementById('nomeLoja').textContent=data.nome||'sua loja';
+  document.getElementById('destino').value=data.destino_tipo||'instagram';
+  document.getElementById('instagram').value=data.instagram||'';
+  document.getElementById('whatsapp').value=data.whatsapp_link||'';
+  document.getElementById('form_titulo').value=data.form_titulo||'';
+  document.getElementById('cor').value=data.cor||'#6366f1';
+  document.getElementById('cor2').value=data.cor2||data.cor||'#22d3ee';
+  if(data.logo_url){const i=document.getElementById('logoPrev');i.src=data.logo_url;i.style.display='';document.getElementById('logoPh').style.display='none';document.getElementById('logofile').dataset.url=data.logo_url;}
+  FORM_ATUAL=data.form_campos||[{campo:'nome',label:'Nome',obrigatorio:true},{campo:'telefone',label:'Telefone / WhatsApp',obrigatorio:true}];
+  troca();prev();
+}
+function mostrarErro(){document.getElementById('loading').classList.add('hidden');document.getElementById('erro').classList.remove('hidden');}
+
+function troca(){
+  const t=document.getElementById('destino').value;
+  document.getElementById('w_insta').classList.toggle('hidden',t!=='instagram');
+  document.getElementById('w_wpp').classList.toggle('hidden',t!=='whatsapp');
+  document.getElementById('w_form').classList.toggle('hidden',t!=='formulario');
+  if(t==='formulario')builder();
+  prev();
+}
+function builder(){
+  document.getElementById('formBuilder').innerHTML=CAMPOS.map(c=>{
+    const sel=FORM_ATUAL.find(x=>x.campo===c.campo),a=!!sel,o=sel&&sel.obrigatorio;
+    return `<div class="fb-row ${a?'on':''}"><label class="fb-check"><input type="checkbox" ${a?'checked':''} onchange="tC('${c.campo}',this.checked)"> ${c.label}</label><label class="fb-obrig" style="${a?'':'visibility:hidden'}"><input type="checkbox" ${o?'checked':''} onchange="tO('${c.campo}',this.checked)"> obrigatório</label></div>`;
+  }).join('');
+}
+function tC(campo,on){const c=CAMPOS.find(x=>x.campo===campo);if(on){if(!FORM_ATUAL.find(x=>x.campo===campo))FORM_ATUAL.push({campo,label:c.label,obrigatorio:false});}else FORM_ATUAL=FORM_ATUAL.filter(x=>x.campo!==campo);builder();}
+function tO(campo,on){const f=FORM_ATUAL.find(x=>x.campo===campo);if(f)f.obrigatorio=on;}
+function prev(){const c1=document.getElementById('cor').value,c2=document.getElementById('cor2').value;document.getElementById('pgrad').style.background='linear-gradient(135deg,'+c1+','+c2+')';}
+
+async function subirLogo(input){
+  const f=input.files&&input.files[0];if(!f)return;
+  if(f.size>2*1024*1024){toast('Imagem muito grande (máx 2MB)');return;}
+  document.getElementById('logoStatus').textContent='Enviando…';
+  const nome='loja_'+SLUG+'_'+Date.now()+'.'+(f.name.split('.').pop()||'png').toLowerCase();
+  const {error}=await sb.storage.from('logos').upload(nome,f,{upsert:true,contentType:f.type});
+  if(error){document.getElementById('logoStatus').textContent='';toast('Erro no envio: '+error.message);return;}
+  const {data:pub}=sb.storage.from('logos').getPublicUrl(nome);
+  input.dataset.url=pub.publicUrl;
+  const i=document.getElementById('logoPrev');i.src=pub.publicUrl;i.style.display='';document.getElementById('logoPh').style.display='none';
+  document.getElementById('logoStatus').textContent='Logo enviada ✅';
+}
+
+async function salvar(){
+  const btn=document.getElementById('salvar');btn.disabled=true;btn.textContent='Salvando…';
+  const {data,error}=await sb.rpc('portal_cliente_salvar',{
+    p_slug:SLUG,p_token:TOKEN,
+    p_cor:document.getElementById('cor').value,
+    p_cor2:document.getElementById('cor2').value,
+    p_logo:document.getElementById('logofile').dataset.url||null,
+    p_instagram:document.getElementById('instagram').value.replace(/^@/,'')||null,
+    p_whatsapp:document.getElementById('whatsapp').value||null,
+    p_destino:document.getElementById('destino').value,
+    p_form_titulo:document.getElementById('form_titulo').value||null,
+    p_form_campos:FORM_ATUAL.length?FORM_ATUAL:null
+  });
+  btn.disabled=false;btn.textContent='Salvar mudanças';
+  const m=document.getElementById('msg');
+  if(error||!data){m.className='msg err';m.textContent='Não consegui salvar. Tente de novo.';return;}
+  m.className='msg ok';m.textContent='✅ Salvo! Suas mudanças já estão no ar.';
+  window.scrollTo({top:0,behavior:'smooth'});
+  setTimeout(()=>{m.className='';m.textContent='';},4000);
+}
+carregar();
+</script>
+</body></html>
