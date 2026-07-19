@@ -98,7 +98,7 @@ label.fld small{color:var(--text-faint);font-weight:400}
 .loja{cursor:default}
 .loja .info{cursor:pointer}
 .loja .trend{font-size:11px;font-weight:700;margin-top:2px}
-.trend.up{color:var(--success)}.trend.down{color:var(--danger)}.trend.flat{color:var(--text-faint)}
+.trend.up{color:var(--success)}.trend.down{color:var(--danger)}.trend.flat{color:var(--text-faint)}.trend.warn{color:var(--warn)}
 
 /* detalhe da loja (modal grande) */
 .det h2{font-size:20px;margin-bottom:2px}
@@ -231,13 +231,18 @@ function render(cont,cont7,contPrev7){
   const ativas=LOJAS.filter(l=>l.ativo).length;
   const totalAcessos=Object.values(cont).reduce((a,b)=>a+b,0);
   const total7=Object.values(cont7).reduce((a,b)=>a+b,0);
+  const mrr=LOJAS.filter(l=>l.ativo&&l.valor_mensal).reduce((s,l)=>s+Number(l.valor_mensal),0);
+  const faturamento='R$ '+mrr.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const atrasados=LOJAS.filter(l=>statusCobranca(l).vencido&&l.ativo).length;
+  const totalAtrasado=LOJAS.filter(l=>statusCobranca(l).vencido&&l.ativo).reduce((s,l)=>s+Number(l.valor_mensal||0),0);
+  const aReceber='R$ '+totalAtrasado.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
   const hoje=new Date().toISOString().slice(0,10);
   const vencendo=LOJAS.filter(l=>l.vencimento&&l.vencimento<=hoje&&l.ativo).length;
 
   document.getElementById('kpis').innerHTML=[
-    ['hero','Conexões (30 dias)',totalAcessos.toLocaleString('pt-BR'),total7.toLocaleString('pt-BR')+' nos últimos 7'],
-    ['','Lojas ativas',ativas,LOJAS.length+' no total'],
-    ['','Vencidas',vencendo,vencendo?'⚠️ precisam de atenção':'tudo em dia ✅'],
+    ['hero','Faturamento mensal',faturamento,'de '+ativas+' lojas ativas'],
+    ['','Conexões (30 dias)',totalAcessos.toLocaleString('pt-BR'),total7.toLocaleString('pt-BR')+' nos últimos 7'],
+    ['','A receber',aReceber,atrasados?'⚠️ '+atrasados+' atrasada(s)':'tudo em dia ✅'],
   ].map(k=>`<div class="kpi ${k[0]}"><div class="l">${k[1]}</div><div class="v">${k[2]}</div><div class="s">${k[3]}</div></div>`).join('');
 
   const box=document.getElementById('lojas');
@@ -257,12 +262,13 @@ function render(cont,cont7,contPrev7){
         </div>
         <div class="meta">
           ${l.dominio?`🌐 ${esc(l.dominio)}`:'<span style="color:var(--warn)">⚠️ sem domínio</span>'}
-          ${l.vencimento?` · 📅 vence ${l.vencimento.split('-').reverse().join('/')}`:''}
+          ${l.valor_mensal?` · 💰 R$ ${Number(l.valor_mensal).toLocaleString('pt-BR',{minimumFractionDigits:2})}/mês`:''}
         </div>
-        ${tendencia(cont7[l.id]||0,contPrev7[l.id]||0)}
+        ${(()=>{const sc=statusCobranca(l);return sc.txt!=='sem cobrança'?`<div class="trend ${sc.cls}">${sc.txt}</div>`:tendencia(cont7[l.id]||0,contPrev7[l.id]||0);})()}
       </div>
       <div class="nums"><b>${(cont[l.id]||0).toLocaleString('pt-BR')}</b>conexões 30d<br><small>${cont7[l.id]||0} nos últimos 7</small></div>
       <div class="acts">
+        ${(()=>{const sc=statusCobranca(l);return (l.valor_mensal&&sc.txt!=='pago este mês')?`<button class="btn sm primary" onclick="registrarPagamento(${l.id})" title="marcar mensalidade como paga">✅ Recebi</button>`:'';})()}
         <button class="btn sm" onclick="editar(${l.id})">✏️ Editar</button>
         <button class="btn sm ${l.ativo?'danger':'primary'}" onclick="toggleAtiva(${l.id},${!l.ativo})">${l.ativo?'Desligar':'Ligar'}</button>
       </div>
@@ -270,6 +276,19 @@ function render(cont,cont7,contPrev7){
   }).join('');
 }
 
+// calcula situação de cobrança da loja
+function statusCobranca(l){
+  if(!l.dia_vencimento||!l.valor_mensal) return {txt:'sem cobrança',cls:'flat',vencido:false};
+  const hoje=new Date(); const diaHoje=hoje.getDate();
+  const ref=hoje.getFullYear()+'-'+String(hoje.getMonth()+1).padStart(2,'0');
+  const pagouEsseMes=l.ultimo_pagamento&&l.ultimo_pagamento.slice(0,7)===ref;
+  if(pagouEsseMes) return {txt:'pago este mês',cls:'up',vencido:false};
+  // ainda não pagou este mês
+  if(diaHoje>l.dia_vencimento) return {txt:'⚠️ atrasado',cls:'down',vencido:true};
+  const faltam=l.dia_vencimento-diaHoje;
+  if(faltam<=3) return {txt:'vence em '+faltam+'d',cls:'warn',vencido:false};
+  return {txt:'vence dia '+l.dia_vencimento,cls:'flat',vencido:false};
+}
 function tendencia(atual,anterior){
   if(atual===0&&anterior===0)return '<div class="trend flat">— sem conexões ainda</div>';
   if(anterior===0)return '<div class="trend up">▲ começou a receber conexões</div>';
@@ -277,6 +296,17 @@ function tendencia(atual,anterior){
   if(pct>5)return `<div class="trend up">▲ ${pct}% vs semana anterior</div>`;
   if(pct<-5)return `<div class="trend down">▼ ${Math.abs(pct)}% vs semana anterior</div>`;
   return '<div class="trend flat">≈ estável vs semana anterior</div>';
+}
+async function registrarPagamento(id){
+  const l=LOJAS.find(x=>x.id===id); if(!l)return;
+  const hoje=new Date().toISOString().slice(0,10);
+  const ref=new Date().toLocaleDateString('pt-BR',{month:'long',year:'numeric'});
+  const {error}=await sb.from('portal_lojas').update({ultimo_pagamento:hoje,status_pagamento:'em_dia'}).eq('id',id);
+  if(error){toast('Erro: '+error.message);return}
+  // registra no histórico (não trava se falhar)
+  try{ await sb.from('portal_pagamentos').insert({loja_id:id,valor:l.valor_mensal,data:hoje,referencia:ref}); }catch(e){}
+  toast('Pagamento de '+l.nome+' registrado ✅ ('+ref+')');
+  carregar();
 }
 async function toggleAtiva(id,novo){
   const {error}=await sb.from('portal_lojas').update({ativo:novo}).eq('id',id);
@@ -309,8 +339,10 @@ function abrirDetalhe(id){
     </div>
     ${buckets.reduce((a,b)=>a+b,0)?`<div class="spark-wrap" style="margin:0 0 6px"><h3>Conexões por dia</h3><div class="spark">${buckets.map(v=>`<div class="bar" style="height:${Math.max(3,v/max*100)}%" title="${v}"></div>`).join('')}</div></div>`:'<div class="det-share">Ainda sem conexões registradas. Assim que o Wi-Fi começar a ser usado, os números aparecem aqui.</div>'}
     <div class="det-share">📣 <b>Pra mostrar pro cliente:</b> "Nos últimos 30 dias, <b>${total30} pessoas</b> conectaram no seu Wi-Fi e ${destino}."</div>
-    <div class="modal-acts" style="margin-top:16px">
+    ${l.valor_mensal?`<div class="det-share" style="border-style:solid;border-color:var(--border)">💰 <b>Cobrança:</b> R$ ${Number(l.valor_mensal).toLocaleString('pt-BR',{minimumFractionDigits:2})}/mês${l.dia_vencimento?', vence dia '+l.dia_vencimento:''} — <b class="trend ${statusCobranca(l).cls}" style="display:inline">${statusCobranca(l).txt}</b>${l.ultimo_pagamento?'<br>Último pagamento: '+l.ultimo_pagamento.split('-').reverse().join('/'):''}</div>`:''}
+    <div class="modal-acts" style="margin-top:16px;flex-wrap:wrap">
       <button class="btn danger" onclick="excluir(${l.id})" style="margin-right:auto">🗑️ Excluir</button>
+      ${(l.valor_mensal&&statusCobranca(l).txt!=='pago este mês')?`<button class="btn" onclick="registrarPagamento(${l.id});fecharModal()">✅ Recebi</button>`:''}
       <button class="btn ghost" onclick="fecharModal()">Fechar</button>
       <button class="btn primary" onclick="fecharModal();editar(${l.id})">✏️ Editar</button>
     </div>
@@ -366,9 +398,10 @@ function campos(l){
       <label class="fld"><span>Segredo do AP <small>(mesma senha no roteador)</small></span><input id="f_secret" value="${esc(l.ap_secret)}" placeholder="senha forte"></label>
     </div>
     <div class="row2">
-      <label class="fld"><span>Vencimento da mensalidade</span><input id="f_venc" type="date" value="${esc(l.vencimento)}"></label>
-      <label class="fld"><span>Plano <small>(só seu controle)</span><input id="f_plano" value="${esc(l.plano||'mensal')}"></label>
+      <label class="fld"><span>Valor mensal <small>(R$)</small></span><input id="f_valor" type="number" step="0.01" value="${l.valor_mensal!=null?l.valor_mensal:''}" placeholder="120.00"></label>
+      <label class="fld"><span>Dia do vencimento <small>(1 a 31)</small></span><input id="f_diavenc" type="number" min="1" max="31" value="${l.dia_vencimento!=null?l.dia_vencimento:''}" placeholder="10"></label>
     </div>
+    <label class="fld"><span>Plano <small>(só pro seu controle)</span><input id="f_plano" value="${esc(l.plano||'mensal')}"></label>
     <label class="fld"><span>Observações</span><textarea id="f_obs" rows="2">${esc(l.obs)}</textarea></label>`;
 }
 
@@ -441,7 +474,7 @@ async function salvar(id){
   const payload={
     nome:v('nome'),slug,dominio:v('dominio')||null,instagram:v('instagram').replace(/^@/,'')||null,
     cor:v('cor'),cor2:v('cor2')||null,logo_url:v('logo')||null,codigo_wifi:v('codigo')||null,ap_secret:v('secret')||null,
-    vencimento:v('venc')||null,plano:v('plano')||null,obs:v('obs')||null,
+    valor_mensal:v('valor')?parseFloat(v('valor')):null,dia_vencimento:v('diavenc')?parseInt(v('diavenc')):null,plano:v('plano')||null,obs:v('obs')||null,
     destino_tipo:document.getElementById('f_destino').value,
     whatsapp_link:v('wpp')||null
   };
