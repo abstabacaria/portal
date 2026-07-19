@@ -204,6 +204,8 @@ function renderPortal({ ap, instagram, autoCode, error, marca }) {
       .fld-form{width:100%;box-sizing:border-box;padding:14px 16px;margin:0 0 10px;border:1.5px solid #e5e7eb;border-radius:12px;font-size:16px;background:#fff;color:#111}
       .fld-form:focus{outline:none;border-color:${cor}}
       .form-titulo{font-weight:800;font-size:17px;margin:4px 0 14px;color:#1a1a1a}
+      .pby{text-align:center;margin-top:18px;padding-top:14px;border-top:1px solid rgba(255,255,255,.07);display:flex;align-items:center;justify-content:center;gap:7px}
+      .pby span{font-size:10px;color:rgba(255,255,255,.35);letter-spacing:.5px}
       .logo-nome{font-size:26px;font-weight:900;background:linear-gradient(135deg,${cor},${cor2});-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;padding:8px 0}
       .num{ background:${cor} }
       .ring{ border-top-color:${cor} }
