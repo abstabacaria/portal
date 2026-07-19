@@ -194,7 +194,7 @@ function mostrarApp(user){
 
 let ACESSOS=[];
 async function carregar(){
-  const {data,error}=await sb.from('portal_lojas').select('*').order('criado_em',{ascending:false});
+  const {data,error}=await sb.from('portal_lojas').select('*').order('criado_em',{ascending:false});  // inclui edit_token
   if(error){toast('Erro: '+error.message);return}
   LOJAS=data||[];
   const ini=new Date(Date.now()-30*864e5).toISOString();
@@ -353,6 +353,7 @@ function abrirDetalhe(id){
     <div class="modal-acts" style="margin-top:16px;flex-wrap:wrap">
       <button class="btn danger" onclick="excluir(${l.id})" style="margin-right:auto">🗑️ Excluir</button>
       ${(l.valor_mensal&&statusCobranca(l).txt!=='pago este mês')?`<button class="btn" onclick="registrarPagamento(${l.id});fecharModal()">✅ Recebi</button>`:''}
+      <button class="btn ghost" onclick="copiarLinkCliente('${esc(l.slug)}','${esc(l.edit_token||'')}')">🔗 Link do cliente</button>
       <button class="btn ghost" onclick="fecharModal()">Fechar</button>
       <button class="btn primary" onclick="fecharModal();editar(${l.id})">✏️ Editar</button>
     </div>
@@ -361,6 +362,13 @@ function abrirDetalhe(id){
   document.body.appendChild(bg);
 }
 
+const BASE_EDIT='https://abstabacaria.github.io/portal/painel-portais/editar.html';
+function copiarLinkCliente(slug,token){
+  if(!token){toast('Essa loja ainda não tem link. Rode o SQL do link mágico.');return;}
+  const url=BASE_EDIT+'?loja='+encodeURIComponent(slug)+'&token='+encodeURIComponent(token);
+  navigator.clipboard.writeText(url).then(()=>toast('🔗 Link copiado! Mande pro cliente personalizar o Wi-Fi dele.'))
+    .catch(()=>prompt('Copie o link do cliente:',url));
+}
 async function verLeads(id,nome){
   const {data,error}=await sb.from('portal_leads').select('dados,criado_em').eq('loja_id',id).order('criado_em',{ascending:false}).limit(200);
   if(error){toast('Erro: '+error.message);return}
