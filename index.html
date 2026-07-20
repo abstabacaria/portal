@@ -1165,7 +1165,7 @@ function cliMostrarListaOnline() {
     '<h3>Conectados agora (' + CLI_ONLINE_DATA.length + ')</h3>' +
     rows +
     '<div style="margin-top:16px;text-align:right">' +
-    '<button class="cli-btn ghost" onclick="this.closest('.online-modal-bg').remove()">Fechar</button>' +
+    '<button class="cli-btn ghost" id="cliFecharOnline">Fechar</button>' +
     '</div></div>';
   document.body.appendChild(bg);
 }
@@ -1218,7 +1218,7 @@ async function admMostrarOnline(loja_id, nome) {
     '<h3>' + nome + ' - conectados agora (' + lista.length + ')</h3>' +
     rows +
     '<div style="margin-top:16px;text-align:right">' +
-    '<button onclick="this.closest('.online-modal-bg').remove()" style="background:transparent;border:1px solid rgba(14,165,233,.2);color:#0ea5e9;border-radius:8px;padding:6px 14px;font-size:12px;cursor:pointer">Fechar</button>' +
+    '<button id="admFecharOnline" style="background:transparent;border:1px solid rgba(14,165,233,.2);color:#0ea5e9;border-radius:8px;padding:6px 14px;font-size:12px;cursor:pointer">Fechar</button>' +
     '</div></div>';
   document.body.appendChild(bg);
 }
