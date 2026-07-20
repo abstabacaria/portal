@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ConectaY — Painel</title>
+<title>ConectaY - Painel</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=Sora:wght@800;900&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -142,7 +142,7 @@ label.fld small{color:var(--text-faint);font-weight:400}
 
 
 
-/* ── PAINEL CLIENTE ── */
+/* -- PAINEL CLIENTE -- */
 #appCliente{display:none;min-height:100vh;font-family:Inter,sans-serif;background:#060c18}
 .cli-sidebar{position:fixed;top:0;left:0;bottom:0;width:220px;background:#0d1526;border-right:1px solid rgba(14,165,233,.15);display:flex;flex-direction:column;z-index:100;padding:20px 0}
 .cli-sb-logo{padding:0 20px 20px;border-bottom:1px solid rgba(14,165,233,.15);margin-bottom:12px}
@@ -211,6 +211,28 @@ label.fld small{color:var(--text-faint);font-weight:400}
 #appCliente button { font-family: Inter, sans-serif; cursor: pointer; }
 #appCliente canvas { display: block; }
 
+/* -- ONLINE AO VIVO -- */
+.online-widget{display:flex;align-items:center;gap:12px;background:#0d1526;border:1px solid rgba(16,185,129,.25);border-radius:14px;padding:16px 20px;margin-bottom:20px}
+.online-dot{width:10px;height:10px;border-radius:50%;background:#10b981;box-shadow:0 0 8px #10b981;animation:pulse-green 2s infinite;flex-shrink:0}
+@keyframes pulse-green{0%,100%{opacity:1;box-shadow:0 0 8px #10b981}50%{opacity:.6;box-shadow:0 0 16px #10b981}}
+.online-num{font-family:Sora,sans-serif;font-size:32px;font-weight:900;color:#10b981;line-height:1}
+.online-label{font-size:12px;color:#64748b;margin-top:2px}
+.online-link{font-size:11px;color:#0ea5e9;cursor:pointer;text-decoration:underline;margin-top:4px;display:block}
+.online-link:hover{color:#22d3ee}
+.online-upd{font-size:10px;color:#334155;margin-left:auto;text-align:right;flex-shrink:0}
+.btn-refresh{background:transparent;border:1px solid rgba(14,165,233,.2);color:#0ea5e9;border-radius:8px;padding:4px 10px;font-size:10px;font-weight:700;cursor:pointer;font-family:Inter,sans-serif;margin-top:4px}
+.btn-refresh:hover{background:rgba(14,165,233,.1)}
+/* modal online */
+.online-modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:9000;display:flex;align-items:center;justify-content:center}
+.online-modal{background:#0d1526;border:1px solid rgba(14,165,233,.2);border-radius:16px;padding:24px;width:100%;max-width:480px;max-height:70vh;overflow-y:auto}
+.online-modal h3{font-size:15px;font-weight:800;color:#e2e8f0;margin-bottom:16px}
+.online-row{display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid rgba(14,165,233,.07)}
+.online-row:last-child{border-bottom:none}
+.online-mac{font-size:11px;color:#94a3b8;font-family:monospace}
+.online-device{font-size:11px;color:#64748b}
+.online-time{font-size:10px;color:#334155;margin-left:auto}
+.online-badge{width:8px;height:8px;border-radius:50%;background:#10b981;flex-shrink:0}
+
 </style>
 </head>
 <body>
@@ -265,7 +287,22 @@ label.fld small{color:var(--text-faint);font-weight:400}
     <div class="cli-page ativo" id="cliPageDashboard">
       <div class="cli-titulo">Dashboard</div>
       <div class="cli-sub" id="cliDashSub">Seus numeros em tempo real</div>
-      <div class="cli-cards">
+      
+    <!-- widget online ao vivo -->
+    <div class="online-widget" id="cliOnlineWidget">
+      <div class="online-dot"></div>
+      <div>
+        <div class="online-num" id="cliOnlineNum">-</div>
+        <div class="online-label">conectados agora</div>
+        <a class="online-link" id="cliOnlineLink">ver lista detalhada</a>
+      </div>
+      <div class="online-upd">
+        <div id="cliOnlineUpd" style="color:#334155;font-size:10px">-</div>
+        <button class="btn-refresh" id="cliBtnRefresh">atualizar</button>
+      </div>
+    </div>
+
+    <div class="cli-cards">
         <div class="cli-card"><div class="cli-card-label">Conexoes este mes</div><div class="cli-card-num accent" id="cliCMes">-</div><div class="cli-card-sub">clientes conectados</div></div>
         <div class="cli-card"><div class="cli-card-label">Ultimos 7 dias</div><div class="cli-card-num" id="cliC7d">-</div><div class="cli-card-sub" id="cliDelta7d"></div></div>
         <div class="cli-card"><div class="cli-card-label">Leads coletados</div><div class="cli-card-num ok" id="cliCLeads">-</div><div class="cli-card-sub">cadastros no formulario</div></div>
@@ -394,6 +431,7 @@ async function carregar(){
   window.__cont=cont;window.__cont7=cont7;
   renderGrafico();
   render(cont,cont7,contPrev7);
+  carregarOnlineAdmin();
 }
 
 // grafico geral: acessos por dia (14 dias)
@@ -448,6 +486,7 @@ function render(cont,cont7,contPrev7){
       <div class="info" onclick="abrirDetalhe(${l.id})">
         <div class="nome">${esc(l.nome)}
           <span class="badge ${l.ativo?'on':'off'}">${l.ativo?'ativa':'desligada'}</span>
+          <span class="badge on" id="online-${l.id}" style="background:rgba(16,185,129,.15);color:#10b981;display:none">&#x25cf; online</span>
           ${venc?'<span class="badge venc">vencida</span>':''}
           ${l.destino_tipo==='whatsapp'?'<span class="badge" style="background:rgba(34,197,94,.15);color:#4ade80">\uD83D\uDCAC grupo</span>':'<span class="badge" style="background:rgba(129,140,248,.15);color:var(--accent-2)">\uD83D\uDCF8 insta</span>'}
         </div>
@@ -468,6 +507,22 @@ function render(cont,cont7,contPrev7){
 }
 
 // calcula situacao de cobranca da loja
+async function carregarOnlineAdmin() {
+  for (var i = 0; i < LOJAS.length; i++) {
+    var loja = LOJAS[i];
+    var count = await admOnlineCount(loja.id);
+    var el = document.getElementById('online-' + loja.id);
+    if (el) {
+      if (count > 0) {
+        el.textContent = count + ' online';
+        el.style.display = 'inline';
+      } else {
+        el.style.display = 'none';
+      }
+    }
+  }
+}
+
 function statusCobranca(l){
   if(!l.dia_vencimento||!l.valor_mensal) return {txt:'sem cobranca',cls:'flat',vencido:false};
   const hoje=new Date(); const diaHoje=hoje.getDate();
@@ -863,6 +918,11 @@ async function iniciarCliente(user) {
   await cliCarregarDashboard();
   cliPreencherAparencia();
 
+  // online ao vivo
+  await cliCarregarOnline();
+  document.getElementById('cliBtnRefresh').addEventListener('click', cliCarregarOnline);
+  document.getElementById('cliOnlineLink').addEventListener('click', cliMostrarListaOnline);
+
   document.getElementById('cliBtnSair').addEventListener('click', async function() {
     await sb.auth.signOut(); location.reload();
   });
@@ -1055,6 +1115,112 @@ async function cliSalvarAparencia() {
   if (r.error||!r.data) { toast('Erro ao salvar'); return; }
   await sb.from('portal_lojas').update({nome:document.getElementById('cliANome').value}).eq('id',CLI_LOJA.id);
   toast('Salvo!');
+}
+
+
+// -- ONLINE AO VIVO (CLIENTE) --
+var CLI_ONLINE_DATA = [];
+var CLI_ONLINE_MINUTOS = 15; // considera online quem conectou nos ultimos 15min
+
+async function cliCarregarOnline() {
+  if (!CLI_LOJA) return;
+  var desde = new Date(Date.now() - CLI_ONLINE_MINUTOS * 60000).toISOString();
+  var r = await sb.from('portal_acessos')
+    .select('mac,dispositivo,criado_em')
+    .eq('loja_id', CLI_LOJA.id)
+    .gte('criado_em', desde)
+    .order('criado_em', {ascending: false});
+
+  // deduplica por MAC - pega o acesso mais recente de cada dispositivo
+  var vistos = {};
+  (r.data || []).forEach(function(a) {
+    var key = a.mac || a.criado_em;
+    if (!vistos[key]) vistos[key] = a;
+  });
+  CLI_ONLINE_DATA = Object.values(vistos);
+
+  var num = CLI_ONLINE_DATA.length;
+  document.getElementById('cliOnlineNum').textContent = num;
+  var agora = new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+  document.getElementById('cliOnlineUpd').textContent = 'atualizado ' + agora;
+}
+
+function cliMostrarListaOnline() {
+  if (!CLI_ONLINE_DATA.length) { toast('Nenhum dispositivo conectado agora'); return; }
+  var rows = CLI_ONLINE_DATA.map(function(a) {
+    var mac = a.mac || 'desconhecido';
+    var dev = a.dispositivo || 'dispositivo';
+    var quando = new Date(a.criado_em).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+    return '<div class="online-row">' +
+      '<div class="online-badge"></div>' +
+      '<div><div class="online-mac">' + mac + '</div>' +
+      '<div class="online-device">' + dev + '</div></div>' +
+      '<div class="online-time">conectou ' + quando + '</div>' +
+      '</div>';
+  }).join('');
+
+  var bg = document.createElement('div');
+  bg.className = 'online-modal-bg';
+  bg.innerHTML = '<div class="online-modal">' +
+    '<h3>Conectados agora (' + CLI_ONLINE_DATA.length + ')</h3>' +
+    rows +
+    '<div style="margin-top:16px;text-align:right">' +
+    '<button class="cli-btn ghost" onclick="this.closest('.online-modal-bg').remove()">Fechar</button>' +
+    '</div></div>';
+  document.body.appendChild(bg);
+}
+
+
+// -- ONLINE AO VIVO (ADMIN) --
+async function admOnlineCount(loja_id) {
+  var desde = new Date(Date.now() - 15 * 60000).toISOString();
+  var r = await sb.from('portal_acessos')
+    .select('mac', {count: 'exact', head: false})
+    .eq('loja_id', loja_id)
+    .gte('criado_em', desde);
+  var vistos = {};
+  (r.data || []).forEach(function(a) { vistos[a.mac || Math.random()] = 1; });
+  return Object.keys(vistos).length;
+}
+
+async function admMostrarOnline(loja_id, nome) {
+  var desde = new Date(Date.now() - 15 * 60000).toISOString();
+  var r = await sb.from('portal_acessos')
+    .select('mac,dispositivo,criado_em')
+    .eq('loja_id', loja_id)
+    .gte('criado_em', desde)
+    .order('criado_em', {ascending: false});
+
+  var vistos = {};
+  (r.data || []).forEach(function(a) {
+    var key = a.mac || a.criado_em;
+    if (!vistos[key]) vistos[key] = a;
+  });
+  var lista = Object.values(vistos);
+
+  if (!lista.length) { toast('Nenhum conectado agora em ' + nome); return; }
+
+  var rows = lista.map(function(a) {
+    var mac = a.mac || 'desconhecido';
+    var dev = a.dispositivo || 'dispositivo';
+    var quando = new Date(a.criado_em).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
+    return '<div class="online-row">' +
+      '<div class="online-badge"></div>' +
+      '<div><div class="online-mac">' + mac + '</div>' +
+      '<div class="online-device">' + dev + '</div></div>' +
+      '<div class="online-time">conectou ' + quando + '</div>' +
+      '</div>';
+  }).join('');
+
+  var bg = document.createElement('div');
+  bg.className = 'online-modal-bg';
+  bg.innerHTML = '<div class="online-modal">' +
+    '<h3>' + nome + ' - conectados agora (' + lista.length + ')</h3>' +
+    rows +
+    '<div style="margin-top:16px;text-align:right">' +
+    '<button onclick="this.closest('.online-modal-bg').remove()" style="background:transparent;border:1px solid rgba(14,165,233,.2);color:#0ea5e9;border-radius:8px;padding:6px 14px;font-size:12px;cursor:pointer">Fechar</button>' +
+    '</div></div>';
+  document.body.appendChild(bg);
 }
 
 </script>
