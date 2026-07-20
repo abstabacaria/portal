@@ -995,7 +995,7 @@ async function cliCarregarDashboard() {
   CLI_CHART = new Chart(document.getElementById('cliGrafico'), {
     type:'bar',
     data:{labels:labels,datasets:[{data:valores,backgroundColor:'rgba(14,165,233,0.3)',borderColor:'rgba(14,165,233,0.8)',borderWidth:1.5,borderRadius:4}]},
-    options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#64748b',font:{size:10},maxRotation:0,maxTicksLimit:10}},y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#64748b',font:{size:10},stepSize:1},beginAtZero:true}}}
+    options:{responsive:true,maintainAspectRatio:false,animation:false,plugins:{legend:{display:false}},scales:{x:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#64748b',font:{size:10},maxRotation:0,maxTicksLimit:10}},y:{grid:{color:'rgba(255,255,255,0.04)'},ticks:{color:'#64748b',font:{size:10},stepSize:1},beginAtZero:true}}}
   });
 }
 
