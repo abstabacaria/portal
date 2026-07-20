@@ -143,7 +143,7 @@ label.fld small{color:var(--text-faint);font-weight:400}
 
 
 /* -- PAINEL CLIENTE -- */
-#appCliente{display:none;min-height:100vh;font-family:Inter,sans-serif;background:#060c18}
+#appCliente{display:none;font-family:Inter,sans-serif;background:#060c18}
 .cli-sidebar{position:fixed;top:0;left:0;bottom:0;width:220px;background:#0d1526;border-right:1px solid rgba(14,165,233,.15);display:flex;flex-direction:column;z-index:100;padding:20px 0}
 .cli-sb-logo{padding:0 20px 20px;border-bottom:1px solid rgba(14,165,233,.15);margin-bottom:12px}
 .cli-sb-loja{padding:12px 20px;margin-bottom:4px}
@@ -156,7 +156,7 @@ label.fld small{color:var(--text-faint);font-weight:400}
 .cli-sb-bottom{padding:10px 10px 0;border-top:1px solid rgba(14,165,233,.15);margin-top:auto}
 .cli-sb-user{padding:10px 12px;font-size:11px;color:#64748b}
 .cli-sb-user b{display:block;color:#e2e8f0;font-size:12px;margin-bottom:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.cli-main{margin-left:220px;padding:32px;background:#060c18;min-height:100vh;box-sizing:border-box}
+.cli-main{margin-left:220px;padding:32px;background:#060c18;box-sizing:border-box}
 .cli-page{display:none}
 .cli-page.ativo{display:block}
 .cli-titulo{font-family:Sora,sans-serif;font-size:22px;font-weight:900;color:#e2e8f0;margin-bottom:4px}
@@ -904,11 +904,12 @@ async function iniciarCliente(user) {
   // esconde TUDO do admin e mostra so o cliente
   var loginEl = document.getElementById('login');
   var appEl = document.getElementById('app');
-  if (loginEl) { loginEl.style.display = 'none'; loginEl.classList.add('hidden'); }
-  if (appEl) { appEl.style.display = 'none'; appEl.classList.add('hidden'); }
+  if (loginEl) { loginEl.style.cssText = 'display:none!important'; loginEl.classList.add('hidden'); }
+  if (appEl) { appEl.style.cssText = 'display:none!important;height:0!important;overflow:hidden!important;position:absolute!important'; appEl.classList.add('hidden'); }
   document.body.style.overflow = 'auto';
   document.body.style.height = 'auto';
   document.body.style.minHeight = 'unset';
+  document.documentElement.style.overflow = 'auto';
   document.getElementById('appCliente').style.display = 'block';
   document.getElementById('cliEmail').textContent = user.email;
   var lr = await sb.rpc('portal_minha_loja');
