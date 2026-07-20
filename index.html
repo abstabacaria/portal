@@ -202,6 +202,15 @@ label.fld small{color:var(--text-faint);font-weight:400}
 @keyframes cliSpin{to{transform:rotate(360deg)}}
 @media(max-width:768px){.cli-sidebar{width:100%;height:auto;position:relative;flex-direction:row;flex-wrap:wrap;padding:12px}.cli-sb-logo{padding:0 12px 0 0;border:none;margin:0}.cli-sb-nav{display:flex;gap:4px;padding:0}.cli-sb-btn{padding:7px 10px;font-size:11px}.cli-sb-btn span:last-child{display:none}.cli-sb-bottom,.cli-sb-loja{display:none}.cli-main{margin-left:0;padding:16px}.cli-grid2{grid-template-columns:1fr}.cli-cards{grid-template-columns:1fr 1fr}}
 
+/* Reset CSS admin dentro do cliente */
+#appCliente table { width: 100%; border-collapse: collapse; background: transparent; }
+#appCliente th { padding: 10px 16px; font-size: 10px; font-weight: 700; text-transform: uppercase; color: #64748b; text-align: left; border-bottom: 1px solid rgba(14,165,233,.15); border-radius: 0; background: transparent; }
+#appCliente td { padding: 12px 16px; font-size: 12px; color: #e2e8f0; border-bottom: 1px solid rgba(14,165,233,.05); background: transparent; }
+#appCliente input, #appCliente select { font-family: Inter, sans-serif; font-size: 13px; padding: 10px 14px; border-radius: 10px; background: #111d32; border: 1px solid rgba(14,165,233,.15); color: #e2e8f0; width: 100%; }
+#appCliente input:focus, #appCliente select:focus { outline: none; border-color: #0ea5e9; }
+#appCliente button { font-family: Inter, sans-serif; cursor: pointer; }
+#appCliente canvas { display: block; }
+
 </style>
 </head>
 <body>
@@ -237,7 +246,7 @@ label.fld small{color:var(--text-faint);font-weight:400}
 <!-- ══ APP CLIENTE ══ -->
 <div id="appCliente">
   <div class="cli-sidebar">
-    <div class="cli-sb-logo"><img src="https://github.com/abstabacaria/portal/blob/main/logo_conectay_transparent.png?raw=true" alt="ConectaY" style="height:36px"></div>
+    <div class="cli-sb-logo"><img src="https://github.com/abstabacaria/portal/blob/main/logo_conectay_transparent.png?raw=true" alt="ConectaY" style="height:36px" onerror="this.style.display='none'"></div>
     <div class="cli-sb-loja">
       <div class="cli-sb-nome" id="cliNome">Carregando...</div>
       <div class="cli-sb-dom" id="cliDom"></div>
