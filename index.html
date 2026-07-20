@@ -119,6 +119,11 @@ body{font-family:Inter,system-ui,sans-serif;background:#060c18;color:#e2e8f0;fon
 .apa-preview-rod{position:relative;z-index:1;text-align:center;margin-top:14px;padding-top:10px;border-top:1px solid rgba(255,255,255,.07);display:flex;align-items:center;justify-content:center;gap:6px}
 .apa-preview-rod span{font-size:8.5px;color:rgba(255,255,255,.35);letter-spacing:.5px}
 .apa-preview-rod img{height:22px;object-fit:contain;opacity:.9}
+.apa-upload{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.apa-upload-status{font-size:12px;color:#64748b}
+.apa-upload-status.ok{color:#22c55e}
+.apa-upload-status.err{color:#f87171}
+.apa-upload-status.load{color:#0ea5e9}
 .apa-cores-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
 .apa-cor-item{background:#0d1526;border:1px solid rgba(14,165,233,.15);border-radius:12px;padding:12px}
 .apa-cor-label{font-size:10px;color:#64748b;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:6px;text-transform:uppercase;letter-spacing:.4px}
@@ -407,10 +412,18 @@ body{font-family:Inter,system-ui,sans-serif;background:#060c18;color:#e2e8f0;fon
         <!-- logo -->
         <div class="apa-section">Logo da Loja</div>
         <div class="fld">
-          <label>URL da logo (PNG, JPG, SVG)</label>
+          <label>Enviar arquivo (PNG, JPG, SVG · até 2 MB)</label>
+          <div class="apa-upload">
+            <input type="file" id="apaLogoFile" accept="image/png,image/jpeg,image/svg+xml,image/webp" style="display:none" onchange="apaUploadLogo(this.files[0])">
+            <button type="button" class="btn btn-ghost btn-sm" id="apaUploadBtn" onclick="document.getElementById('apaLogoFile').click()">📤 Escolher imagem</button>
+            <span class="apa-upload-status" id="apaUploadStatus"></span>
+          </div>
+        </div>
+        <div class="fld">
+          <label>Ou cole uma URL</label>
           <input id="apaLogo" placeholder="https://..." oninput="apaUpdateLogo(this.value)">
         </div>
-        <div style="font-size:11px;color:#64748b;margin-top:-8px;margin-bottom:14px">Use <a href="https://postimg.cc" target="_blank" style="color:#0ea5e9">postimg.cc</a> para hospedar gratuitamente</div>
+        <div style="font-size:11px;color:#64748b;margin-top:-8px;margin-bottom:14px">O upload é hospedado com segurança. Para colar uma URL, você pode usar <a href="https://postimg.cc" target="_blank" style="color:#0ea5e9">postimg.cc</a>.</div>
 
         <!-- cores -->
         <div class="apa-section">Cores do Botão</div>
@@ -955,6 +968,41 @@ function apaUpdateLogo(url) {
   } else {
     img.style.display = 'none'; txt.style.display = 'flex';
   }
+}
+
+async function apaUploadLogo(file) {
+  if (!file) return;
+  var status = document.getElementById('apaUploadStatus');
+  var btn = document.getElementById('apaUploadBtn');
+  if (file.size > 2 * 1024 * 1024) {
+    status.textContent = 'Arquivo muito grande (máx. 2 MB).';
+    status.className = 'apa-upload-status err';
+    return;
+  }
+  var tiposOk = ['image/png','image/jpeg','image/svg+xml','image/webp'];
+  if (tiposOk.indexOf(file.type) === -1) {
+    status.textContent = 'Formato não suportado. Use PNG, JPG, SVG ou WEBP.';
+    status.className = 'apa-upload-status err';
+    return;
+  }
+  status.textContent = 'Enviando...';
+  status.className = 'apa-upload-status load';
+  btn.disabled = true;
+  var ext = (file.name.split('.').pop() || 'png').toLowerCase();
+  var caminho = CLI_LOJA.slug + '/logo_' + Date.now() + '.' + ext;
+  var up = await SB.storage.from('logos').upload(caminho, file, {upsert: true, cacheControl: '3600'});
+  btn.disabled = false;
+  if (up.error) {
+    status.textContent = 'Erro ao enviar: ' + up.error.message;
+    status.className = 'apa-upload-status err';
+    return;
+  }
+  var pub = SB.storage.from('logos').getPublicUrl(caminho);
+  var url = pub.data.publicUrl;
+  document.getElementById('apaLogo').value = url;
+  apaUpdateLogo(url);
+  status.textContent = '✓ Imagem enviada';
+  status.className = 'apa-upload-status ok';
 }
 
 // Atualiza os textos do preview conforme o destino escolhido — espelhando views.js
