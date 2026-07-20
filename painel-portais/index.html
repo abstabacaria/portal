@@ -188,17 +188,32 @@ async function sair(){await sb.auth.signOut();location.reload();}
 
 async function verificarAcesso(user){
   try {
-    // busca papel na tabela admin_perfis
-    const {data,error} = await sb.from('admin_perfis').select('papel').eq('email',user.email);
-    const temPapel = !error && Array.isArray(data) && data.length > 0;
-    if(!temPapel){
-      // não tem papel = é cliente ConectaY, bloqueia
-      await sb.auth.signOut();
-      const err = document.getElementById('loginErr');
-      if(err) err.textContent='Acesso negado. Use painel.conectay.com.br';
+    // Verifica se é admin ConectaY (tem papel na admin_perfis)
+    const {data:perfil} = await sb.from('admin_perfis').select('papel').eq('email',user.email);
+    const ehAdmin = Array.isArray(perfil) && perfil.length > 0;
+
+    if(ehAdmin){
+      mostrarApp(user);
       return;
     }
-    mostrarApp(user);
+
+    // Verifica se é cliente ConectaY (tem email_acesso na portal_lojas)
+    const {data:loja} = await sb.from('portal_lojas').select('id').eq('email_acesso',user.email);
+    const ehCliente = Array.isArray(loja) && loja.length > 0;
+
+    if(ehCliente){
+      // é cliente — faz logout e manda pro painel deles
+      await sb.auth.signOut();
+      const err = document.getElementById('loginErr');
+      if(err) err.innerHTML='Acesso negado aqui.<br><a href="https://painel.conectay.com.br" style="color:var(--accent)">👉 Acesse seu painel em painel.conectay.com.br</a>';
+      return;
+    }
+
+    // nem admin nem cliente — bloqueia
+    await sb.auth.signOut();
+    const err = document.getElementById('loginErr');
+    if(err) err.textContent='Acesso não autorizado.';
+
   } catch(e){
     await sb.auth.signOut();
     const err = document.getElementById('loginErr');
