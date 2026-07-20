@@ -10,736 +10,743 @@
 *{box-sizing:border-box;margin:0;padding:0}
 body{font-family:Inter,system-ui,sans-serif;background:#060c18;color:#e2e8f0;font-size:14px;line-height:1.5}
 
-/* ── LOGIN ── */
+/* LOGIN */
 #pgLogin{min-height:100vh;display:flex;align-items:center;justify-content:center;background:#060c18}
 .login-box{width:360px;background:#0d1526;border:1px solid rgba(14,165,233,.2);border-radius:18px;padding:36px 28px;text-align:center}
-.login-box h2{font-family:Sora,sans-serif;font-size:15px;color:#64748b;margin:16px 0 24px;font-weight:400}
-.login-box input{width:100%;background:#060c18;border:1px solid rgba(14,165,233,.2);border-radius:10px;color:#e2e8f0;padding:11px 14px;font-size:14px;outline:none;margin-bottom:12px}
+.login-box h2{font-size:14px;color:#64748b;margin:14px 0 22px;font-weight:400}
+.login-box input{width:100%;background:#060c18;border:1px solid rgba(14,165,233,.2);border-radius:10px;color:#e2e8f0;padding:11px 14px;font-size:14px;outline:none;margin-bottom:10px;font-family:inherit}
 .login-box input:focus{border-color:#0ea5e9}
 .login-box button{width:100%;background:linear-gradient(135deg,#0ea5e9,#22d3ee);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:700;padding:12px;cursor:pointer;margin-top:4px}
-.login-erro{color:#f87171;font-size:12px;margin-top:8px;display:none}
+.login-box button:disabled{opacity:.6;cursor:not-allowed}
+.login-erro{color:#f87171;font-size:12px;margin-top:10px;display:none;text-align:left;padding:8px 10px;background:rgba(248,113,113,.1);border-radius:8px}
 
-/* ── TOAST ── */
-#toast{position:fixed;top:20px;right:20px;background:#0ea5e9;color:#fff;padding:10px 18px;border-radius:10px;font-size:13px;z-index:9999;display:none;max-width:320px}
+/* TOAST */
+#toast{position:fixed;top:20px;right:20px;padding:10px 18px;border-radius:10px;font-size:13px;z-index:9999;display:none;max-width:300px;font-weight:600}
 
-/* ── ADMIN ── */
-#pgAdmin{display:none}
-.adm-layout{display:flex;min-height:100vh}
-.adm-sidebar{width:220px;min-height:100vh;background:#0d1526;border-right:1px solid rgba(14,165,233,.15);position:fixed;top:0;left:0;bottom:0;display:flex;flex-direction:column}
-.adm-sb-logo{padding:20px;border-bottom:1px solid rgba(14,165,233,.15);display:flex;align-items:center;justify-content:center}
-.adm-sb-menu{flex:1;padding:12px 0}
-.adm-sb-item{display:flex;align-items:center;gap:10px;padding:11px 20px;cursor:pointer;color:#94a3b8;font-size:13px;border-radius:0;transition:all .2s}
-.adm-sb-item:hover,.adm-sb-item.ativo{background:rgba(14,165,233,.1);color:#0ea5e9}
-.adm-sb-bottom{padding:12px 0;border-top:1px solid rgba(14,165,233,.15)}
-.adm-main{margin-left:220px;padding:28px;flex:1}
-.adm-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px}
-.adm-titulo{font-family:Sora,sans-serif;font-size:22px;font-weight:800;background:linear-gradient(135deg,#0ea5e9,#22d3ee);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.adm-page{display:none}
-.adm-page.ativo{display:block}
+/* SHARED SIDEBAR */
+.sb{width:220px;min-height:100vh;background:#0d1526;border-right:1px solid rgba(14,165,233,.15);position:fixed;top:0;left:0;bottom:0;display:flex;flex-direction:column;z-index:100}
+.sb-logo{padding:20px;border-bottom:1px solid rgba(14,165,233,.15);display:flex;align-items:center;justify-content:center;min-height:84px}
+.sb-info{padding:12px 20px;border-bottom:1px solid rgba(14,165,233,.15)}
+.sb-nome{font-size:13px;font-weight:800}
+.sb-email{font-size:11px;color:#64748b;margin-top:2px;word-break:break-all}
+.sb-menu{flex:1;padding:10px 0;overflow-y:auto}
+.sb-item{display:flex;align-items:center;gap:10px;padding:11px 18px;cursor:pointer;color:#94a3b8;font-size:13px;transition:all .15s;border-left:3px solid transparent}
+.sb-item:hover{background:rgba(14,165,233,.08);color:#e2e8f0}
+.sb-item.ativo{background:rgba(14,165,233,.12);color:#0ea5e9;border-left-color:#0ea5e9}
+.sb-item .ico{font-size:16px;width:20px;text-align:center;flex-shrink:0}
+.sb-bottom{padding:10px 0;border-top:1px solid rgba(14,165,233,.15)}
 
-/* cards do admin */
-.adm-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:16px}
-.adm-card{background:#0d1526;border:1px solid rgba(14,165,233,.15);border-radius:14px;padding:18px;cursor:pointer;transition:border-color .2s}
-.adm-card:hover{border-color:rgba(14,165,233,.4)}
-.adm-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-.adm-card-nome{font-weight:700;font-size:15px}
-.adm-card-slug{font-size:11px;color:#64748b}
-.adm-dot{width:10px;height:10px;border-radius:50%;background:#22c55e}
-.adm-dot.off{background:#f87171}
-.adm-card-stats{display:flex;gap:16px;margin-top:10px}
-.adm-stat{font-size:12px;color:#64748b}
-.adm-stat span{display:block;font-size:18px;font-weight:800;color:#e2e8f0}
-.adm-badge-online{display:inline-block;background:rgba(34,197,94,.15);color:#22c55e;font-size:10px;font-weight:700;padding:2px 8px;border-radius:20px;margin-left:8px}
+/* MAIN */
+.main{margin-left:220px;padding:28px;min-height:100vh}
+.pg{display:none}
+.pg.ativo{display:block}
+.pg-titulo{font-family:Sora,sans-serif;font-size:22px;font-weight:800;background:linear-gradient(135deg,#0ea5e9,#22d3ee);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:4px}
+.pg-sub{font-size:12px;color:#64748b;margin-bottom:22px}
 
-/* botoes */
-.btn{border:none;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;transition:opacity .2s}
+/* CARDS */
+.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;margin-bottom:22px}
+.card{background:#0d1526;border:1px solid rgba(14,165,233,.15);border-radius:14px;padding:16px}
+.card-label{font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.6px}
+.card-val{font-size:28px;font-weight:800;margin-top:6px}
+.card-sub{font-size:11px;color:#64748b;margin-top:3px}
+
+/* CHART */
+.chart-wrap{background:#0d1526;border:1px solid rgba(14,165,233,.15);border-radius:14px;padding:18px;margin-bottom:22px}
+.chart-titulo{font-size:13px;font-weight:700;margin-bottom:12px}
+.chart-box{position:relative;height:180px;width:100%}
+
+/* ONLINE */
+.online-wrap{background:#0d1526;border:1px solid rgba(14,165,233,.15);border-radius:14px;padding:18px;margin-bottom:22px}
+.online-header{display:flex;align-items:center;justify-content:space-between}
+.online-titulo{font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px}
+.online-dot{width:8px;height:8px;border-radius:50%;background:#22c55e;animation:pulse 2s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+.online-count{font-size:32px;font-weight:800;color:#22c55e;margin:10px 0 4px}
+.online-sub{font-size:11px;color:#64748b}
+
+/* LOJAS (admin) */
+.lojas-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px}
+.loja-card{background:#0d1526;border:1px solid rgba(14,165,233,.15);border-radius:14px;padding:18px;cursor:pointer;transition:border-color .2s}
+.loja-card:hover{border-color:rgba(14,165,233,.4)}
+.loja-card-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px}
+.loja-nome{font-size:15px;font-weight:800}
+.loja-slug{font-size:11px;color:#64748b;margin-top:2px}
+.loja-dot{width:10px;height:10px;border-radius:50%;background:#22c55e;flex-shrink:0;margin-top:4px}
+.loja-dot.off{background:#ef4444}
+.loja-stats{display:flex;gap:16px}
+.loja-stat{font-size:11px;color:#64748b}
+.loja-stat b{display:block;font-size:16px;font-weight:800;color:#e2e8f0}
+.badge-online{display:inline-block;background:rgba(34,197,94,.15);color:#22c55e;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;margin-left:6px;vertical-align:middle}
+.badge-venc{display:inline-block;background:rgba(239,68,68,.15);color:#ef4444;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;margin-left:6px;vertical-align:middle}
+
+/* FORMULARIOS ADMIN */
+.form-card{background:#0d1526;border:1px solid rgba(14,165,233,.15);border-radius:14px;padding:22px;max-width:660px}
+.form-card h3{font-size:15px;font-weight:800;margin-bottom:18px}
+.fld{margin-bottom:14px}
+.fld label{display:block;font-size:11px;color:#64748b;font-weight:700;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
+.fld input,.fld textarea,.fld select{width:100%;background:#060c18;border:1px solid rgba(14,165,233,.2);border-radius:10px;color:#e2e8f0;padding:10px 14px;font-size:13px;outline:none;font-family:inherit}
+.fld input:focus,.fld textarea:focus,.fld select:focus{border-color:#0ea5e9}
+.fld textarea{resize:vertical;min-height:60px}
+.fld-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.fld-section{font-size:10px;font-weight:700;color:#0ea5e9;text-transform:uppercase;letter-spacing:.8px;margin:20px 0 12px;padding-bottom:6px;border-bottom:1px solid rgba(14,165,233,.12)}
+.form-btns{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap}
+
+/* TABELA LEADS */
+.table-wrap{background:#0d1526;border:1px solid rgba(14,165,233,.15);border-radius:14px;overflow:hidden}
+.table-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid rgba(14,165,233,.1)}
+.table-titulo{font-size:13px;font-weight:700}
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{padding:10px 16px;font-size:10px;font-weight:700;color:#64748b;text-align:left;border-bottom:1px solid rgba(14,165,233,.1);text-transform:uppercase;letter-spacing:.5px}
+.tbl td{padding:11px 16px;font-size:12px;border-bottom:1px solid rgba(14,165,233,.05)}
+.tbl tr:last-child td{border-bottom:none}
+.tbl-empty{text-align:center;color:#64748b;padding:28px}
+
+/* APARENCIA */
+.apa-wrap{max-width:600px}
+.apa-section{font-size:10px;font-weight:700;color:#0ea5e9;text-transform:uppercase;letter-spacing:.8px;margin:22px 0 12px;padding-bottom:6px;border-bottom:1px solid rgba(14,165,233,.12)}
+.apa-preview{border-radius:14px;overflow:hidden;max-width:280px;margin:0 auto 20px;box-shadow:0 4px 24px rgba(0,0,0,.5)}
+.apa-preview-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:28px 20px;min-height:240px;transition:background .3s}
+.apa-preview-logo{width:90px;height:44px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.apa-preview-logo img{max-width:100%;max-height:100%;object-fit:contain}
+.apa-preview-logo span{font-size:10px;color:rgba(255,255,255,.3)}
+.apa-preview-titulo{font-size:14px;font-weight:800;text-align:center}
+.apa-preview-msg{font-size:11px;text-align:center;opacity:.7}
+.apa-preview-btn{padding:10px 28px;border-radius:25px;border:none;font-size:12px;font-weight:800;cursor:default}
+.apa-preview-rod{font-size:9px;opacity:.3}
+.apa-cores-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
+.apa-cor-item{background:#0d1526;border:1px solid rgba(14,165,233,.15);border-radius:12px;padding:12px}
+.apa-cor-label{font-size:10px;color:#64748b;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:6px;text-transform:uppercase;letter-spacing:.4px}
+.apa-cor-label span{width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0}
+.apa-cor-row{display:flex;gap:8px;align-items:center}
+.apa-swatch{width:34px;height:34px;border-radius:8px;border:2px solid rgba(255,255,255,.15);cursor:pointer;flex-shrink:0}
+.apa-hex{flex:1;background:#060c18;border:1px solid rgba(14,165,233,.2);border-radius:8px;color:#e2e8f0;padding:7px 10px;font-size:12px;outline:none;font-family:monospace;min-width:0}
+.apa-hex:focus{border-color:#0ea5e9}
+
+/* DESTINO TABS */
+.dest-tabs{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+.dest-tab{padding:8px 16px;border-radius:8px;border:1px solid rgba(14,165,233,.2);background:transparent;color:#94a3b8;font-size:12px;cursor:pointer;transition:all .15s;font-family:inherit}
+.dest-tab:hover{border-color:rgba(14,165,233,.5);color:#e2e8f0}
+.dest-tab.ativo{background:rgba(14,165,233,.15);color:#0ea5e9;border-color:#0ea5e9;font-weight:700}
+.dest-campo{display:none}
+.dest-campo.ativo{display:block}
+
+/* FORM BUILDER */
+.form-campos{background:#060c18;border:1px solid rgba(14,165,233,.1);border-radius:10px;padding:12px;margin-top:8px}
+.form-campo-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(14,165,233,.07)}
+.form-campo-item:last-child{border-bottom:none}
+.form-campo-nome{flex:1;font-size:13px}
+.form-campo-chk{accent-color:#0ea5e9;width:16px;height:16px;cursor:pointer}
+
+/* BOTOES */
+.btn{border:none;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;transition:opacity .15s;font-family:inherit}
 .btn:hover{opacity:.85}
 .btn-primary{background:linear-gradient(135deg,#0ea5e9,#22d3ee);color:#fff}
-.btn-danger{background:rgba(248,113,113,.15);color:#f87171;border:1px solid rgba(248,113,113,.3)}
-.btn-ghost{background:transparent;color:#64748b;border:1px solid rgba(100,116,139,.3)}
-.btn-sm{padding:6px 12px;font-size:12px;border-radius:8px}
+.btn-danger{background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3)}
+.btn-ghost{background:transparent;color:#94a3b8;border:1px solid rgba(148,163,184,.2)}
+.btn-sm{padding:7px 14px;font-size:12px;border-radius:8px}
+.btn-link{background:transparent;border:none;color:#0ea5e9;font-size:12px;cursor:pointer;padding:0;font-family:inherit}
 
-/* formulario admin */
-.adm-form{background:#0d1526;border:1px solid rgba(14,165,233,.15);border-radius:14px;padding:24px;max-width:640px}
-.adm-form h3{font-size:16px;font-weight:800;margin-bottom:20px;color:#e2e8f0}
-.field{margin-bottom:16px}
-.field label{display:block;font-size:12px;color:#64748b;margin-bottom:6px;font-weight:600}
-.field input,.field textarea,.field select{width:100%;background:#060c18;border:1px solid rgba(14,165,233,.2);border-radius:10px;color:#e2e8f0;padding:10px 14px;font-size:13px;outline:none;font-family:inherit}
-.field input:focus,.field textarea:focus{border-color:#0ea5e9}
-.field textarea{resize:vertical;min-height:70px}
-.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.field-section{font-size:11px;font-weight:700;color:#0ea5e9;letter-spacing:.8px;text-transform:uppercase;margin:20px 0 12px;padding-bottom:6px;border-bottom:1px solid rgba(14,165,233,.15)}
-.adm-form-btns{display:flex;gap:10px;margin-top:20px}
-
-/* grafico admin */
-.adm-chart-wrap{background:#0d1526;border:1px solid rgba(14,165,233,.15);border-radius:14px;padding:20px;margin-top:20px}
-.adm-chart-titulo{font-size:13px;font-weight:700;margin-bottom:14px}
-.adm-chart-container{position:relative;height:200px;width:100%}
-
-/* ── CLIENTE ── */
-#pgCliente{display:none}
-.cli-layout{display:flex;min-height:100vh}
-.cli-sidebar{width:220px;min-height:100vh;background:#0d1526;border-right:1px solid rgba(14,165,233,.15);position:fixed;top:0;left:0;bottom:0;display:flex;flex-direction:column}
-.cli-sb-logo{padding:20px;border-bottom:1px solid rgba(14,165,233,.15);display:flex;align-items:center;justify-content:center}
-.cli-sb-info{padding:14px 20px;border-bottom:1px solid rgba(14,165,233,.15)}
-.cli-sb-nome{font-size:13px;font-weight:800;color:#e2e8f0}
-.cli-sb-email{font-size:11px;color:#64748b;margin-top:2px}
-.cli-sb-menu{flex:1;padding:12px 0}
-.cli-sb-item{display:flex;align-items:center;gap:10px;padding:11px 20px;cursor:pointer;color:#94a3b8;font-size:13px;transition:all .2s}
-.cli-sb-item:hover,.cli-sb-item.ativo{background:rgba(14,165,233,.1);color:#0ea5e9}
-.cli-sb-bottom{padding:12px 0;border-top:1px solid rgba(14,165,233,.15)}
-.cli-main{margin-left:220px;padding:28px;flex:1}
-.cli-page{display:none}
-.cli-page.ativo{display:block}
-.cli-titulo{font-family:Sora,sans-serif;font-size:22px;font-weight:800;background:linear-gradient(135deg,#0ea5e9,#22d3ee);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:6px}
-.cli-sub{font-size:12px;color:#64748b;margin-bottom:22px}
-
-/* cards cliente */
-.cli-cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:14px;margin-bottom:24px}
-.cli-card{background:#0d1526;border:1px solid rgba(14,165,233,.15);border-radius:14px;padding:18px}
-.cli-card-label{font-size:11px;color:#64748b;font-weight:600;text-transform:uppercase;letter-spacing:.5px}
-.cli-card-valor{font-size:28px;font-weight:800;color:#e2e8f0;margin-top:6px}
-.cli-card-sub{font-size:11px;color:#64748b;margin-top:4px}
-
-/* grafico cliente */
-.cli-chart-wrap{background:#0d1526;border:1px solid rgba(14,165,233,.15);border-radius:14px;padding:20px;margin-bottom:24px}
-.cli-chart-titulo{font-size:13px;font-weight:700;margin-bottom:14px}
-.cli-chart-container{position:relative;height:180px;width:100%}
-
-/* online ao vivo */
-.cli-online-wrap{background:#0d1526;border:1px solid rgba(14,165,233,.15);border-radius:14px;padding:18px;margin-bottom:24px}
-.cli-online-header{display:flex;align-items:center;justify-content:space-between}
-.cli-online-titulo{font-size:13px;font-weight:700}
-.cli-online-count{font-size:24px;font-weight:800;color:#22c55e;margin-top:8px}
-.cli-online-sub{font-size:11px;color:#64748b;margin-top:2px}
-
-/* leads */
-.cli-table-wrap{background:#0d1526;border:1px solid rgba(14,165,233,.15);border-radius:14px;overflow:hidden}
-.cli-table-header{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid rgba(14,165,233,.1)}
-.cli-table-titulo{font-size:13px;font-weight:700}
-table{width:100%;border-collapse:collapse}
-th{padding:10px 16px;font-size:11px;font-weight:700;color:#64748b;text-align:left;border-bottom:1px solid rgba(14,165,233,.1);background:transparent;text-transform:uppercase;letter-spacing:.5px}
-td{padding:11px 16px;font-size:12px;color:#e2e8f0;border-bottom:1px solid rgba(14,165,233,.05)}
-tr:last-child td{border-bottom:none}
-
-/* aparencia cliente */
-.cli-aparencia{max-width:580px}
-.apa-section{font-size:11px;font-weight:700;color:#0ea5e9;letter-spacing:.8px;text-transform:uppercase;margin:24px 0 12px;padding-bottom:6px;border-bottom:1px solid rgba(14,165,233,.15)}
-.apa-paleta{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px}
-.apa-cor{width:36px;height:36px;border-radius:8px;cursor:pointer;border:3px solid transparent;transition:all .2s;flex-shrink:0}
-.apa-cor.sel{border-color:#fff;transform:scale(1.15)}
-.apa-cor-custom{display:flex;align-items:center;gap:8px;margin-top:8px}
-.apa-cor-custom input[type=color]{width:44px;height:36px;border-radius:8px;border:1px solid rgba(14,165,233,.2);background:#060c18;cursor:pointer;padding:2px}
-.apa-cor-custom input[type=text]{width:100px;background:#060c18;border:1px solid rgba(14,165,233,.2);border-radius:8px;color:#e2e8f0;padding:8px 12px;font-size:13px;outline:none;font-family:monospace}
-.apa-preview{background:#0d1526;border:1px solid rgba(14,165,233,.15);border-radius:14px;overflow:hidden;margin-bottom:16px}
-.apa-preview-bar{height:6px;width:100%;background:var(--apa-cor,#ff6a1a);transition:background .3s}
-.apa-preview-body{padding:18px;display:flex;flex-direction:column;align-items:center;gap:10px}
-.apa-preview-logo{width:80px;height:40px;background:rgba(255,255,255,.05);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#64748b;overflow:hidden}
-.apa-preview-logo img{max-width:100%;max-height:100%;object-fit:contain}
-.apa-preview-msg{font-size:11px;color:#94a3b8;text-align:center;min-height:16px}
-.apa-preview-btn{padding:8px 24px;border-radius:20px;border:none;font-size:12px;font-weight:700;color:#fff;background:var(--apa-cor,#ff6a1a);cursor:default;transition:background .3s}
-.apa-preview-label{font-size:10px;color:#64748b;text-align:center}
-.apa-btn-group{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px}
-.apa-btn-opt{padding:8px 14px;border-radius:8px;border:1px solid rgba(14,165,233,.2);background:transparent;color:#94a3b8;font-size:12px;cursor:pointer;transition:all .2s}
-.apa-btn-opt.sel,.apa-btn-opt:hover{background:rgba(14,165,233,.1);color:#0ea5e9;border-color:#0ea5e9}
-.apa-destino-url{margin-top:8px}
-.cli-logo-preview{width:100%;height:100px;background:#060c18;border:1px dashed rgba(14,165,233,.3);border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:12px;cursor:pointer;overflow:hidden}
-.cli-color-row{display:flex;align-items:center;gap:12px;margin-bottom:16px}
-.cli-color-swatch{width:36px;height:36px;border-radius:8px;border:2px solid rgba(255,255,255,.1);cursor:pointer}
-.cli-preview-btn{display:inline-flex;align-items:center;gap:6px;background:rgba(14,165,233,.1);color:#0ea5e9;border:1px solid rgba(14,165,233,.3);border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer}
-
-/* modal online */
-.modal-bg{display:none;position:fixed;inset:0;background:rgba(6,12,24,.85);z-index:1000;align-items:center;justify-content:center}
+/* MODAL */
+.modal-bg{display:none;position:fixed;inset:0;background:rgba(6,12,24,.88);z-index:1000;align-items:center;justify-content:center}
 .modal-bg.open{display:flex}
-.modal{background:#0d1526;border:1px solid rgba(14,165,233,.2);border-radius:16px;padding:24px;width:90%;max-width:480px;max-height:80vh;overflow-y:auto}
-.modal h3{font-size:15px;font-weight:800;margin-bottom:16px}
-.modal-close{float:right;background:transparent;border:none;color:#64748b;cursor:pointer;font-size:18px}
-.online-row{display:flex;align-items:center;justify-content:space-between;padding:10px 0;border-bottom:1px solid rgba(14,165,233,.07)}
-.online-row:last-child{border-bottom:none}
-.online-mac{font-size:12px;color:#e2e8f0;font-family:monospace}
-.online-device{font-size:11px;color:#64748b}
-.online-time{font-size:11px;color:#22c55e}
+.modal{background:#0d1526;border:1px solid rgba(14,165,233,.2);border-radius:16px;padding:22px;width:92%;max-width:460px;max-height:80vh;overflow-y:auto}
+.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.modal-titulo{font-size:14px;font-weight:800}
+.modal-close{background:transparent;border:none;color:#64748b;cursor:pointer;font-size:20px;line-height:1}
+.online-item{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid rgba(14,165,233,.07)}
+.online-item:last-child{border-bottom:none}
+.online-mac{font-size:12px;font-family:monospace;color:#e2e8f0}
+.online-dev{font-size:11px;color:#64748b}
+.online-time{font-size:11px;color:#22c55e;font-weight:700}
 </style>
 </head>
 <body>
 
-<!-- ════ TOAST ════ -->
 <div id="toast"></div>
 
-<!-- ════ LOGIN ════ -->
+<!-- ════════ LOGIN ════════ -->
 <div id="pgLogin">
   <div class="login-box">
-    <img src="https://i.postimg.cc/BQjJGBKf/logo-conectay-transparent.png" alt="ConectaY" style="height:180px;display:block;margin:0 auto">
+    <img src="https://i.postimg.cc/BQjJGBKf/logo-conectay-transparent.png" alt="ConectaY" style="height:160px;display:block;margin:0 auto">
     <h2>Acesse seu painel</h2>
-    <input id="lgEmail" type="email" placeholder="E-mail">
+    <input id="lgEmail" type="email" placeholder="seu@email.com">
     <input id="lgSenha" type="password" placeholder="Senha">
     <button id="lgBtn" onclick="fazerLogin()">Entrar</button>
     <div class="login-erro" id="lgErro"></div>
   </div>
 </div>
 
-<!-- ════ ADMIN ════ -->
-<div id="pgAdmin">
-  <div class="adm-layout">
-    <div class="adm-sidebar">
-      <div class="adm-sb-logo">
-        <img src="https://i.postimg.cc/BQjJGBKf/logo-conectay-transparent.png" alt="ConectaY" style="height:48px;width:auto;max-width:160px;object-fit:contain;display:block;margin:0 auto" crossorigin="anonymous">
-      </div>
-      <div class="adm-sb-menu">
-        <div class="adm-sb-item ativo" onclick="admPagina('lojas')">📋 Lojas</div>
-        <div class="adm-sb-item" onclick="admPagina('nova')">➕ Nova Loja</div>
-        <div class="adm-sb-item" onclick="admPagina('graf')">📊 Gráfico Geral</div>
-      </div>
-      <div class="adm-sb-bottom">
-        <div class="adm-sb-item" onclick="sair()">🚪 Sair</div>
+<!-- ════════ ADMIN ════════ -->
+<div id="pgAdmin" style="display:none">
+  <div class="sb">
+    <div class="sb-logo"><img src="https://i.postimg.cc/BQjJGBKf/logo-conectay-transparent.png" alt="ConectaY" style="height:44px;display:block;margin:0 auto;object-fit:contain"></div>
+    <div class="sb-info">
+      <div class="sb-nome">Admin ConectaY</div>
+      <div class="sb-email" id="admEmail"></div>
+    </div>
+    <div class="sb-menu">
+      <div class="sb-item ativo" onclick="admPg('lojas')" id="admTabLojas"><span class="ico">📋</span>Lojas</div>
+      <div class="sb-item" onclick="admPg('nova')" id="admTabNova"><span class="ico">➕</span>Nova Loja</div>
+      <div class="sb-item" onclick="admPg('grafico')" id="admTabGrafico"><span class="ico">📊</span>Gráfico Geral</div>
+    </div>
+    <div class="sb-bottom">
+      <div class="sb-item" onclick="sair()"><span class="ico">🚪</span>Sair</div>
+    </div>
+  </div>
+  <div class="main">
+
+    <!-- lojas -->
+    <div class="pg ativo" id="admPgLojas">
+      <div class="pg-titulo">Lojas</div>
+      <div class="pg-sub" id="admSubLojas">Carregando...</div>
+      <div class="lojas-grid" id="admLojasGrid"></div>
+    </div>
+
+    <!-- nova/editar loja -->
+    <div class="pg" id="admPgNova">
+      <div class="pg-titulo" id="admFormTitulo">Nova Loja</div>
+      <div class="pg-sub">Preencha os dados da loja</div>
+      <div class="form-card">
+        <input type="hidden" id="fId">
+        <div class="fld-section">Dados Básicos</div>
+        <div class="fld-row">
+          <div class="fld"><label>Nome da Loja *</label><input id="fNome" placeholder="Ex: Gold Pipe"></div>
+          <div class="fld"><label>Slug (ID único) *</label><input id="fSlug" placeholder="goldpipe"></div>
+        </div>
+        <div class="fld"><label>Domínio</label><input id="fDominio" placeholder="goldpipe.conectay.com.br"></div>
+        <div class="fld-row">
+          <div class="fld"><label>Responsável</label><input id="fResp" placeholder="Nome completo"></div>
+          <div class="fld"><label>WhatsApp</label><input id="fContato" placeholder="(21) 99999-9999"></div>
+        </div>
+        <div class="fld-row">
+          <div class="fld"><label>CPF / CNPJ</label><input id="fDoc" placeholder="000.000.000-00"></div>
+          <div class="fld"><label>Email de contato</label><input id="fEmailCliente" type="email" placeholder="loja@email.com"></div>
+        </div>
+
+        <div class="fld-section">Visual do Portal</div>
+        <div class="fld"><label>Logo (URL)</label><input id="fLogo" placeholder="https://..."></div>
+        <div class="fld"><label>Mensagem no portal</label><textarea id="fMensagem" placeholder="Ex: Bem-vindo! Aproveite o Wi-Fi."></textarea></div>
+        <div class="fld-row">
+          <div class="fld"><label>Cor principal</label><input id="fCor" type="color" value="#ff6a1a"></div>
+          <div class="fld"><label>Cor 2 (gradiente)</label><input id="fCor2" type="color" value="#ff6a1a"></div>
+        </div>
+
+        <div class="fld-section">Destino após conectar</div>
+        <div class="dest-tabs">
+          <button class="dest-tab ativo" id="dtabInsta" onclick="admDestTab('instagram')">📸 Instagram</button>
+          <button class="dest-tab" id="dtabWpp" onclick="admDestTab('whatsapp')">💬 WhatsApp</button>
+          <button class="dest-tab" id="dtabForm" onclick="admDestTab('formulario')">📋 Formulário</button>
+        </div>
+        <input type="hidden" id="fDestino" value="instagram">
+        <div class="dest-campo ativo" id="dcInsta">
+          <div class="fld"><label>Instagram (sem @)</label><input id="fInsta" placeholder="minhaloja"></div>
+        </div>
+        <div class="dest-campo" id="dcWpp">
+          <div class="fld"><label>Link do grupo WhatsApp</label><input id="fWpp" placeholder="https://chat.whatsapp.com/..."></div>
+        </div>
+        <div class="dest-campo" id="dcForm">
+          <div class="fld"><label>Título do formulário</label><input id="fFormTitulo" placeholder="Ex: Cadastre-se para usar o Wi-Fi"></div>
+          <div class="fld"><label>Campos do formulário</label>
+            <div class="form-campos">
+              <div class="form-campo-item"><input class="form-campo-chk" type="checkbox" id="fc_nome" checked> <label class="form-campo-nome" for="fc_nome">Nome</label> <input class="form-campo-chk" type="checkbox" id="fc_nome_obrig" checked title="Obrigatório"> <label for="fc_nome_obrig" style="font-size:10px;color:#64748b">Obrig.</label></div>
+              <div class="form-campo-item"><input class="form-campo-chk" type="checkbox" id="fc_tel"> <label class="form-campo-nome" for="fc_tel">Telefone / WhatsApp</label> <input class="form-campo-chk" type="checkbox" id="fc_tel_obrig"> <label for="fc_tel_obrig" style="font-size:10px;color:#64748b">Obrig.</label></div>
+              <div class="form-campo-item"><input class="form-campo-chk" type="checkbox" id="fc_email"> <label class="form-campo-nome" for="fc_email">E-mail</label> <input class="form-campo-chk" type="checkbox" id="fc_email_obrig"> <label for="fc_email_obrig" style="font-size:10px;color:#64748b">Obrig.</label></div>
+              <div class="form-campo-item"><input class="form-campo-chk" type="checkbox" id="fc_aniv"> <label class="form-campo-nome" for="fc_aniv">Data de aniversário</label> <input class="form-campo-chk" type="checkbox" id="fc_aniv_obrig"> <label for="fc_aniv_obrig" style="font-size:10px;color:#64748b">Obrig.</label></div>
+              <div class="form-campo-item"><input class="form-campo-chk" type="checkbox" id="fc_bairro"> <label class="form-campo-nome" for="fc_bairro">Bairro</label> <input class="form-campo-chk" type="checkbox" id="fc_bairro_obrig"> <label for="fc_bairro_obrig" style="font-size:10px;color:#64748b">Obrig.</label></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="fld-section">Wi-Fi & Segurança</div>
+        <div class="fld-row">
+          <div class="fld"><label>AP Secret</label><input id="fSecret" placeholder="ABSOLEM"></div>
+          <div class="fld"><label>Código Wi-Fi</label><input id="fCodigo" placeholder="ABSOLEM"></div>
+        </div>
+
+        <div class="fld-section">Cobrança</div>
+        <div class="fld-row">
+          <div class="fld"><label>Plano</label>
+            <select id="fPlano"><option value="mensal">Mensal</option><option value="trimestral">Trimestral</option><option value="anual">Anual</option></select>
+          </div>
+          <div class="fld"><label>Vencimento</label><input id="fVenc" type="date"></div>
+        </div>
+        <div class="fld-row">
+          <div class="fld"><label>Valor Mensal (R$)</label><input id="fValor" type="number" step="0.01" placeholder="0.00"></div>
+          <div class="fld"><label>Status</label>
+            <select id="fAtivo"><option value="true">Ativo</option><option value="false">Desativado</option></select>
+          </div>
+        </div>
+        <div class="fld"><label>Observações</label><textarea id="fObs" placeholder="Anotações internas..."></textarea></div>
+
+        <div class="fld-section">Acesso ao Painel do Cliente</div>
+        <div class="fld-row">
+          <div class="fld"><label>Email de acesso</label><input id="fEmailAcesso" type="email" placeholder="dono@loja.com"></div>
+          <div class="fld"><label>Senha inicial</label><input id="fSenhaAcesso" type="password" placeholder="(em branco = não altera)"></div>
+        </div>
+
+        <div class="form-btns">
+          <button class="btn btn-primary" onclick="admSalvar()">💾 Salvar</button>
+          <button class="btn btn-ghost" onclick="admPg('lojas')">Cancelar</button>
+          <button class="btn btn-danger btn-sm" id="btnDel" style="display:none" onclick="admDeletar()">🗑 Excluir</button>
+        </div>
       </div>
     </div>
-    <div class="adm-main">
-      <div class="adm-header">
-        <div class="adm-titulo" id="admTitulo">Lojas</div>
-      </div>
 
-      <!-- lojas -->
-      <div class="adm-page ativo" id="admPageLojas">
-        <div class="adm-cards" id="admCards">
-          <div style="color:#64748b;font-size:13px">Carregando...</div>
-        </div>
-      </div>
-
-      <!-- nova / editar loja -->
-      <div class="adm-page" id="admPageNova">
-        <div class="adm-form">
-          <h3 id="admFormTitulo">Nova Loja</h3>
-          <input type="hidden" id="fId">
-          <div class="field-section">Dados Básicos</div>
-          <div class="field-row">
-            <div class="field"><label>Nome da Loja</label><input id="fNome" placeholder="Ex: Gold Pipe"></div>
-            <div class="field"><label>Slug (URL)</label><input id="fSlug" placeholder="ex: goldpipe"></div>
-          </div>
-          <div class="field"><label>Domínio (wildcard)</label><input id="fDominio" placeholder="goldpipe.conectay.com.br"></div>
-          <div class="field"><label>Instagram (sem @)</label><input id="fInsta" placeholder="goldpipe"></div>
-          <div class="field-row">
-            <div class="field"><label>Cor do Tema</label><input id="fCor" type="color" value="#ff6a1a"></div>
-            <div class="field"><label>Logo URL</label><input id="fLogo" placeholder="https://..."></div>
-          </div>
-          <div class="field"><label>Mensagem (opcional)</label><textarea id="fMsg" placeholder="Texto que aparece no portal..."></textarea></div>
-          <div class="field-section">Wi-Fi & Segurança</div>
-          <div class="field-row">
-            <div class="field"><label>AP Secret</label><input id="fSecret" placeholder="ABSOLEM"></div>
-            <div class="field"><label>Código Wi-Fi</label><input id="fCodigo" placeholder="ABSOLEM"></div>
-          </div>
-          <div class="field-section">Cobrança</div>
-          <div class="field-row">
-            <div class="field"><label>Plano</label>
-              <select id="fPlano"><option value="mensal">Mensal</option><option value="trimestral">Trimestral</option><option value="anual">Anual</option></select>
-            </div>
-            <div class="field"><label>Vencimento</label><input id="fVenc" type="date"></div>
-          </div>
-          <div class="field-row">
-            <div class="field"><label>Ativo</label>
-              <select id="fAtivo"><option value="true">Sim</option><option value="false">Não</option></select>
-            </div>
-            <div class="field"><label>Obs</label><input id="fObs" placeholder="Anotações..."></div>
-          </div>
-          <div class="field-section">Acesso ao Painel do Cliente</div>
-          <div class="field-row">
-            <div class="field"><label>E-mail de acesso</label><input id="fEmail" type="email" placeholder="dono@loja.com"></div>
-            <div class="field"><label>Senha inicial</label><input id="fSenha" type="password" placeholder="(deixe em branco para não alterar)"></div>
-          </div>
-          <div class="adm-form-btns">
-            <button class="btn btn-primary" onclick="admSalvar()">Salvar</button>
-            <button class="btn btn-ghost" onclick="admPagina('lojas')">Cancelar</button>
-            <button class="btn btn-danger btn-sm" id="btnDel" onclick="admDeletar()" style="display:none">Excluir</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- grafico geral -->
-      <div class="adm-page" id="admPageGraf">
-        <div class="adm-chart-wrap">
-          <div class="adm-chart-titulo">Conexões por dia — últimos 30 dias (todas as lojas)</div>
-          <div class="adm-chart-container">
-            <canvas id="admChart"></canvas>
-          </div>
-        </div>
+    <!-- grafico geral -->
+    <div class="pg" id="admPgGrafico">
+      <div class="pg-titulo">Gráfico Geral</div>
+      <div class="pg-sub">Todas as lojas — últimos 30 dias</div>
+      <div class="chart-wrap">
+        <div class="chart-titulo">Conexões por dia</div>
+        <div class="chart-box"><canvas id="admChart"></canvas></div>
       </div>
     </div>
+
   </div>
 </div>
 
-<!-- ════ CLIENTE ════ -->
-<div id="pgCliente">
-  <div class="cli-layout">
-    <div class="cli-sidebar">
-      <div class="cli-sb-logo">
-        <img src="https://i.postimg.cc/BQjJGBKf/logo-conectay-transparent.png" alt="ConectaY" style="height:48px;width:auto;max-width:160px;object-fit:contain;display:block;margin:0 auto" crossorigin="anonymous">
+<!-- ════════ CLIENTE ════════ -->
+<div id="pgCliente" style="display:none">
+  <div class="sb">
+    <div class="sb-logo"><img src="https://i.postimg.cc/BQjJGBKf/logo-conectay-transparent.png" alt="ConectaY" style="height:44px;display:block;margin:0 auto;object-fit:contain"></div>
+    <div class="sb-info">
+      <div class="sb-nome" id="cliNome">—</div>
+      <div class="sb-email" id="cliEmailEl">—</div>
+    </div>
+    <div class="sb-menu">
+      <div class="sb-item ativo" onclick="cliPg('dash')" id="cliTabDash"><span class="ico">📊</span>Dashboard</div>
+      <div class="sb-item" onclick="cliPg('leads')" id="cliTabLeads"><span class="ico">👥</span>Leads</div>
+      <div class="sb-item" onclick="cliPg('apa')" id="cliTabApa"><span class="ico">🎨</span>Aparência</div>
+    </div>
+    <div class="sb-bottom">
+      <div class="sb-item" onclick="sair()"><span class="ico">🚪</span>Sair</div>
+    </div>
+  </div>
+  <div class="main">
+
+    <!-- dashboard -->
+    <div class="pg ativo" id="cliPgDash">
+      <div class="pg-titulo">Dashboard</div>
+      <div class="pg-sub" id="cliSubDash">Bem-vindo!</div>
+      <div class="online-wrap">
+        <div class="online-header">
+          <div class="online-titulo"><span class="online-dot"></span>Online agora</div>
+          <button class="btn-link" onclick="cliCarregarOnline()">↻ Atualizar</button>
+        </div>
+        <div class="online-count" id="cliOnlineCount">—</div>
+        <div class="online-sub">conectados nos últimos 15 min</div>
+        <div style="margin-top:10px"><button class="btn-link" onclick="cliVerOnline()">👁 Ver lista detalhada</button></div>
       </div>
-      <div class="cli-sb-info">
-        <div class="cli-sb-nome" id="cliNome">—</div>
-        <div class="cli-sb-email" id="cliEmailEl">—</div>
+      <div class="cards">
+        <div class="card"><div class="card-label">Este mês</div><div class="card-val" id="cliMes">—</div><div class="card-sub">conexões</div></div>
+        <div class="card"><div class="card-label">Últimos 7 dias</div><div class="card-val" id="cli7d">—</div><div class="card-sub">conexões</div></div>
+        <div class="card"><div class="card-label">Últimos 30 dias</div><div class="card-val" id="cli30d">—</div><div class="card-sub">conexões</div></div>
+        <div class="card"><div class="card-label">Mês anterior</div><div class="card-val" id="cliAnt">—</div><div class="card-sub">conexões</div></div>
       </div>
-      <div class="cli-sb-menu">
-        <div class="cli-sb-item ativo" onclick="cliPagina('dash')">📊 Dashboard</div>
-        <div class="cli-sb-item" onclick="cliPagina('leads')">👥 Leads</div>
-        <div class="cli-sb-item" onclick="cliPagina('aparencia')">🎨 Aparência</div>
-      </div>
-      <div class="cli-sb-bottom">
-        <div class="cli-sb-item" onclick="sair()">🚪 Sair</div>
+      <div class="chart-wrap">
+        <div class="chart-titulo">Conexões por dia — últimos 30 dias</div>
+        <div class="chart-box"><canvas id="cliChart"></canvas></div>
       </div>
     </div>
-    <div class="cli-main">
 
-      <!-- dashboard -->
-      <div class="cli-page ativo" id="cliPageDash">
-        <div class="cli-titulo">Dashboard</div>
-        <div class="cli-sub" id="cliSubDash">Bem-vindo!</div>
-        <div class="cli-online-wrap">
-          <div class="cli-online-header">
-            <div class="cli-online-titulo">🟢 Online agora</div>
-            <button class="btn btn-ghost btn-sm" onclick="cliCarregarOnline()">↻ Atualizar</button>
-          </div>
-          <div class="cli-online-count" id="cliOnlineCount">—</div>
-          <div class="cli-online-sub">conectados nos últimos 15 min</div>
-          <div style="margin-top:10px">
-            <span class="cli-preview-btn" onclick="cliVerOnline()">👁 Ver lista</span>
+    <!-- leads -->
+    <div class="pg" id="cliPgLeads">
+      <div class="pg-titulo">Leads</div>
+      <div class="pg-sub">Clientes que preencheram o formulário</div>
+      <div class="table-wrap">
+        <div class="table-head">
+          <div class="table-titulo" id="cliLeadsTitulo">Cadastros</div>
+          <div style="display:flex;gap:8px">
+            <button class="btn btn-ghost btn-sm" onclick="cliDownloadCSV()">⬇ CSV</button>
+            <button class="btn btn-ghost btn-sm" onclick="cliDownloadVCF()">📇 Contatos</button>
           </div>
         </div>
-        <div class="cli-cards">
-          <div class="cli-card"><div class="cli-card-label">Este mês</div><div class="cli-card-valor" id="cliStatMes">—</div><div class="cli-card-sub">conexões</div></div>
-          <div class="cli-card"><div class="cli-card-label">Últimos 7 dias</div><div class="cli-card-valor" id="cliStat7">—</div><div class="cli-card-sub">conexões</div></div>
-          <div class="cli-card"><div class="cli-card-label">Últimos 30 dias</div><div class="cli-card-valor" id="cliStat30">—</div><div class="cli-card-sub">conexões</div></div>
-          <div class="cli-card"><div class="cli-card-label">Mês anterior</div><div class="cli-card-valor" id="cliStatAnt">—</div><div class="cli-card-sub">conexões</div></div>
-        </div>
-        <div class="cli-chart-wrap">
-          <div class="cli-chart-titulo">Conexões por dia — últimos 30 dias</div>
-          <div class="cli-chart-container">
-            <canvas id="cliChart"></canvas>
-          </div>
+        <div style="overflow-x:auto">
+          <table class="tbl">
+            <thead><tr><th>Nome</th><th>Telefone</th><th>E-mail</th><th>Aniversário</th><th>Bairro</th><th>Data</th></tr></thead>
+            <tbody id="cliLeadsBody"><tr><td colspan="6" class="tbl-empty">Carregando...</td></tr></tbody>
+          </table>
         </div>
       </div>
+    </div>
 
-      <!-- leads -->
-      <div class="cli-page" id="cliPageLeads">
-        <div class="cli-titulo">Leads</div>
-        <div class="cli-sub">Clientes que preencheram o formulário</div>
-        <div class="cli-table-wrap">
-          <div class="cli-table-header">
-            <div class="cli-table-titulo">Cadastros coletados</div>
-            <div style="display:flex;gap:8px">
-              <button class="btn btn-ghost btn-sm" onclick="cliDownloadCSV()">⬇ CSV</button>
-              <button class="btn btn-ghost btn-sm" onclick="cliDownloadVCF()">📇 Contatos</button>
+    <!-- aparencia -->
+    <div class="pg" id="cliPgApa">
+      <div class="pg-titulo">Aparência</div>
+      <div class="pg-sub">Personalize o portal Wi-Fi da sua loja</div>
+      <div class="apa-wrap">
+
+        <!-- preview ao vivo -->
+        <div class="apa-section">Preview ao Vivo</div>
+        <div class="apa-preview">
+          <div class="apa-preview-screen" id="apaScreen" style="background:#0a0f1e">
+            <div class="apa-preview-logo">
+              <img id="apaLogoImg" src="" alt="" style="display:none">
+              <span id="apaLogoTxt" style="color:rgba(255,255,255,.3);font-size:10px">Sua logo</span>
             </div>
-          </div>
-          <div style="overflow-x:auto">
-            <table id="cliLeadsTable">
-              <thead><tr><th>Nome</th><th>Telefone</th><th>E-mail</th><th>Data</th></tr></thead>
-              <tbody id="cliLeadsBody"><tr><td colspan="4" style="color:#64748b;text-align:center;padding:20px">Carregando...</td></tr></tbody>
-            </table>
+            <div class="apa-preview-titulo" id="apaTitulo" style="color:#fff">Wi-Fi Grátis</div>
+            <div class="apa-preview-msg" id="apaMsgEl" style="color:#fff">Bem-vindo!</div>
+            <div class="apa-preview-btn" id="apaBtnEl" style="background:linear-gradient(135deg,#ff6a1a,#ff6a1a);color:#fff">Conectar ao Wi-Fi</div>
+            <div class="apa-preview-rod" style="color:#fff">Wi-Fi por ConectaY</div>
           </div>
         </div>
+
+        <!-- logo -->
+        <div class="apa-section">Logo da Loja</div>
+        <div class="fld">
+          <label>URL da logo (PNG, JPG, SVG)</label>
+          <input id="apaLogo" placeholder="https://..." oninput="apaUpdateLogo(this.value)">
+        </div>
+        <div style="font-size:11px;color:#64748b;margin-top:-8px;margin-bottom:14px">Use <a href="https://postimg.cc" target="_blank" style="color:#0ea5e9">postimg.cc</a> para hospedar gratuitamente</div>
+
+        <!-- cores -->
+        <div class="apa-section">Cores do Botão</div>
+        <div class="apa-cores-grid">
+          <div class="apa-cor-item">
+            <div class="apa-cor-label"><span id="dot_cor" style="background:#ff6a1a"></span>Cor Primária</div>
+            <div class="apa-cor-row">
+              <input type="color" class="apa-swatch" id="cor_cor" value="#ff6a1a" oninput="apaSetCor('cor',this.value)">
+              <input type="text" class="apa-hex" id="hex_cor" value="#ff6a1a" maxlength="7" oninput="apaHexInput('cor',this.value)">
+            </div>
+          </div>
+          <div class="apa-cor-item">
+            <div class="apa-cor-label"><span id="dot_cor2" style="background:#ff6a1a"></span>Cor Secundária</div>
+            <div class="apa-cor-row">
+              <input type="color" class="apa-swatch" id="cor_cor2" value="#ff6a1a" oninput="apaSetCor('cor2',this.value)">
+              <input type="text" class="apa-hex" id="hex_cor2" value="#ff6a1a" maxlength="7" oninput="apaHexInput('cor2',this.value)">
+            </div>
+          </div>
+        </div>
+        <div style="font-size:11px;color:#64748b;margin:-6px 0 14px">O botão do portal usa um gradiente que vai da cor primária até a secundária. Para cor sólida, use a mesma nos dois.</div>
+
+        <!-- texto botao -->
+        <div class="apa-section">Texto do Botão</div>
+        <div class="fld"><input id="apaBtn" placeholder="Ex: Conectar ao Wi-Fi grátis" oninput="apaBtnUpdate(this.value)"></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
+          <button class="btn btn-ghost btn-sm" onclick="apaBtnSet('Conectar ao Wi-Fi')">Conectar ao Wi-Fi</button>
+          <button class="btn btn-ghost btn-sm" onclick="apaBtnSet('Acessar Internet')">Acessar Internet</button>
+          <button class="btn btn-ghost btn-sm" onclick="apaBtnSet('Entrar grátis')">Entrar grátis</button>
+          <button class="btn btn-ghost btn-sm" onclick="apaBtnSet('Quero Wi-Fi!')">Quero Wi-Fi!</button>
+        </div>
+
+        <!-- mensagem -->
+        <div class="apa-section">Mensagem de Boas-vindas</div>
+        <div class="fld"><textarea id="apaMsg" rows="2" placeholder="Ex: Bem-vindo! Aproveite nosso Wi-Fi grátis." oninput="apaMsgUpdate(this.value)"></textarea></div>
+
+        <!-- destino -->
+        <div class="apa-section">Após Conectar, Redirecionar para</div>
+        <div class="dest-tabs">
+          <button class="dest-tab ativo" id="cliDtabInsta" onclick="cliDestTab('instagram')">📸 Instagram</button>
+          <button class="dest-tab" id="cliDtabWpp" onclick="cliDestTab('whatsapp')">💬 WhatsApp</button>
+          <button class="dest-tab" id="cliDtabForm" onclick="cliDestTab('formulario')">📋 Formulário</button>
+          <button class="dest-tab" id="cliDtabNenhum" onclick="cliDestTab('nenhum')">🚫 Nenhum</button>
+        </div>
+        <input type="hidden" id="apaDestino" value="instagram">
+        <div class="dest-campo ativo" id="cliDcInsta">
+          <div class="fld"><label>Instagram (sem @)</label><input id="apaInsta" placeholder="minhaloja"></div>
+        </div>
+        <div class="dest-campo" id="cliDcWpp">
+          <div class="fld"><label>Link do grupo WhatsApp</label><input id="apaWpp" placeholder="https://chat.whatsapp.com/..."></div>
+        </div>
+        <div class="dest-campo" id="cliDcForm">
+          <div class="fld" style="color:#64748b;font-size:12px;padding:10px;background:#060c18;border-radius:10px">
+            O formulário é configurado pelo administrador. Seus campos e título já estão definidos.
+          </div>
+        </div>
+        <div class="dest-campo" id="cliDcNenhum"></div>
+
+        <div style="margin-top:20px;display:flex;gap:10px;align-items:center">
+          <button class="btn btn-primary" onclick="cliSalvarApa()">💾 Salvar Aparência</button>
+          <a id="cliLinkPortal" href="#" target="_blank" class="btn-link">🌐 Ver meu portal</a>
+        </div>
       </div>
+    </div>
 
-      <!-- aparencia -->
-      <div class="cli-page" id="cliPageAparencia">
-        <div class="cli-titulo">Aparência</div>
-        <div class="cli-sub">Personalize o portal Wi-Fi da sua loja</div>
-        <div class="cli-aparencia">
-          <!-- PREVIEW AO VIVO -->
-          <div class="apa-section">Preview do Portal</div>
-          <div class="apa-preview-wrap">
-            <div class="apa-preview">
-              <div class="apa-preview-screen" id="apaPreviewScreen" style="background:#1a1a2e">
-                <div class="apa-preview-logo-box">
-                  <img id="apaPreviewLogoImg" src="" alt="" style="display:none">
-                  <span id="apaPreviewLogoTxt" style="color:rgba(255,255,255,.4);font-size:11px">Logo</span>
-                </div>
-                <div class="apa-preview-titulo" id="apaPreviewTitulo" style="color:#ffffff">Wi-Fi Grátis</div>
-                <div class="apa-preview-subtitulo" id="apaPreviewMsg" style="color:#ffffff">Sua mensagem aparece aqui</div>
-                <div class="apa-preview-btn" id="apaPreviewBtn" style="background:#ff6a1a;color:#ffffff">Conectar ao Wi-Fi</div>
-                <div class="apa-preview-rodape" id="apaPreviewRodape" style="color:#ffffff">Wi-Fi por ConectaY</div>
-              </div>
-            </div>
-          </div>
-
-          <!-- LOGO -->
-          <div class="apa-section">Logo da Loja</div>
-          <div class="field"><label>URL da logo (PNG, JPG, SVG)</label>
-            <input id="cliAparLogo" placeholder="https://..." oninput="apaAtualizarLogo(this.value)">
-          </div>
-          <div style="font-size:11px;color:#64748b;margin-top:-8px;margin-bottom:16px">
-            Dica: use <a href="https://postimg.cc" target="_blank" style="color:#0ea5e9">postimg.cc</a> para hospedar sua logo gratuitamente
-          </div>
-
-          <!-- TEMAS PRONTOS -->
-          <div class="apa-section">Temas Prontos</div>
-          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:16px">
-            <button class="apa-btn-opt" onclick="apaTema('dark')">🌑 Dark</button>
-            <button class="apa-btn-opt" onclick="apaTema('light')">☀️ Light</button>
-            <button class="apa-btn-opt" onclick="apaTema('ocean')">🌊 Ocean</button>
-            <button class="apa-btn-opt" onclick="apaTema('forest')">🌿 Forest</button>
-            <button class="apa-btn-opt" onclick="apaTema('sunset')">🌅 Sunset</button>
-            <button class="apa-btn-opt" onclick="apaTema('purple')">💜 Purple</button>
-            <button class="apa-btn-opt" onclick="apaTema('gold')">✨ Gold</button>
-            <button class="apa-btn-opt" onclick="apaTema('rose')">🌸 Rose</button>
-          </div>
-
-          <!-- CORES CUSTOMIZÁVEIS -->
-          <div class="apa-section">Cores Personalizadas</div>
-          <div class="apa-cores-grid">
-            <div class="apa-cor-item">
-              <div class="apa-cor-item-label"><span id="dot_fundo" style="background:#1a1a2e"></span>Cor de Fundo</div>
-              <div class="apa-cor-row">
-                <input type="color" class="apa-swatch" id="cor_fundo" value="#1a1a2e" oninput="apaSetCor('fundo',this.value)">
-                <input type="text" class="apa-hex" id="hex_fundo" value="#1a1a2e" maxlength="7" oninput="apaHexInput('fundo',this.value)">
-              </div>
-              <div class="apa-paleta-rapida"><div class="apa-bolinha" style="background:#ff6a1a;" title="#ff6a1a" onclick="apaSetCor('fundo','#ff6a1a')"></div><div class="apa-bolinha" style="background:#0ea5e9;" title="#0ea5e9" onclick="apaSetCor('fundo','#0ea5e9')"></div><div class="apa-bolinha" style="background:#22c55e;" title="#22c55e" onclick="apaSetCor('fundo','#22c55e')"></div><div class="apa-bolinha" style="background:#a855f7;" title="#a855f7" onclick="apaSetCor('fundo','#a855f7')"></div><div class="apa-bolinha" style="background:#f43f5e;" title="#f43f5e" onclick="apaSetCor('fundo','#f43f5e')"></div><div class="apa-bolinha" style="background:#f59e0b;" title="#f59e0b" onclick="apaSetCor('fundo','#f59e0b')"></div><div class="apa-bolinha" style="background:#06b6d4;" title="#06b6d4" onclick="apaSetCor('fundo','#06b6d4')"></div><div class="apa-bolinha" style="background:#ec4899;" title="#ec4899" onclick="apaSetCor('fundo','#ec4899')"></div><div class="apa-bolinha" style="background:#14b8a6;" title="#14b8a6" onclick="apaSetCor('fundo','#14b8a6')"></div><div class="apa-bolinha" style="background:#8b5cf6;" title="#8b5cf6" onclick="apaSetCor('fundo','#8b5cf6')"></div><div class="apa-bolinha" style="background:#ffffff;border:1px solid rgba(255,255,255,.3);" title="#ffffff" onclick="apaSetCor('fundo','#ffffff')"></div><div class="apa-bolinha" style="background:#000000;" title="#000000" onclick="apaSetCor('fundo','#000000')"></div><div class="apa-bolinha" style="background:#1e293b;" title="#1e293b" onclick="apaSetCor('fundo','#1e293b')"></div><div class="apa-bolinha" style="background:#334155;" title="#334155" onclick="apaSetCor('fundo','#334155')"></div></div>
-            </div>
-            <div class="apa-cor-item">
-              <div class="apa-cor-item-label"><span id="dot_texto" style="background:#ffffff"></span>Cor do Texto</div>
-              <div class="apa-cor-row">
-                <input type="color" class="apa-swatch" id="cor_texto" value="#ffffff" oninput="apaSetCor('texto',this.value)">
-                <input type="text" class="apa-hex" id="hex_texto" value="#ffffff" maxlength="7" oninput="apaHexInput('texto',this.value)">
-              </div>
-              <div class="apa-paleta-rapida"><div class="apa-bolinha" style="background:#ff6a1a;" title="#ff6a1a" onclick="apaSetCor('texto','#ff6a1a')"></div><div class="apa-bolinha" style="background:#0ea5e9;" title="#0ea5e9" onclick="apaSetCor('texto','#0ea5e9')"></div><div class="apa-bolinha" style="background:#22c55e;" title="#22c55e" onclick="apaSetCor('texto','#22c55e')"></div><div class="apa-bolinha" style="background:#a855f7;" title="#a855f7" onclick="apaSetCor('texto','#a855f7')"></div><div class="apa-bolinha" style="background:#f43f5e;" title="#f43f5e" onclick="apaSetCor('texto','#f43f5e')"></div><div class="apa-bolinha" style="background:#f59e0b;" title="#f59e0b" onclick="apaSetCor('texto','#f59e0b')"></div><div class="apa-bolinha" style="background:#06b6d4;" title="#06b6d4" onclick="apaSetCor('texto','#06b6d4')"></div><div class="apa-bolinha" style="background:#ec4899;" title="#ec4899" onclick="apaSetCor('texto','#ec4899')"></div><div class="apa-bolinha" style="background:#14b8a6;" title="#14b8a6" onclick="apaSetCor('texto','#14b8a6')"></div><div class="apa-bolinha" style="background:#8b5cf6;" title="#8b5cf6" onclick="apaSetCor('texto','#8b5cf6')"></div><div class="apa-bolinha" style="background:#ffffff;border:1px solid rgba(255,255,255,.3);" title="#ffffff" onclick="apaSetCor('texto','#ffffff')"></div><div class="apa-bolinha" style="background:#000000;" title="#000000" onclick="apaSetCor('texto','#000000')"></div><div class="apa-bolinha" style="background:#1e293b;" title="#1e293b" onclick="apaSetCor('texto','#1e293b')"></div><div class="apa-bolinha" style="background:#334155;" title="#334155" onclick="apaSetCor('texto','#334155')"></div></div>
-            </div>
-            <div class="apa-cor-item">
-              <div class="apa-cor-item-label"><span id="dot_botao_bg" style="background:#ff6a1a"></span>Fundo do Botão</div>
-              <div class="apa-cor-row">
-                <input type="color" class="apa-swatch" id="cor_botao_bg" value="#ff6a1a" oninput="apaSetCor('botao_bg',this.value)">
-                <input type="text" class="apa-hex" id="hex_botao_bg" value="#ff6a1a" maxlength="7" oninput="apaHexInput('botao_bg',this.value)">
-              </div>
-              <div class="apa-paleta-rapida"><div class="apa-bolinha" style="background:#ff6a1a;" title="#ff6a1a" onclick="apaSetCor('botao_bg','#ff6a1a')"></div><div class="apa-bolinha" style="background:#0ea5e9;" title="#0ea5e9" onclick="apaSetCor('botao_bg','#0ea5e9')"></div><div class="apa-bolinha" style="background:#22c55e;" title="#22c55e" onclick="apaSetCor('botao_bg','#22c55e')"></div><div class="apa-bolinha" style="background:#a855f7;" title="#a855f7" onclick="apaSetCor('botao_bg','#a855f7')"></div><div class="apa-bolinha" style="background:#f43f5e;" title="#f43f5e" onclick="apaSetCor('botao_bg','#f43f5e')"></div><div class="apa-bolinha" style="background:#f59e0b;" title="#f59e0b" onclick="apaSetCor('botao_bg','#f59e0b')"></div><div class="apa-bolinha" style="background:#06b6d4;" title="#06b6d4" onclick="apaSetCor('botao_bg','#06b6d4')"></div><div class="apa-bolinha" style="background:#ec4899;" title="#ec4899" onclick="apaSetCor('botao_bg','#ec4899')"></div><div class="apa-bolinha" style="background:#14b8a6;" title="#14b8a6" onclick="apaSetCor('botao_bg','#14b8a6')"></div><div class="apa-bolinha" style="background:#8b5cf6;" title="#8b5cf6" onclick="apaSetCor('botao_bg','#8b5cf6')"></div><div class="apa-bolinha" style="background:#ffffff;border:1px solid rgba(255,255,255,.3);" title="#ffffff" onclick="apaSetCor('botao_bg','#ffffff')"></div><div class="apa-bolinha" style="background:#000000;" title="#000000" onclick="apaSetCor('botao_bg','#000000')"></div><div class="apa-bolinha" style="background:#1e293b;" title="#1e293b" onclick="apaSetCor('botao_bg','#1e293b')"></div><div class="apa-bolinha" style="background:#334155;" title="#334155" onclick="apaSetCor('botao_bg','#334155')"></div></div>
-            </div>
-            <div class="apa-cor-item">
-              <div class="apa-cor-item-label"><span id="dot_botao_txt" style="background:#ffffff"></span>Texto do Botão</div>
-              <div class="apa-cor-row">
-                <input type="color" class="apa-swatch" id="cor_botao_txt" value="#ffffff" oninput="apaSetCor('botao_txt',this.value)">
-                <input type="text" class="apa-hex" id="hex_botao_txt" value="#ffffff" maxlength="7" oninput="apaHexInput('botao_txt',this.value)">
-              </div>
-              <div class="apa-paleta-rapida"><div class="apa-bolinha" style="background:#ff6a1a;" title="#ff6a1a" onclick="apaSetCor('botao_txt','#ff6a1a')"></div><div class="apa-bolinha" style="background:#0ea5e9;" title="#0ea5e9" onclick="apaSetCor('botao_txt','#0ea5e9')"></div><div class="apa-bolinha" style="background:#22c55e;" title="#22c55e" onclick="apaSetCor('botao_txt','#22c55e')"></div><div class="apa-bolinha" style="background:#a855f7;" title="#a855f7" onclick="apaSetCor('botao_txt','#a855f7')"></div><div class="apa-bolinha" style="background:#f43f5e;" title="#f43f5e" onclick="apaSetCor('botao_txt','#f43f5e')"></div><div class="apa-bolinha" style="background:#f59e0b;" title="#f59e0b" onclick="apaSetCor('botao_txt','#f59e0b')"></div><div class="apa-bolinha" style="background:#06b6d4;" title="#06b6d4" onclick="apaSetCor('botao_txt','#06b6d4')"></div><div class="apa-bolinha" style="background:#ec4899;" title="#ec4899" onclick="apaSetCor('botao_txt','#ec4899')"></div><div class="apa-bolinha" style="background:#14b8a6;" title="#14b8a6" onclick="apaSetCor('botao_txt','#14b8a6')"></div><div class="apa-bolinha" style="background:#8b5cf6;" title="#8b5cf6" onclick="apaSetCor('botao_txt','#8b5cf6')"></div><div class="apa-bolinha" style="background:#ffffff;border:1px solid rgba(255,255,255,.3);" title="#ffffff" onclick="apaSetCor('botao_txt','#ffffff')"></div><div class="apa-bolinha" style="background:#000000;" title="#000000" onclick="apaSetCor('botao_txt','#000000')"></div><div class="apa-bolinha" style="background:#1e293b;" title="#1e293b" onclick="apaSetCor('botao_txt','#1e293b')"></div><div class="apa-bolinha" style="background:#334155;" title="#334155" onclick="apaSetCor('botao_txt','#334155')"></div></div>
-            </div>
-          </div>
-
-          <!-- TEXTO DO BOTÃO -->
-          <div class="apa-section">Texto do Botão</div>
-          <div class="field">
-            <input id="cliAparBotao" placeholder="Ex: Conectar ao Wi-Fi grátis" oninput="apaAtualizarBotao(this.value)">
-          </div>
-          <div class="apa-btn-group" style="margin-bottom:16px">
-            <button class="apa-btn-opt" onclick="apaSetBotao('Conectar ao Wi-Fi')">Conectar ao Wi-Fi</button>
-            <button class="apa-btn-opt" onclick="apaSetBotao('Acessar Internet')">Acessar Internet</button>
-            <button class="apa-btn-opt" onclick="apaSetBotao('Entrar grátis')">Entrar grátis</button>
-            <button class="apa-btn-opt" onclick="apaSetBotao('Quero Wi-Fi!')">Quero Wi-Fi!</button>
-          </div>
-
-          <!-- MENSAGEM -->
-          <div class="apa-section">Mensagem de Boas-vindas</div>
-          <div class="field">
-            <textarea id="cliAparMsg" placeholder="Ex: Bem-vindo! Aproveite o Wi-Fi grátis." rows="2" oninput="apaAtualizarMsg(this.value)"></textarea>
-          </div>
-
-          <!-- DESTINO -->
-          <div class="apa-section">Após Conectar, Redirecionar para</div>
-          <div class="apa-btn-group">
-            <button class="apa-btn-opt sel" id="apaDestInsta" onclick="apaSetDest('instagram')">📸 Instagram</button>
-            <button class="apa-btn-opt" id="apaDestSite" onclick="apaSetDest('site')">🌐 Site</button>
-            <button class="apa-btn-opt" id="apaDestNenhum" onclick="apaSetDest('nenhum')">🚫 Nenhum</button>
-          </div>
-          <input type="hidden" id="cliAparDest" value="instagram">
-          <input type="hidden" id="cliAparCor" value="#ff6a1a">
-          <div class="apa-destino-url" id="cliAparInstaField">
-            <div class="field"><label>Instagram (sem @)</label><input id="cliAparInsta" placeholder="minhaloja"></div>
-          </div>
-          <div class="apa-destino-url" id="cliAparSiteField" style="display:none">
-            <div class="field"><label>URL do site</label><input id="cliAparSiteUrl" placeholder="https://minhaloja.com.br"></div>
-          </div>
+  </div>
 </div>
 
-<!-- modal online -->
+<!-- modal online cliente -->
 <div class="modal-bg" id="modalOnline">
   <div class="modal">
-    <button class="modal-close" onclick="document.getElementById('modalOnline').classList.remove('open')">✕</button>
-    <h3 id="modalOnlineTitulo">Online agora</h3>
+    <div class="modal-header">
+      <div class="modal-titulo" id="modalOnlineTitulo">Online agora</div>
+      <button class="modal-close" onclick="document.getElementById('modalOnline').classList.remove('open')">✕</button>
+    </div>
     <div id="modalOnlineBody"></div>
   </div>
 </div>
 
-<!-- modal editar loja (admin) -->
-<div class="modal-bg" id="modalOnlineAdm">
-  <div class="modal">
-    <button class="modal-close" onclick="document.getElementById('modalOnlineAdm').classList.remove('open')">✕</button>
-    <h3 id="modalOnlineAdmTitulo">Online agora</h3>
-    <div id="modalOnlineAdmBody"></div>
-  </div>
-</div>
-
 <script>
-// ══════════════════════════════════════════════
-//  CONFIGURAÇÃO
-// ══════════════════════════════════════════════
-const SUPA_URL  = 'https://iekxuehdrxsimqtfejxm.supabase.co';
-const SUPA_KEY  = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlla3h1ZWhkcnhzaW1xdGZlanhtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1MDk0NzAsImV4cCI6MjA5MTA4NTQ3MH0.61zaRoTBK2XorXgAcGXcsN8yOY0MTRS4bIJ_X4vPjyA';
-const EDGE_URL  = 'https://iekxuehdrxsimqtfejxm.supabase.co/functions/v1/smart-responder';
-const sb = supabase.createClient(SUPA_URL, SUPA_KEY);
+// ═══════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════
+const SB  = supabase.createClient('https://iekxuehdrxsimqtfejxm.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlla3h1ZWhkcnhzaW1xdGZlanhtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1MDk0NzAsImV4cCI6MjA5MTA4NTQ3MH0.61zaRoTBK2XorXgAcGXcsN8yOY0MTRS4bIJ_X4vPjyA');
+const EDGE = 'https://iekxuehdrxsimqtfejxm.supabase.co/functions/v1/smart-responder';
 
-// ══════════════════════════════════════════════
-//  ESTADO GLOBAL
-// ══════════════════════════════════════════════
-let IS_ADMIN  = false;
-let LOJAS     = [];
-let ACESSOS   = [];
-let ADM_CHART = null;
-let CLI_CHART = null;
-let CLI_LOJA  = null;
-let CLI_LEADS = [];
-let CLI_ONLINE_LISTA = [];
-
-// ══════════════════════════════════════════════
-//  UTILITÁRIOS
-// ══════════════════════════════════════════════
-function mostrar(id) {
-  var el = document.getElementById(id);
-  if (id === 'pgAdmin' || id === 'pgCliente') {
-    el.style.display = 'flex';
-  } else {
-    el.style.display = 'block';
-  }
-}
-function esconder(id) {
-  document.getElementById(id).style.display = 'none';
-}
-function toast(msg, ok) {
+// ═══════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════
+function toast(msg, tipo) {
   var t = document.getElementById('toast');
   t.textContent = msg;
-  t.style.background = ok === false ? '#f87171' : '#0ea5e9';
+  t.style.background = tipo === 'err' ? '#ef4444' : '#0ea5e9';
+  t.style.color = '#fff';
   t.style.display = 'block';
-  setTimeout(function(){ t.style.display = 'none'; }, 3000);
+  clearTimeout(t._to);
+  t._to = setTimeout(function() { t.style.display = 'none'; }, 3000);
 }
 function esc(v) {
-  if (!v) return '';
-  return String(v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+  return String(v == null ? '' : v).replace(/[&<>"]/g, function(c) {
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];
+  });
 }
 function fmtData(iso) {
   if (!iso) return '';
-  var d = new Date(iso);
-  return d.toLocaleDateString('pt-BR');
+  return new Date(iso).toLocaleDateString('pt-BR');
 }
+function pg(id) {
+  var el = document.getElementById(id);
+  if (id === 'pgAdmin' || id === 'pgCliente') { el.style.display = 'flex'; }
+  else { el.style.display = 'block'; }
+}
+function hidePg(id) { document.getElementById(id).style.display = 'none'; }
 
-// ══════════════════════════════════════════════
-//  AUTH — INICIALIZAÇÃO
-// ══════════════════════════════════════════════
+// ═══════════════════════════════════════════
+// AUTH
+// ═══════════════════════════════════════════
 window.addEventListener('DOMContentLoaded', async function() {
-  var s = await sb.auth.getSession();
-  if (s.data && s.data.session) {
-    verificarAcesso(s.data.session.user);
-  }
+  var s = await SB.auth.getSession();
+  if (s.data && s.data.session) verificarAcesso(s.data.session.user);
 });
 
 async function fazerLogin() {
   var email = document.getElementById('lgEmail').value.trim();
-  var senha = document.getElementById('lgSenha').value;
-  var erro  = document.getElementById('lgErro');
-  var btn   = document.getElementById('lgBtn');
-  if (!email || !senha) { erro.textContent = 'Preencha e-mail e senha.'; erro.style.display='block'; return; }
-  btn.textContent = 'Entrando...';
-  btn.disabled = true;
-  var r = await sb.auth.signInWithPassword({ email: email, password: senha });
-  btn.textContent = 'Entrar';
-  btn.disabled = false;
-  if (r.error) {
-    erro.textContent = 'E-mail ou senha incorretos.';
-    erro.style.display = 'block';
-    return;
-  }
+  var senha  = document.getElementById('lgSenha').value;
+  var erro   = document.getElementById('lgErro');
+  var btn    = document.getElementById('lgBtn');
   erro.style.display = 'none';
+  if (!email || !senha) { erro.textContent = 'Preencha e-mail e senha.'; erro.style.display = 'block'; return; }
+  btn.textContent = 'Entrando...'; btn.disabled = true;
+  var r = await SB.auth.signInWithPassword({ email: email, password: senha });
+  btn.textContent = 'Entrar'; btn.disabled = false;
+  if (r.error) { erro.textContent = 'E-mail ou senha incorretos.'; erro.style.display = 'block'; return; }
   verificarAcesso(r.data.user);
 }
 
 async function verificarAcesso(user) {
-  console.log('[ConectaY] user.id:', user.id, 'user.email:', user.email);
-
-  // 1. testa se é admin
-  var ra = await sb.from('admin_perfis').select('papel').eq('email', user.email);
-  console.log('[ConectaY] admin_perfis result:', JSON.stringify(ra));
+  var ra = await SB.from('admin_perfis').select('papel').eq('email', user.email);
   if (!ra.error && ra.data && ra.data.length > 0) {
-    IS_ADMIN = true;
-    esconder('pgLogin');
-    mostrar('pgAdmin');
+    document.getElementById('admEmail').textContent = user.email;
+    hidePg('pgLogin');
+    pg('pgAdmin');
     admCarregar();
     return;
   }
-
-  // 2. testa se é cliente
-  var rc = await sb.from('portal_lojas').select('*').eq('email_acesso', user.email).maybeSingle();
-  console.log('[ConectaY] portal_lojas result:', JSON.stringify(rc));
-  if (rc.data) {
-    IS_ADMIN = false;
+  var rc = await SB.from('portal_lojas').select('*').eq('email_acesso', user.email).maybeSingle();
+  if (!rc.error && rc.data) {
     CLI_LOJA = rc.data;
-    esconder('pgLogin');
-    mostrar('pgCliente');
-    cliIniciar();
+    hidePg('pgLogin');
+    pg('pgCliente');
+    cliIniciar(user);
     return;
   }
-
-  // 3. sem acesso
-  console.log('[ConectaY] SEM ACESSO — admin_perfis error:', ra.error, 'portal_lojas error:', rc.error);
-  toast('Acesso não autorizado. Veja o console (F12) para detalhes.', false);
-  await sb.auth.signOut();
+  toast('Acesso não autorizado.', 'err');
+  await SB.auth.signOut();
 }
 
-async function sair() {
-  await sb.auth.signOut();
-  location.reload();
-}
+async function sair() { await SB.auth.signOut(); location.reload(); }
 
-// ══════════════════════════════════════════════
-//  ADMIN — LOJAS
-// ══════════════════════════════════════════════
+// ═══════════════════════════════════════════
+// ADMIN
+// ═══════════════════════════════════════════
+var ADM_LOJAS   = [];
+var ADM_ACESSOS = [];
+var ADM_CHART   = null;
+
 async function admCarregar() {
-  var hoje = new Date().toISOString().slice(0,10);
   var ini30 = new Date(Date.now() - 30*864e5).toISOString();
-  var rl = await sb.from('portal_lojas').select('*').order('criado_em', {ascending: false});
-  LOJAS = rl.data || [];
-  var ra = await sb.from('portal_acessos').select('loja_id,criado_em').gte('criado_em', ini30);
-  ACESSOS = ra.data || [];
-  admRenderLojas(hoje);
-  admCarregarOnlineBadges();
+  var rl = await SB.from('portal_lojas').select('*').order('criado_em', {ascending: false});
+  ADM_LOJAS = rl.data || [];
+  var ra = await SB.from('portal_acessos').select('loja_id,criado_em').gte('criado_em', ini30);
+  ADM_ACESSOS = ra.data || [];
+  admRenderLojas();
+  admOnlineBadges();
 }
 
-function admRenderLojas(hoje) {
-  var box = document.getElementById('admCards');
-  if (!LOJAS.length) { box.innerHTML = '<div style="color:#64748b">Nenhuma loja cadastrada.</div>'; return; }
-  box.innerHTML = LOJAS.map(function(l) {
+function admRenderLojas() {
+  var box  = document.getElementById('admLojasGrid');
+  var hoje = new Date().toISOString().slice(0,10);
+  document.getElementById('admSubLojas').textContent = ADM_LOJAS.length + ' loja(s) cadastrada(s)';
+  if (!ADM_LOJAS.length) { box.innerHTML = '<div style="color:#64748b">Nenhuma loja cadastrada.</div>'; return; }
+  box.innerHTML = ADM_LOJAS.map(function(l) {
     var venc = l.vencimento && l.vencimento <= hoje;
-    var cnt  = ACESSOS.filter(function(a){ return a.loja_id === l.id; }).length;
-    return '<div class="adm-card" onclick="admEditar(' + l.id + ')">' +
-      '<div class="adm-card-header">' +
-        '<div>' +
-          '<div class="adm-card-nome">' + esc(l.nome) + ' <span class="adm-badge-online" id="badge_' + l.id + '" style="display:none">0 online</span></div>' +
-          '<div class="adm-card-slug">@' + esc(l.slug) + (venc ? ' · <span style="color:#f87171">VENCIDA</span>' : '') + '</div>' +
+    var cnt  = ADM_ACESSOS.filter(function(a) { return a.loja_id === l.id; }).length;
+    var dest = l.destino_tipo || 'instagram';
+    var destIcon = dest === 'instagram' ? '📸' : dest === 'whatsapp' ? '💬' : dest === 'formulario' ? '📋' : '—';
+    return '<div class="loja-card" onclick="admEditar(' + l.id + ')">' +
+      '<div class="loja-card-header">' +
+        '<div><div class="loja-nome">' + esc(l.nome) +
+          (venc ? '<span class="badge-venc">VENCIDA</span>' : '') +
+          '<span class="badge-online" id="bl_' + l.id + '" style="display:none">0 online</span>' +
         '</div>' +
-        '<div class="adm-dot' + (l.ativo ? '' : ' off') + '"></div>' +
+        '<div class="loja-slug">@' + esc(l.slug) + ' · ' + destIcon + ' ' + dest + '</div></div>' +
+        '<div class="loja-dot' + (l.ativo ? '' : ' off') + '"></div>' +
       '</div>' +
-      '<div class="adm-card-stats">' +
-        '<div class="adm-stat"><span>' + cnt + '</span>30 dias</div>' +
-        (l.vencimento ? '<div class="adm-stat"><span>' + l.vencimento + '</span>vence</div>' : '') +
+      '<div class="loja-stats">' +
+        '<div class="loja-stat"><b>' + cnt + '</b>30 dias</div>' +
+        (l.vencimento ? '<div class="loja-stat"><b>' + l.vencimento + '</b>vence</div>' : '') +
       '</div>' +
     '</div>';
   }).join('');
 }
 
-async function admCarregarOnlineBadges() {
-  var ini15 = new Date(Date.now() - 15*60*1000).toISOString();
-  var r = await sb.from('portal_acessos').select('loja_id').gte('criado_em', ini15);
-  var online = r.data || [];
-  var contagem = {};
-  online.forEach(function(a) {
-    contagem[a.loja_id] = (contagem[a.loja_id] || 0) + 1;
-  });
-  LOJAS.forEach(function(l) {
-    var badge = document.getElementById('badge_' + l.id);
-    if (!badge) return;
-    var n = contagem[l.id] || 0;
-    if (n > 0) { badge.textContent = n + ' online'; badge.style.display = 'inline-block'; }
-    else { badge.style.display = 'none'; }
+async function admOnlineBadges() {
+  var ini15 = new Date(Date.now() - 15*60000).toISOString();
+  var r = await SB.from('portal_acessos').select('loja_id').gte('criado_em', ini15);
+  var cnt = {};
+  (r.data || []).forEach(function(a) { cnt[a.loja_id] = (cnt[a.loja_id] || 0) + 1; });
+  ADM_LOJAS.forEach(function(l) {
+    var b = document.getElementById('bl_' + l.id);
+    if (!b) return;
+    var n = cnt[l.id] || 0;
+    if (n > 0) { b.textContent = n + ' online'; b.style.display = 'inline-block'; }
   });
 }
 
-function admPagina(pg) {
-  document.querySelectorAll('.adm-page').forEach(function(el){ el.classList.remove('ativo'); });
-  document.querySelectorAll('.adm-sb-item').forEach(function(el){ el.classList.remove('ativo'); });
-  if (pg === 'lojas')  { document.getElementById('admPageLojas').classList.add('ativo'); document.getElementById('admTitulo').textContent = 'Lojas'; }
-  if (pg === 'nova')   { admNovaLoja(); document.getElementById('admPageNova').classList.add('ativo'); document.getElementById('admTitulo').textContent = 'Nova Loja'; }
-  if (pg === 'editar') { document.getElementById('admPageNova').classList.add('ativo'); document.getElementById('admTitulo').textContent = 'Editar Loja'; }
-  if (pg === 'graf')   { document.getElementById('admPageGraf').classList.add('ativo'); document.getElementById('admTitulo').textContent = 'Gráfico Geral'; admRenderChart(); }
+function admPg(pg_id) {
+  document.querySelectorAll('.pg').forEach(function(el) { el.classList.remove('ativo'); });
+  document.querySelectorAll('.sb-item').forEach(function(el) { el.classList.remove('ativo'); });
+  if (pg_id === 'lojas')   { document.getElementById('admPgLojas').classList.add('ativo');   document.getElementById('admTabLojas').classList.add('ativo'); }
+  if (pg_id === 'nova')    { document.getElementById('admPgNova').classList.add('ativo');    document.getElementById('admTabNova').classList.add('ativo'); admNovaLoja(); }
+  if (pg_id === 'editar')  { document.getElementById('admPgNova').classList.add('ativo'); }
+  if (pg_id === 'grafico') { document.getElementById('admPgGrafico').classList.add('ativo'); document.getElementById('admTabGrafico').classList.add('ativo'); admRenderChart(); }
+}
+
+function admDestTab(dest) {
+  document.getElementById('fDestino').value = dest;
+  ['Insta','Wpp','Form'].forEach(function(d) { document.getElementById('dtab'+d).classList.remove('ativo'); });
+  ['Insta','Wpp','Form'].forEach(function(d) { document.getElementById('dc'+d).classList.remove('ativo'); });
+  var map = {instagram:'Insta', whatsapp:'Wpp', formulario:'Form'};
+  if (map[dest]) { document.getElementById('dtab'+map[dest]).classList.add('ativo'); document.getElementById('dc'+map[dest]).classList.add('ativo'); }
 }
 
 function admNovaLoja() {
   document.getElementById('admFormTitulo').textContent = 'Nova Loja';
-  ['fId','fNome','fSlug','fDominio','fInsta','fLogo','fMsg','fSecret','fCodigo','fObs','fVenc','fEmail','fSenha'].forEach(function(id){
-    document.getElementById(id).value = '';
+  document.getElementById('btnDel').style.display = 'none';
+  ['fId','fNome','fSlug','fDominio','fResp','fContato','fDoc','fEmailCliente',
+   'fLogo','fMensagem','fSecret','fCodigo','fObs','fVenc','fValor','fEmailAcesso','fSenhaAcesso','fFormTitulo','fInsta','fWpp'].forEach(function(id) {
+    var el = document.getElementById(id);
+    if (el) el.value = '';
   });
   document.getElementById('fCor').value = '#ff6a1a';
+  document.getElementById('fCor2').value = '#ff6a1a';
   document.getElementById('fAtivo').value = 'true';
   document.getElementById('fPlano').value = 'mensal';
-  document.getElementById('btnDel').style.display = 'none';
+  admDestTab('instagram');
+  ['nome','tel','email','aniv','bairro'].forEach(function(c) {
+    var el = document.getElementById('fc_'+c); if (el) el.checked = (c === 'nome');
+    var ob = document.getElementById('fc_'+c+'_obrig'); if (ob) ob.checked = (c === 'nome');
+  });
 }
 
 function admEditar(id) {
-  var l = LOJAS.find(function(x){ return x.id === id; });
+  var l = ADM_LOJAS.find(function(x) { return x.id === id; });
   if (!l) return;
-  admPagina('editar');
-  document.getElementById('admFormTitulo').textContent = 'Editar Loja';
-  document.getElementById('fId').value     = l.id;
-  document.getElementById('fNome').value   = l.nome || '';
-  document.getElementById('fSlug').value   = l.slug || '';
-  document.getElementById('fDominio').value= l.dominio || '';
-  document.getElementById('fInsta').value  = l.instagram || '';
-  document.getElementById('fCor').value    = l.cor || '#ff6a1a';
-  document.getElementById('fLogo').value   = l.logo_url || '';
-  document.getElementById('fMsg').value    = l.mensagem || '';
-  document.getElementById('fSecret').value = l.ap_secret || '';
-  document.getElementById('fCodigo').value = l.codigo_wifi || '';
-  document.getElementById('fObs').value    = l.obs || '';
-  document.getElementById('fVenc').value   = l.vencimento || '';
-  document.getElementById('fAtivo').value  = l.ativo ? 'true' : 'false';
-  document.getElementById('fPlano').value  = l.plano || 'mensal';
-  document.getElementById('fEmail').value  = l.email_acesso || '';
-  document.getElementById('fSenha').value  = '';
+  admPg('editar');
+  document.getElementById('admFormTitulo').textContent = 'Editar Loja — ' + l.nome;
   document.getElementById('btnDel').style.display = 'inline-block';
+  var set = function(fid, val) { var el = document.getElementById(fid); if (el) el.value = val || ''; };
+  set('fId', l.id); set('fNome', l.nome); set('fSlug', l.slug); set('fDominio', l.dominio);
+  set('fResp', l.responsavel); set('fContato', l.contato); set('fDoc', l.documento);
+  set('fEmailCliente', l.email_cliente); set('fLogo', l.logo_url); set('fMensagem', l.mensagem);
+  set('fCor', l.cor || '#ff6a1a'); set('fCor2', l.cor2 || '#ff6a1a');
+  set('fSecret', l.ap_secret); set('fCodigo', l.codigo_wifi);
+  set('fObs', l.obs); set('fVenc', l.vencimento); set('fValor', l.valor_mensal);
+  set('fEmailAcesso', l.email_acesso); set('fSenhaAcesso', '');
+  set('fInsta', l.instagram); set('fWpp', l.whatsapp_link); set('fFormTitulo', l.form_titulo);
+  document.getElementById('fAtivo').value = l.ativo ? 'true' : 'false';
+  document.getElementById('fPlano').value = l.plano || 'mensal';
+  admDestTab(l.destino_tipo || 'instagram');
+  var fc = l.form_campos || {};
+  ['nome','tel','email','aniv','bairro'].forEach(function(c) {
+    var el = document.getElementById('fc_'+c); if (el) el.checked = !!fc[c];
+    var ob = document.getElementById('fc_'+c+'_obrig'); if (ob) ob.checked = !!(fc[c] && fc[c].obrig);
+  });
+}
+
+function admGetFormCampos() {
+  var fc = {};
+  ['nome','tel','email','aniv','bairro'].forEach(function(c) {
+    var el = document.getElementById('fc_'+c);
+    if (el && el.checked) {
+      var ob = document.getElementById('fc_'+c+'_obrig');
+      fc[c] = {obrig: !!(ob && ob.checked)};
+    }
+  });
+  return fc;
 }
 
 async function admSalvar() {
   var id    = document.getElementById('fId').value;
   var nome  = document.getElementById('fNome').value.trim();
-  var slug  = document.getElementById('fSlug').value.trim().toLowerCase();
-  var email = document.getElementById('fEmail').value.trim();
-  var senha = document.getElementById('fSenha').value;
-  if (!nome || !slug) { toast('Nome e Slug são obrigatórios.', false); return; }
+  var slug  = document.getElementById('fSlug').value.trim().toLowerCase().replace(/[^a-z0-9]/g,'');
+  var email = document.getElementById('fEmailAcesso').value.trim();
+  var senha = document.getElementById('fSenhaAcesso').value;
+  if (!nome || !slug) { toast('Nome e Slug são obrigatórios.', 'err'); return; }
   var dados = {
     nome: nome, slug: slug,
-    dominio:    document.getElementById('fDominio').value.trim() || null,
-    instagram:  document.getElementById('fInsta').value.trim()   || null,
-    cor:        document.getElementById('fCor').value,
-    logo_url:   document.getElementById('fLogo').value.trim()    || null,
-    mensagem:   document.getElementById('fMsg').value.trim()     || null,
-    ap_secret:  document.getElementById('fSecret').value.trim()  || null,
-    codigo_wifi:document.getElementById('fCodigo').value.trim()  || null,
-    obs:        document.getElementById('fObs').value.trim()     || null,
-    vencimento: document.getElementById('fVenc').value           || null,
-    ativo:      document.getElementById('fAtivo').value === 'true',
-    plano:      document.getElementById('fPlano').value,
+    dominio:      document.getElementById('fDominio').value.trim() || null,
+    responsavel:  document.getElementById('fResp').value.trim()    || null,
+    contato:      document.getElementById('fContato').value.trim() || null,
+    documento:    document.getElementById('fDoc').value.trim()     || null,
+    email_cliente:document.getElementById('fEmailCliente').value.trim() || null,
+    logo_url:     document.getElementById('fLogo').value.trim()    || null,
+    mensagem:     document.getElementById('fMensagem').value.trim()|| null,
+    cor:          document.getElementById('fCor').value,
+    cor2:         document.getElementById('fCor2').value,
+    instagram:    document.getElementById('fInsta').value.trim()   || null,
+    whatsapp_link:document.getElementById('fWpp').value.trim()     || null,
+    destino_tipo: document.getElementById('fDestino').value,
+    form_titulo:  document.getElementById('fFormTitulo').value.trim() || null,
+    form_campos:  admGetFormCampos(),
+    ap_secret:    document.getElementById('fSecret').value.trim()  || null,
+    codigo_wifi:  document.getElementById('fCodigo').value.trim()  || null,
+    obs:          document.getElementById('fObs').value.trim()     || null,
+    vencimento:   document.getElementById('fVenc').value           || null,
+    valor_mensal: parseFloat(document.getElementById('fValor').value) || null,
+    ativo:        document.getElementById('fAtivo').value === 'true',
+    plano:        document.getElementById('fPlano').value,
     email_acesso: email || null
   };
   var r = id
-    ? await sb.from('portal_lojas').update(dados).eq('id', id)
-    : await sb.from('portal_lojas').insert(dados);
-  if (r.error) { toast('Erro: ' + r.error.message, false); return; }
-  // criar/atualizar usuário Auth se tem email + senha
+    ? await SB.from('portal_lojas').update(dados).eq('id', id)
+    : await SB.from('portal_lojas').insert(dados);
+  if (r.error) { toast('Erro: ' + r.error.message, 'err'); return; }
   if (email && senha) {
-    var s = await sb.auth.getSession();
+    var s = await SB.auth.getSession();
     var token = s.data.session ? s.data.session.access_token : '';
-    await fetch(EDGE_URL, {
-      method: 'POST',
-      headers: {'Content-Type':'application/json','Authorization':'Bearer ' + token},
-      body: JSON.stringify({action:'criar_usuario_cliente', email: email, senha: senha})
-    });
+    try {
+      await fetch(EDGE, {
+        method: 'POST',
+        headers: {'Content-Type':'application/json', 'Authorization':'Bearer '+token},
+        body: JSON.stringify({action:'criar_usuario_cliente', email: email, senha: senha})
+      });
+    } catch(e) {}
   }
   toast('Salvo com sucesso!');
   admCarregar();
-  admPagina('lojas');
+  admPg('lojas');
 }
 
 async function admDeletar() {
   var id = document.getElementById('fId').value;
   if (!id || !confirm('Excluir esta loja e todos os dados?')) return;
-  await sb.from('portal_lojas').delete().eq('id', id);
+  await SB.from('portal_lojas').delete().eq('id', id);
   toast('Loja excluída.');
   admCarregar();
-  admPagina('lojas');
+  admPg('lojas');
 }
 
-// grafico admin
 function admRenderChart() {
   var dias = {};
   var hoje = new Date(); hoje.setHours(0,0,0,0);
@@ -748,88 +755,64 @@ function admRenderChart() {
     var k = d.toLocaleDateString('pt-BR', {day:'2-digit',month:'2-digit'});
     dias[k] = 0;
   }
-  ACESSOS.forEach(function(a) {
+  ADM_ACESSOS.forEach(function(a) {
     var d = new Date(a.criado_em); d.setHours(0,0,0,0);
     var k = d.toLocaleDateString('pt-BR', {day:'2-digit',month:'2-digit'});
     if (k in dias) dias[k]++;
   });
-  var labels = Object.keys(dias);
-  var valores = Object.values(dias);
-  var canvas = document.getElementById('admChart');
   if (ADM_CHART) { ADM_CHART.destroy(); ADM_CHART = null; }
-  ADM_CHART = new Chart(canvas, {
+  ADM_CHART = new Chart(document.getElementById('admChart'), {
     type: 'bar',
-    data: {
-      labels: labels,
-      datasets: [{
-        data: valores,
-        backgroundColor: 'rgba(14,165,233,0.3)',
-        borderColor: 'rgba(14,165,233,0.8)',
-        borderWidth: 1.5, borderRadius: 4
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      animation: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#64748b', font: { size: 10 }, maxRotation: 0, maxTicksLimit: 10 } },
-        y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#64748b', font: { size: 10 }, stepSize: 1 }, beginAtZero: true }
-      }
-    }
+    data: { labels: Object.keys(dias), datasets: [{ data: Object.values(dias), backgroundColor:'rgba(14,165,233,.3)', borderColor:'rgba(14,165,233,.8)', borderWidth:1.5, borderRadius:4 }] },
+    options: { responsive:true, maintainAspectRatio:false, animation:false, plugins:{legend:{display:false}}, scales:{ x:{grid:{color:'rgba(255,255,255,.04)'}, ticks:{color:'#64748b',font:{size:10},maxRotation:0,maxTicksLimit:10}}, y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#64748b',font:{size:10}},beginAtZero:true} } }
   });
 }
 
-// ══════════════════════════════════════════════
-//  CLIENTE
-// ══════════════════════════════════════════════
-async function cliIniciar() {
-  document.getElementById('cliNome').textContent    = CLI_LOJA.nome || 'Minha Loja';
-  var s = await sb.auth.getSession();
-  document.getElementById('cliEmailEl').textContent = s.data.session ? s.data.session.user.email : '';
-  // link do portal
+// ═══════════════════════════════════════════
+// CLIENTE
+// ═══════════════════════════════════════════
+var CLI_LOJA    = null;
+var CLI_LEADS   = [];
+var CLI_ONLINE  = [];
+var CLI_CHART   = null;
+
+async function cliIniciar(user) {
+  document.getElementById('cliNome').textContent   = CLI_LOJA.nome || '—';
+  document.getElementById('cliEmailEl').textContent = user.email;
+  document.getElementById('cliSubDash').textContent = 'Portal: ' + (CLI_LOJA.dominio || CLI_LOJA.slug);
   var link = document.getElementById('cliLinkPortal');
-  link.href = CLI_LOJA.dominio ? 'https://' + CLI_LOJA.dominio : '#';
+  if (CLI_LOJA.dominio) link.href = 'https://' + CLI_LOJA.dominio;
   cliCarregarDash();
   cliCarregarLeads();
-  cliCarregarAparencia();
+  cliCarregarApa();
 }
 
-function cliPagina(pg) {
-  document.querySelectorAll('.cli-page').forEach(function(el){ el.classList.remove('ativo'); });
-  document.querySelectorAll('.cli-sb-item').forEach(function(el){ el.classList.remove('ativo'); });
-  var map = { dash: 'cliPageDash', leads: 'cliPageLeads', aparencia: 'cliPageAparencia' };
-  if (map[pg]) document.getElementById(map[pg]).classList.add('ativo');
-  // marcar menu
-  var items = document.querySelectorAll('.cli-sb-item');
-  var idx   = { dash:0, leads:1, aparencia:2 }[pg];
-  if (items[idx]) items[idx].classList.add('ativo');
+function cliPg(pg_id) {
+  document.querySelectorAll('.pg').forEach(function(el) { el.classList.remove('ativo'); });
+  document.querySelectorAll('.sb-item').forEach(function(el) { el.classList.remove('ativo'); });
+  if (pg_id === 'dash')  { document.getElementById('cliPgDash').classList.add('ativo');  document.getElementById('cliTabDash').classList.add('ativo'); }
+  if (pg_id === 'leads') { document.getElementById('cliPgLeads').classList.add('ativo'); document.getElementById('cliTabLeads').classList.add('ativo'); }
+  if (pg_id === 'apa')   { document.getElementById('cliPgApa').classList.add('ativo');   document.getElementById('cliTabApa').classList.add('ativo'); }
 }
 
 async function cliCarregarDash() {
-  var agora  = new Date();
-  var ini30  = new Date(agora - 30*864e5).toISOString();
-  var r = await sb.from('portal_acessos').select('criado_em').eq('loja_id', CLI_LOJA.id).gte('criado_em', ini30);
+  var agora = new Date();
+  var ini30 = new Date(agora - 30*864e5).toISOString();
+  var r = await SB.from('portal_acessos').select('criado_em').eq('loja_id', CLI_LOJA.id).gte('criado_em', ini30);
   var dados = r.data || [];
-  var hoje   = agora; hoje.setHours(0,0,0,0);
-  var mes    = agora.getMonth();
-  var ano    = agora.getFullYear();
-  var mesAnt = mes === 0 ? 11 : mes - 1;
-  var anoAnt = mes === 0 ? ano - 1 : ano;
-  var ini7   = new Date(agora - 7*864e5);
-  var cMes  = dados.filter(function(a){ var d=new Date(a.criado_em); return d.getMonth()===mes && d.getFullYear()===ano; }).length;
-  var c7    = dados.filter(function(a){ return new Date(a.criado_em) >= ini7; }).length;
+  var mes   = agora.getMonth(), ano = agora.getFullYear();
+  var ini7  = new Date(agora - 7*864e5);
+  var cMes  = dados.filter(function(a) { var d = new Date(a.criado_em); return d.getMonth()===mes && d.getFullYear()===ano; }).length;
+  var c7    = dados.filter(function(a) { return new Date(a.criado_em) >= ini7; }).length;
   var c30   = dados.length;
-  // mes anterior - busca separada
-  var iniMesAnt = new Date(anoAnt, mesAnt, 1).toISOString();
-  var fimMesAnt = new Date(ano, mes, 1).toISOString();
-  var ra = await sb.from('portal_acessos').select('id', {count:'exact',head:true}).eq('loja_id', CLI_LOJA.id).gte('criado_em', iniMesAnt).lt('criado_em', fimMesAnt);
-  document.getElementById('cliStatMes').textContent  = cMes;
-  document.getElementById('cliStat7').textContent    = c7;
-  document.getElementById('cliStat30').textContent   = c30;
-  document.getElementById('cliStatAnt').textContent  = ra.count || 0;
-  document.getElementById('cliSubDash').textContent  = 'Portal: ' + (CLI_LOJA.dominio || CLI_LOJA.slug);
+  var mesAnt = mes===0?11:mes-1, anoAnt = mes===0?ano-1:ano;
+  var iniMA = new Date(anoAnt, mesAnt, 1).toISOString();
+  var fimMA = new Date(ano, mes, 1).toISOString();
+  var ra = await SB.from('portal_acessos').select('id', {count:'exact',head:true}).eq('loja_id', CLI_LOJA.id).gte('criado_em', iniMA).lt('criado_em', fimMA);
+  document.getElementById('cliMes').textContent  = cMes;
+  document.getElementById('cli7d').textContent   = c7;
+  document.getElementById('cli30d').textContent  = c30;
+  document.getElementById('cliAnt').textContent  = ra.count || 0;
   cliRenderChart(dados);
   cliCarregarOnline();
 }
@@ -847,149 +830,129 @@ function cliRenderChart(dados) {
     var k = d.toLocaleDateString('pt-BR', {day:'2-digit',month:'2-digit'});
     if (k in dias) dias[k]++;
   });
-  var canvas = document.getElementById('cliChart');
   if (CLI_CHART) { CLI_CHART.destroy(); CLI_CHART = null; }
-  CLI_CHART = new Chart(canvas, {
+  CLI_CHART = new Chart(document.getElementById('cliChart'), {
     type: 'bar',
-    data: {
-      labels: Object.keys(dias),
-      datasets: [{
-        data: Object.values(dias),
-        backgroundColor: 'rgba(14,165,233,0.3)',
-        borderColor: 'rgba(14,165,233,0.8)',
-        borderWidth: 1.5, borderRadius: 4
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      animation: false,
-      plugins: { legend: { display: false } },
-      scales: {
-        x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#64748b', font: { size: 10 }, maxRotation: 0, maxTicksLimit: 10 } },
-        y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#64748b', font: { size: 10 }, stepSize: 1 }, beginAtZero: true }
-      }
-    }
+    data: { labels: Object.keys(dias), datasets: [{ data: Object.values(dias), backgroundColor:'rgba(14,165,233,.3)', borderColor:'rgba(14,165,233,.8)', borderWidth:1.5, borderRadius:4 }] },
+    options: { responsive:true, maintainAspectRatio:false, animation:false, plugins:{legend:{display:false}}, scales:{ x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#64748b',font:{size:10},maxRotation:0,maxTicksLimit:10}}, y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#64748b',font:{size:10}},beginAtZero:true} } }
   });
 }
 
 async function cliCarregarOnline() {
-  var ini15 = new Date(Date.now() - 15*60*1000).toISOString();
-  var r = await sb.from('portal_acessos').select('mac,dispositivo,criado_em').eq('loja_id', CLI_LOJA.id).gte('criado_em', ini15).order('criado_em', {ascending:false});
-  CLI_ONLINE_LISTA = r.data || [];
-  document.getElementById('cliOnlineCount').textContent = CLI_ONLINE_LISTA.length;
+  var ini15 = new Date(Date.now() - 15*60000).toISOString();
+  var r = await SB.from('portal_acessos').select('mac,dispositivo,criado_em').eq('loja_id', CLI_LOJA.id).gte('criado_em', ini15).order('criado_em', {ascending:false});
+  CLI_ONLINE = r.data || [];
+  document.getElementById('cliOnlineCount').textContent = CLI_ONLINE.length;
 }
 
 function cliVerOnline() {
   var modal = document.getElementById('modalOnline');
   var body  = document.getElementById('modalOnlineBody');
-  document.getElementById('modalOnlineTitulo').textContent = CLI_LOJA.nome + ' — online agora (' + CLI_ONLINE_LISTA.length + ')';
-  if (!CLI_ONLINE_LISTA.length) {
+  document.getElementById('modalOnlineTitulo').textContent = CLI_LOJA.nome + ' — online agora (' + CLI_ONLINE.length + ')';
+  if (!CLI_ONLINE.length) {
     body.innerHTML = '<div style="color:#64748b;text-align:center;padding:20px">Ninguém online no momento.</div>';
   } else {
-    body.innerHTML = CLI_ONLINE_LISTA.map(function(a) {
-      var quando = new Date(a.criado_em).toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'});
-      return '<div class="online-row"><span class="online-mac">' + (a.mac||'–') + '</span><span class="online-device">' + (a.dispositivo||'–') + '</span><span class="online-time">' + quando + '</span></div>';
+    body.innerHTML = CLI_ONLINE.map(function(a) {
+      return '<div class="online-item">' +
+        '<span><div class="online-mac">' + esc(a.mac||'—') + '</div><div class="online-dev">' + esc(a.dispositivo||'—') + '</div></span>' +
+        '<span class="online-time">' + new Date(a.criado_em).toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}) + '</span>' +
+      '</div>';
     }).join('');
   }
   modal.classList.add('open');
 }
 
-// leads
 async function cliCarregarLeads() {
-  var r = await sb.from('portal_leads').select('dados,criado_em').eq('loja_id', CLI_LOJA.id).order('criado_em', {ascending:false}).limit(500);
+  var r = await SB.from('portal_leads').select('dados,criado_em').eq('loja_id', CLI_LOJA.id).order('criado_em',{ascending:false}).limit(500);
   CLI_LEADS = r.data || [];
   var tbody = document.getElementById('cliLeadsBody');
+  document.getElementById('cliLeadsTitulo').textContent = 'Leads coletados (' + CLI_LEADS.length + ')';
   if (!CLI_LEADS.length) {
-    tbody.innerHTML = '<tr><td colspan="4" style="color:#64748b;text-align:center;padding:20px">Nenhum lead captado ainda.</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="6" class="tbl-empty">Nenhum lead ainda.</td></tr>';
     return;
   }
   tbody.innerHTML = CLI_LEADS.map(function(l) {
     var d = l.dados || {};
-    return '<tr><td>' + esc(d.nome||'–') + '</td><td>' + esc(d.telefone||'–') + '</td><td>' + esc(d.email||'–') + '</td><td>' + fmtData(l.criado_em) + '</td></tr>';
+    return '<tr>' +
+      '<td>' + esc(d.nome||'—') + '</td>' +
+      '<td>' + esc(d.telefone||d.phone||d.celular||'—') + '</td>' +
+      '<td>' + esc(d.email||'—') + '</td>' +
+      '<td>' + esc(d.aniversario||d.data_nascimento||'—') + '</td>' +
+      '<td>' + esc(d.bairro||'—') + '</td>' +
+      '<td>' + fmtData(l.criado_em) + '</td>' +
+    '</tr>';
   }).join('');
 }
 
 function cliDownloadCSV() {
-  var linhas = ['Nome,Telefone,E-mail,Data'];
+  if (!CLI_LEADS.length) { toast('Nenhum lead para baixar.', 'err'); return; }
+  var cols = ['Data/Hora','Nome','Telefone','E-mail','Aniversário','Bairro'];
+  var linhas = [cols.join(',')];
   CLI_LEADS.forEach(function(l) {
     var d = l.dados || {};
-    linhas.push([d.nome,d.telefone,d.email,fmtData(l.criado_em)].map(function(v){ return '"' + (v||'').replace(/"/g,'""') + '"'; }).join(','));
+    var row = [
+      new Date(l.criado_em).toLocaleString('pt-BR'),
+      d.nome||'', d.telefone||d.phone||d.celular||'', d.email||'',
+      d.aniversario||d.data_nascimento||'', d.bairro||''
+    ].map(function(v) { return '"' + String(v).replace(/"/g,'""') + '"'; });
+    linhas.push(row.join(','));
   });
-  var blob = new Blob([linhas.join('\r\n')], {type:'text/csv;charset=utf-8'});
+  var blob = new Blob(['\uFEFF' + linhas.join('\n')], {type:'text/csv;charset=utf-8'});
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a'); a.href = url; a.download = 'leads_' + CLI_LOJA.slug + '.csv'; a.click();
   URL.revokeObjectURL(url);
+  toast('CSV baixado!');
 }
 
 function cliDownloadVCF() {
+  if (!CLI_LEADS.length) { toast('Nenhum lead para baixar.', 'err'); return; }
   var vcf = CLI_LEADS.map(function(l) {
     var d = l.dados || {};
-    var lines = ['BEGIN:VCARD','VERSION:3.0','FN:' + (d.nome||'')];
-    if (d.telefone) lines.push('TEL:' + d.telefone);
-    if (d.email)    lines.push('EMAIL:' + d.email);
-    lines.push('END:VCARD');
-    return lines.join('\n');
+    var nome = d.nome || 'Cliente';
+    var tel  = d.telefone||d.phone||d.celular||'';
+    var mail = d.email||'';
+    var parts = nome.split(' ');
+    var v = 'BEGIN:VCARD\nVERSION:3.0\nFN:' + nome + '\nN:' + parts.slice(1).join(' ') + ';' + parts[0] + ';;;\n';
+    if (tel)  v += 'TEL;TYPE=CELL:' + tel + '\n';
+    if (mail) v += 'EMAIL:' + mail + '\n';
+    v += 'END:VCARD';
+    return v;
   }).join('\n');
   var blob = new Blob([vcf], {type:'text/vcard'});
   var url  = URL.createObjectURL(blob);
   var a    = document.createElement('a'); a.href = url; a.download = 'leads_' + CLI_LOJA.slug + '.vcf'; a.click();
   URL.revokeObjectURL(url);
+  toast('Contatos baixados!');
 }
 
-// ── APARÊNCIA ──
-var APA_DEST = 'instagram';
-var APA_CORES = {fundo:'#1a1a2e', texto:'#ffffff', botao_bg:'#ff6a1a', botao_txt:'#ffffff'};
-var APA_TEMAS = {
-  dark:   {fundo:'#0f0f1a', texto:'#ffffff',  botao_bg:'#6d28d9', botao_txt:'#ffffff'},
-  light:  {fundo:'#f1f5f9', texto:'#1e293b',  botao_bg:'#0ea5e9', botao_txt:'#ffffff'},
-  ocean:  {fundo:'#0c1445', texto:'#e0f2fe',  botao_bg:'#06b6d4', botao_txt:'#ffffff'},
-  forest: {fundo:'#052e16', texto:'#dcfce7',  botao_bg:'#16a34a', botao_txt:'#ffffff'},
-  sunset: {fundo:'#1c0a00', texto:'#fef3c7',  botao_bg:'#f97316', botao_txt:'#ffffff'},
-  purple: {fundo:'#2d1b69', texto:'#ede9fe',  botao_bg:'#a855f7', botao_txt:'#ffffff'},
-  gold:   {fundo:'#1c1200', texto:'#fef9c3',  botao_bg:'#eab308', botao_txt:'#000000'},
-  rose:   {fundo:'#1c0714', texto:'#fce7f3',  botao_bg:'#ec4899', botao_txt:'#ffffff'}
-};
-
-function apaTema(nome) {
-  var t = APA_TEMAS[nome];
-  if (!t) return;
-  ['fundo','texto','botao_bg','botao_txt'].forEach(function(k) { apaSetCor(k, t[k]); });
-}
+// -- APARENCIA (simplificada: logo, cor primaria/secundaria, texto botao, mensagem, destino) --
+var APA_CORES = {cor:'#ff6a1a', cor2:'#ff6a1a'};
 
 function apaSetCor(campo, valor) {
   if (!valor || valor.length < 4) return;
   APA_CORES[campo] = valor;
-  var sw = document.getElementById('cor_' + campo);
-  var hx = document.getElementById('hex_' + campo);
-  var dt = document.getElementById('dot_' + campo);
+  var sw = document.getElementById('cor_'+campo), hx = document.getElementById('hex_'+campo), dt = document.getElementById('dot_'+campo);
   if (sw) sw.value = valor;
   if (hx) hx.value = valor;
   if (dt) dt.style.background = valor;
-  document.getElementById('cliAparCor').value = APA_CORES.botao_bg;
-  apaAtualizarPreview();
+  apaUpdatePreview();
 }
 
 function apaHexInput(campo, val) {
   if (/^#[0-9a-fA-F]{6}$/.test(val)) apaSetCor(campo, val);
 }
 
-function apaAtualizarPreview() {
-  var sc  = document.getElementById('apaPreviewScreen');
-  var btn = document.getElementById('apaPreviewBtn');
-  var tit = document.getElementById('apaPreviewTitulo');
-  var sub = document.getElementById('apaPreviewMsg');
-  var rod = document.getElementById('apaPreviewRodape');
-  if (sc)  sc.style.background  = APA_CORES.fundo;
-  if (tit) tit.style.color      = APA_CORES.texto;
-  if (sub) sub.style.color      = APA_CORES.texto;
-  if (rod) rod.style.color      = APA_CORES.texto;
-  if (btn) { btn.style.background = APA_CORES.botao_bg; btn.style.color = APA_CORES.botao_txt; }
+function apaUpdatePreview() {
+  var btn = document.getElementById('apaBtnEl');
+  if (btn) {
+    btn.style.background = 'linear-gradient(135deg,' + APA_CORES.cor + ',' + APA_CORES.cor2 + ')';
+    btn.style.color = '#fff';
+  }
 }
 
-function apaAtualizarLogo(url) {
-  var img = document.getElementById('apaPreviewLogoImg');
-  var txt = document.getElementById('apaPreviewLogoTxt');
+function apaUpdateLogo(url) {
+  var img = document.getElementById('apaLogoImg');
+  var txt = document.getElementById('apaLogoTxt');
   if (url && url.indexOf('http') === 0) {
     img.src = url; img.style.display = 'block'; txt.style.display = 'none';
   } else {
@@ -997,69 +960,68 @@ function apaAtualizarLogo(url) {
   }
 }
 
-function apaAtualizarMsg(msg) {
-  document.getElementById('apaPreviewMsg').textContent = msg || 'Sua mensagem aparece aqui';
+function apaMsgUpdate(msg) {
+  document.getElementById('apaMsgEl').textContent = msg || 'Bem-vindo!';
 }
 
-function apaAtualizarBotao(txt) {
-  document.getElementById('apaPreviewBtn').textContent = txt || 'Conectar ao Wi-Fi';
+function apaBtnUpdate(txt) {
+  document.getElementById('apaBtnEl').textContent = txt || 'Conectar ao Wi-Fi';
 }
 
-function apaSetBotao(txt) {
-  document.getElementById('cliAparBotao').value = txt;
-  apaAtualizarBotao(txt);
+function apaBtnSet(txt) {
+  document.getElementById('apaBtn').value = txt;
+  apaBtnUpdate(txt);
 }
 
-function apaSetDest(dest) {
-  APA_DEST = dest;
-  document.getElementById('cliAparDest').value = dest;
-  document.getElementById('cliAparInstaField').style.display = dest === 'instagram' ? 'block' : 'none';
-  document.getElementById('cliAparSiteField').style.display  = dest === 'site'      ? 'block' : 'none';
-  ['Insta','Site','Nenhum'].forEach(function(d) { document.getElementById('apaDest'+d).classList.remove('sel'); });
-  var map = {instagram:'Insta', site:'Site', nenhum:'Nenhum'};
-  if (map[dest]) document.getElementById('apaDest'+map[dest]).classList.add('sel');
+function cliDestTab(dest) {
+  document.getElementById('apaDestino').value = dest;
+  ['Insta','Wpp','Form','Nenhum'].forEach(function(d) {
+    document.getElementById('cliDtab'+d).classList.remove('ativo');
+    document.getElementById('cliDc'+d).classList.remove('ativo');
+  });
+  var map = {instagram:'Insta', whatsapp:'Wpp', formulario:'Form', nenhum:'Nenhum'};
+  if (map[dest]) {
+    document.getElementById('cliDtab'+map[dest]).classList.add('ativo');
+    document.getElementById('cliDc'+map[dest]).classList.add('ativo');
+  }
 }
 
-function cliCarregarAparencia() {
-  var cores_salvas = {};
-  try { cores_salvas = JSON.parse(CLI_LOJA.cores_json || '{}'); } catch(e) {}
+function cliCarregarApa() {
+  var l = CLI_LOJA;
   APA_CORES = {
-    fundo:     cores_salvas.fundo     || '#1a1a2e',
-    texto:     cores_salvas.texto     || '#ffffff',
-    botao_bg:  cores_salvas.botao_bg  || CLI_LOJA.cor || '#ff6a1a',
-    botao_txt: cores_salvas.botao_txt || '#ffffff'
+    cor:  l.cor  || '#ff6a1a',
+    cor2: l.cor2 || l.cor || '#ff6a1a'
   };
-  ['fundo','texto','botao_bg','botao_txt'].forEach(function(k) { apaSetCor(k, APA_CORES[k]); });
-  var logo  = CLI_LOJA.logo_url  || '';
-  var msg   = CLI_LOJA.mensagem  || '';
-  var insta = CLI_LOJA.instagram || '';
-  var botao = CLI_LOJA.botao_txt || 'Conectar ao Wi-Fi';
-  var site  = CLI_LOJA.site_url  || '';
-  var dest  = insta ? 'instagram' : (site ? 'site' : 'nenhum');
-  document.getElementById('cliAparLogo').value    = logo;
-  document.getElementById('cliAparMsg').value     = msg;
-  document.getElementById('cliAparInsta').value   = insta;
-  document.getElementById('cliAparBotao').value   = botao;
-  document.getElementById('cliAparSiteUrl').value = site;
-  apaSetDest(dest);
-  apaAtualizarLogo(logo);
-  apaAtualizarMsg(msg);
-  apaAtualizarBotao(botao);
-  apaAtualizarPreview();
+  apaSetCor('cor', APA_CORES.cor);
+  apaSetCor('cor2', APA_CORES.cor2);
+  document.getElementById('apaLogo').value = l.logo_url || '';
+  document.getElementById('apaMsg').value  = l.mensagem || '';
+  document.getElementById('apaBtn').value  = l.botao_txt || 'Conectar ao Wi-Fi';
+  document.getElementById('apaInsta').value = l.instagram || '';
+  document.getElementById('apaWpp').value   = l.whatsapp_link || '';
+  var dest = l.destino_tipo || (l.instagram ? 'instagram' : 'nenhum');
+  cliDestTab(dest);
+  apaUpdateLogo(l.logo_url || '');
+  apaMsgUpdate(l.mensagem || '');
+  apaBtnUpdate(l.botao_txt || 'Conectar ao Wi-Fi');
+  apaUpdatePreview();
 }
 
-async function cliSalvarAparencia() {
+async function cliSalvarApa() {
   var dados = {
-    cor:        APA_CORES.botao_bg,
-    cores_json: JSON.stringify(APA_CORES),
-    logo_url:   document.getElementById('cliAparLogo').value.trim()    || null,
-    mensagem:   document.getElementById('cliAparMsg').value.trim()     || null,
-    instagram:  document.getElementById('cliAparInsta').value.trim()   || null
+    logo_url:     document.getElementById('apaLogo').value.trim()  || null,
+    mensagem:     document.getElementById('apaMsg').value.trim()   || null,
+    botao_txt:    document.getElementById('apaBtn').value.trim()   || null,
+    cor:          APA_CORES.cor,
+    cor2:         APA_CORES.cor2,
+    destino_tipo: document.getElementById('apaDestino').value,
+    instagram:    document.getElementById('apaInsta').value.trim() || null,
+    whatsapp_link:document.getElementById('apaWpp').value.trim()   || null
   };
-  var r = await sb.from('portal_lojas').update(dados).eq('id', CLI_LOJA.id);
-  if (r.error) { toast('Erro ao salvar: ' + r.error.message, false); return; }
+  var r = await SB.from('portal_lojas').update(dados).eq('id', CLI_LOJA.id);
+  if (r.error) { toast('Erro: ' + r.error.message, 'err'); return; }
   Object.assign(CLI_LOJA, dados);
-  toast('Aparência salva! ✨');
+  toast('Aparência salva!');
 }
 </script>
 </body>
