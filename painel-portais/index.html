@@ -1,4 +1,4 @@
-<!DOCTYPE html><html lang="pt-BR"><head>
+ <!DOCTYPE html><html lang="pt-BR"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Painel de Portais Wi-Fi</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -622,21 +622,19 @@ async function salvar(id){
 
   // cria ou atualiza o usuário no Supabase Auth
   if(emailAcesso && senhaAcesso){
-    const {error:authErr} = await sb.auth.admin
-      ? sb.auth.admin.createUser({email:emailAcesso, password:senhaAcesso, email_confirm:true})
-      : {error:{message:'admin API não disponível no client'}};
-
-    // fallback: usa signUp (cria o usuário mesmo sem admin API)
-    if(authErr){
-      const {error:signErr} = await sb.auth.signUp({
-        email:emailAcesso,
-        password:senhaAcesso,
-        options:{data:{loja:slug}}
-      });
-      if(signErr && !signErr.message.includes('already registered')){
-        toast('⚠️ Loja salva, mas erro ao criar acesso: '+signErr.message,'warn');
-        fecharModal();carregar();return;
-      }
+    // chama a Supabase Edge Function com service key (cria com email_confirm:true)
+    const {data:{session}} = await sb.auth.getSession();
+    const token = session?.access_token||'';
+    const EDGE = 'https://iekxuehdrxsimqtfejxm.supabase.co/functions/v1/smart-responder';
+    const r = await fetch(EDGE, {
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+token},
+      body: JSON.stringify({email:emailAcesso, senha:senhaAcesso, loja_id:id||null})
+    });
+    const rj = await r.json();
+    if(!r.ok || !rj.ok){
+      toast('⚠️ Loja salva, mas erro ao criar acesso: '+(rj.error||'tente novamente'),'err');
+      fecharModal();carregar();return;
     }
     toast(id?'Loja atualizada e acesso configurado ✅':'Loja criada com acesso ao painel ✅');
   } else {
