@@ -104,15 +104,21 @@ body{font-family:Inter,system-ui,sans-serif;background:#060c18;color:#e2e8f0;fon
 /* APARENCIA */
 .apa-wrap{max-width:600px}
 .apa-section{font-size:10px;font-weight:700;color:#0ea5e9;text-transform:uppercase;letter-spacing:.8px;margin:22px 0 12px;padding-bottom:6px;border-bottom:1px solid rgba(14,165,233,.12)}
-.apa-preview{border-radius:14px;overflow:hidden;max-width:280px;margin:0 auto 20px;box-shadow:0 4px 24px rgba(0,0,0,.5)}
-.apa-preview-screen{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:28px 20px;min-height:240px;transition:background .3s}
-.apa-preview-logo{width:90px;height:44px;display:flex;align-items:center;justify-content:center;overflow:hidden}
-.apa-preview-logo img{max-width:100%;max-height:100%;object-fit:contain}
-.apa-preview-logo span{font-size:10px;color:rgba(255,255,255,.3)}
-.apa-preview-titulo{font-size:14px;font-weight:800;text-align:center}
-.apa-preview-msg{font-size:11px;text-align:center;opacity:.7}
-.apa-preview-btn{padding:10px 28px;border-radius:25px;border:none;font-size:12px;font-weight:800;cursor:default}
-.apa-preview-rod{font-size:9px;opacity:.3}
+/* preview fiel ao portal real (views.js) */
+.apa-preview{border-radius:16px;overflow:hidden;max-width:300px;margin:0 auto 20px;box-shadow:0 12px 40px rgba(0,0,0,.5)}
+.apa-preview-screen{display:flex;align-items:center;justify-content:center;padding:26px 18px;min-height:300px;background:radial-gradient(120% 90% at 50% 12%,#3a271b 0%,#1a1512 45%,#0c0a09 100%);transition:background .3s}
+.apa-preview-card{width:100%;max-width:240px;background:linear-gradient(180deg,rgba(29,25,22,.9),rgba(16,13,11,.92));border:1px solid rgba(249,115,22,.25);border-radius:18px;padding:22px 18px 18px;position:relative;overflow:hidden;box-shadow:0 16px 40px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.04)}
+.apa-preview-card::before{content:"";position:absolute;inset:-40% 15% auto 15%;height:140px;background:radial-gradient(60% 60% at 50% 0,rgba(249,115,22,.5),transparent 70%);filter:blur(24px);pointer-events:none}
+.apa-preview-logo{text-align:center;position:relative;z-index:1;margin-bottom:8px;min-height:40px;display:flex;align-items:center;justify-content:center}
+.apa-preview-logo img{width:70%;max-width:150px;height:auto;display:block;margin:0 auto;filter:drop-shadow(0 4px 12px rgba(249,115,22,.35))}
+.apa-preview-logo .ph{font-size:15px;font-weight:800;color:#f4efe9}
+.apa-preview-titulo{position:relative;z-index:1;font-size:15px;font-weight:700;text-align:center;color:#f4efe9;margin:10px 0 3px}
+.apa-preview-msg{position:relative;z-index:1;font-size:10.5px;text-align:center;color:#b9a89b;line-height:1.5;margin:0 0 14px}
+.apa-preview-btn{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;gap:7px;width:100%;padding:12px;border-radius:11px;border:none;font-size:11.5px;font-weight:800;color:#fff;cursor:default;box-sizing:border-box}
+.apa-preview-hint{position:relative;z-index:1;text-align:center;font-size:9.5px;color:#ffd7b0;background:rgba(249,115,22,.10);border:1px solid rgba(249,115,22,.25);border-radius:9px;padding:8px 10px;margin:12px 0 0;line-height:1.5}
+.apa-preview-rod{position:relative;z-index:1;text-align:center;margin-top:14px;padding-top:10px;border-top:1px solid rgba(255,255,255,.07);display:flex;align-items:center;justify-content:center;gap:6px}
+.apa-preview-rod span{font-size:8.5px;color:rgba(255,255,255,.35);letter-spacing:.5px}
+.apa-preview-rod img{height:22px;object-fit:contain;opacity:.9}
 .apa-cores-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
 .apa-cor-item{background:#0d1526;border:1px solid rgba(14,165,233,.15);border-radius:12px;padding:12px}
 .apa-cor-label{font-size:10px;color:#64748b;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:6px;text-transform:uppercase;letter-spacing:.4px}
@@ -376,18 +382,25 @@ body{font-family:Inter,system-ui,sans-serif;background:#060c18;color:#e2e8f0;fon
       <div class="pg-sub">Personalize o portal Wi-Fi da sua loja</div>
       <div class="apa-wrap">
 
-        <!-- preview ao vivo -->
+        <!-- preview ao vivo (fiel ao portal real) -->
         <div class="apa-section">Preview ao Vivo</div>
+        <div style="font-size:11px;color:#64748b;margin-bottom:10px">É assim que o cliente final vê o portal ao conectar. Os textos são padronizados pelo ConectaY — você personaliza logo, cores e destino.</div>
         <div class="apa-preview">
-          <div class="apa-preview-screen" id="apaScreen" style="background:#0a0f1e">
-            <div class="apa-preview-logo">
-              <img id="apaLogoImg" src="" alt="" style="display:none">
-              <span id="apaLogoTxt" style="color:rgba(255,255,255,.3);font-size:10px">Sua logo</span>
+          <div class="apa-preview-screen">
+            <div class="apa-preview-card">
+              <div class="apa-preview-logo">
+                <img id="apaLogoImg" src="" alt="" style="display:none">
+                <span class="ph" id="apaLogoTxt">Sua Loja</span>
+              </div>
+              <div class="apa-preview-titulo">Wi-Fi liberado</div>
+              <div class="apa-preview-msg" id="apaSubEl">Toque no botão abaixo para seguir a gente e conectar à internet.</div>
+              <div class="apa-preview-btn" id="apaBtnEl" style="background:linear-gradient(135deg,#ff6a1a,#ff6a1a)"><span id="apaBtnTxt">📸 Seguir no Instagram e conectar</span></div>
+              <div class="apa-preview-hint" id="apaHintEl">Você será direcionado ao nosso Instagram com a internet já liberada.</div>
+              <div class="apa-preview-rod">
+                <span>Wi-Fi por</span>
+                <img src="https://i.postimg.cc/BQjJGBKf/logo-conectay-transparent.png" alt="ConectaY">
+              </div>
             </div>
-            <div class="apa-preview-titulo" id="apaTitulo" style="color:#fff">Wi-Fi Grátis</div>
-            <div class="apa-preview-msg" id="apaMsgEl" style="color:#fff">Bem-vindo!</div>
-            <div class="apa-preview-btn" id="apaBtnEl" style="background:linear-gradient(135deg,#ff6a1a,#ff6a1a);color:#fff">Conectar ao Wi-Fi</div>
-            <div class="apa-preview-rod" style="color:#fff">Wi-Fi por ConectaY</div>
           </div>
         </div>
 
@@ -418,20 +431,6 @@ body{font-family:Inter,system-ui,sans-serif;background:#060c18;color:#e2e8f0;fon
           </div>
         </div>
         <div style="font-size:11px;color:#64748b;margin:-6px 0 14px">O botão do portal usa um gradiente que vai da cor primária até a secundária. Para cor sólida, use a mesma nos dois.</div>
-
-        <!-- texto botao -->
-        <div class="apa-section">Texto do Botão</div>
-        <div class="fld"><input id="apaBtn" placeholder="Ex: Conectar ao Wi-Fi grátis" oninput="apaBtnUpdate(this.value)"></div>
-        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px">
-          <button class="btn btn-ghost btn-sm" onclick="apaBtnSet('Conectar ao Wi-Fi')">Conectar ao Wi-Fi</button>
-          <button class="btn btn-ghost btn-sm" onclick="apaBtnSet('Acessar Internet')">Acessar Internet</button>
-          <button class="btn btn-ghost btn-sm" onclick="apaBtnSet('Entrar grátis')">Entrar grátis</button>
-          <button class="btn btn-ghost btn-sm" onclick="apaBtnSet('Quero Wi-Fi!')">Quero Wi-Fi!</button>
-        </div>
-
-        <!-- mensagem -->
-        <div class="apa-section">Mensagem de Boas-vindas</div>
-        <div class="fld"><textarea id="apaMsg" rows="2" placeholder="Ex: Bem-vindo! Aproveite nosso Wi-Fi grátis." oninput="apaMsgUpdate(this.value)"></textarea></div>
 
         <!-- destino -->
         <div class="apa-section">Após Conectar, Redirecionar para</div>
@@ -942,12 +941,10 @@ function apaHexInput(campo, val) {
   if (/^#[0-9a-fA-F]{6}$/.test(val)) apaSetCor(campo, val);
 }
 
+// Só o botão reage às cores; textos (título/sub/hint) são padronizados pelo destino, igual ao portal real.
 function apaUpdatePreview() {
   var btn = document.getElementById('apaBtnEl');
-  if (btn) {
-    btn.style.background = 'linear-gradient(135deg,' + APA_CORES.cor + ',' + APA_CORES.cor2 + ')';
-    btn.style.color = '#fff';
-  }
+  if (btn) btn.style.background = 'linear-gradient(135deg,' + APA_CORES.cor + ',' + APA_CORES.cor2 + ')';
 }
 
 function apaUpdateLogo(url) {
@@ -956,21 +953,33 @@ function apaUpdateLogo(url) {
   if (url && url.indexOf('http') === 0) {
     img.src = url; img.style.display = 'block'; txt.style.display = 'none';
   } else {
-    img.style.display = 'none'; txt.style.display = 'block';
+    img.style.display = 'none'; txt.style.display = 'flex';
   }
 }
 
-function apaMsgUpdate(msg) {
-  document.getElementById('apaMsgEl').textContent = msg || 'Bem-vindo!';
-}
-
-function apaBtnUpdate(txt) {
-  document.getElementById('apaBtnEl').textContent = txt || 'Conectar ao Wi-Fi';
-}
-
-function apaBtnSet(txt) {
-  document.getElementById('apaBtn').value = txt;
-  apaBtnUpdate(txt);
+// Atualiza os textos do preview conforme o destino escolhido — espelhando views.js
+function apaTextosPorDestino(dest) {
+  var btnTxt = document.getElementById('apaBtnTxt');
+  var subEl  = document.getElementById('apaSubEl');
+  var hintEl = document.getElementById('apaHintEl');
+  if (dest === 'whatsapp') {
+    btnTxt.textContent = '💬 Entrar no grupo e conectar';
+    subEl.textContent  = 'Toque no botão abaixo para entrar no nosso grupo e conectar à internet.';
+    hintEl.textContent = 'Você vai entrar no nosso grupo de WhatsApp com a internet já liberada.';
+  } else if (dest === 'formulario') {
+    btnTxt.textContent = '✅ Cadastrar e conectar';
+    subEl.textContent  = 'Preencha o cadastro abaixo para conectar à internet.';
+    hintEl.textContent = 'Seus dados vão só para a loja. Ao cadastrar, a internet libera na hora.';
+  } else if (dest === 'nenhum') {
+    btnTxt.textContent = '🔓 Conectar à internet';
+    subEl.textContent  = 'Toque no botão abaixo para conectar à internet.';
+    hintEl.textContent = 'A internet será liberada na hora.';
+  } else {
+    var ig = (document.getElementById('apaInsta').value || '').trim();
+    btnTxt.textContent = '📸 Seguir no Instagram e conectar';
+    subEl.textContent  = 'Toque no botão abaixo para seguir a gente e conectar à internet.';
+    hintEl.textContent = 'Você será direcionado ao nosso Instagram' + (ig ? ' @' + ig.replace(/^@/,'') : '') + ' com a internet já liberada.';
+  }
 }
 
 function cliDestTab(dest) {
@@ -984,6 +993,7 @@ function cliDestTab(dest) {
     document.getElementById('cliDtab'+map[dest]).classList.add('ativo');
     document.getElementById('cliDc'+map[dest]).classList.add('ativo');
   }
+  apaTextosPorDestino(dest);
 }
 
 function cliCarregarApa() {
@@ -994,24 +1004,21 @@ function cliCarregarApa() {
   };
   apaSetCor('cor', APA_CORES.cor);
   apaSetCor('cor2', APA_CORES.cor2);
-  document.getElementById('apaLogo').value = l.logo_url || '';
-  document.getElementById('apaMsg').value  = l.mensagem || '';
-  document.getElementById('apaBtn').value  = l.botao_txt || 'Conectar ao Wi-Fi';
+  document.getElementById('apaLogo').value  = l.logo_url || '';
   document.getElementById('apaInsta').value = l.instagram || '';
   document.getElementById('apaWpp').value   = l.whatsapp_link || '';
   var dest = l.destino_tipo || (l.instagram ? 'instagram' : 'nenhum');
-  cliDestTab(dest);
   apaUpdateLogo(l.logo_url || '');
-  apaMsgUpdate(l.mensagem || '');
-  apaBtnUpdate(l.botao_txt || 'Conectar ao Wi-Fi');
+  cliDestTab(dest);
   apaUpdatePreview();
+  // logo do preview atualiza também ao digitar a logo, e o hint do IG ao digitar o @
+  var apaInsta = document.getElementById('apaInsta');
+  if (apaInsta) apaInsta.addEventListener('input', function(){ if (document.getElementById('apaDestino').value === 'instagram') apaTextosPorDestino('instagram'); });
 }
 
 async function cliSalvarApa() {
   var dados = {
     logo_url:     document.getElementById('apaLogo').value.trim()  || null,
-    mensagem:     document.getElementById('apaMsg').value.trim()   || null,
-    botao_txt:    document.getElementById('apaBtn').value.trim()   || null,
     cor:          APA_CORES.cor,
     cor2:         APA_CORES.cor2,
     destino_tipo: document.getElementById('apaDestino').value,
