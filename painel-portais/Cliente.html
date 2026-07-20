@@ -168,7 +168,7 @@ tr:hover td{background:rgba(14,165,233,.03)}
     <div class="login-sub">Entre com seu email e senha pra acessar</div>
     <div class="fld"><label>Email</label><input type="email" id="loginEmail" placeholder="seu@email.com" autocomplete="email"></div>
     <div class="fld"><label>Senha</label><input type="password" id="loginSenha" placeholder="••••••••" autocomplete="current-password"></div>
-    <button class="btn-login" id="btnLogin" onclick="fazerLogin()">Entrar</button>
+    <button class="btn-login" id="btnLogin">Entrar</button>
     <div class="login-erro" id="loginErro"></div>
     <div class="forgot" onclick="esqueceuSenha()">Esqueceu a senha? Clique aqui</div>
   </div>
@@ -584,6 +584,11 @@ function toast(msg,tipo='ok'){
   document.body.appendChild(el);
   setTimeout(()=>el.remove(),3500);
 }
+
+// ── EVENT LISTENERS ──
+document.getElementById("btnLogin").addEventListener("click", fazerLogin);
+document.getElementById("loginSenha").addEventListener("keydown", e=>{ if(e.key==="Enter") fazerLogin(); });
+document.getElementById("loginEmail").addEventListener("keydown", e=>{ if(e.key==="Enter") fazerLogin(); });
 
 // ── AUTH STATE ──
 SB.auth.onAuthStateChange(async(event,session)=>{
