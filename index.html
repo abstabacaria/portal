@@ -123,7 +123,26 @@ td{padding:11px 16px;font-size:12px;color:#e2e8f0;border-bottom:1px solid rgba(1
 tr:last-child td{border-bottom:none}
 
 /* aparencia cliente */
-.cli-aparencia{max-width:500px}
+.cli-aparencia{max-width:580px}
+.apa-section{font-size:11px;font-weight:700;color:#0ea5e9;letter-spacing:.8px;text-transform:uppercase;margin:24px 0 12px;padding-bottom:6px;border-bottom:1px solid rgba(14,165,233,.15)}
+.apa-paleta{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:12px}
+.apa-cor{width:36px;height:36px;border-radius:8px;cursor:pointer;border:3px solid transparent;transition:all .2s;flex-shrink:0}
+.apa-cor.sel{border-color:#fff;transform:scale(1.15)}
+.apa-cor-custom{display:flex;align-items:center;gap:8px;margin-top:8px}
+.apa-cor-custom input[type=color]{width:44px;height:36px;border-radius:8px;border:1px solid rgba(14,165,233,.2);background:#060c18;cursor:pointer;padding:2px}
+.apa-cor-custom input[type=text]{width:100px;background:#060c18;border:1px solid rgba(14,165,233,.2);border-radius:8px;color:#e2e8f0;padding:8px 12px;font-size:13px;outline:none;font-family:monospace}
+.apa-preview{background:#0d1526;border:1px solid rgba(14,165,233,.15);border-radius:14px;overflow:hidden;margin-bottom:16px}
+.apa-preview-bar{height:6px;width:100%;background:var(--apa-cor,#ff6a1a);transition:background .3s}
+.apa-preview-body{padding:18px;display:flex;flex-direction:column;align-items:center;gap:10px}
+.apa-preview-logo{width:80px;height:40px;background:rgba(255,255,255,.05);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:10px;color:#64748b;overflow:hidden}
+.apa-preview-logo img{max-width:100%;max-height:100%;object-fit:contain}
+.apa-preview-msg{font-size:11px;color:#94a3b8;text-align:center;min-height:16px}
+.apa-preview-btn{padding:8px 24px;border-radius:20px;border:none;font-size:12px;font-weight:700;color:#fff;background:var(--apa-cor,#ff6a1a);cursor:default;transition:background .3s}
+.apa-preview-label{font-size:10px;color:#64748b;text-align:center}
+.apa-btn-group{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:4px}
+.apa-btn-opt{padding:8px 14px;border-radius:8px;border:1px solid rgba(14,165,233,.2);background:transparent;color:#94a3b8;font-size:12px;cursor:pointer;transition:all .2s}
+.apa-btn-opt.sel,.apa-btn-opt:hover{background:rgba(14,165,233,.1);color:#0ea5e9;border-color:#0ea5e9}
+.apa-destino-url{margin-top:8px}
 .cli-logo-preview{width:100%;height:100px;background:#060c18;border:1px dashed rgba(14,165,233,.3);border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:12px;cursor:pointer;overflow:hidden}
 .cli-color-row{display:flex;align-items:center;gap:12px;margin-bottom:16px}
 .cli-color-swatch{width:36px;height:36px;border-radius:8px;border:2px solid rgba(255,255,255,.1);cursor:pointer}
@@ -325,28 +344,84 @@ tr:last-child td{border-bottom:none}
         <div class="cli-titulo">Aparência</div>
         <div class="cli-sub">Personalize o portal Wi-Fi da sua loja</div>
         <div class="cli-aparencia">
-          <div class="field"><label>Logo da loja (URL)</label>
-            <input id="cliAparLogo" placeholder="https://..." oninput="cliPreviewLogo(this.value)">
-          </div>
-          <div class="cli-logo-preview" id="cliLogoPreview" onclick="document.getElementById('cliAparLogo').focus()">
-            <img id="cliLogoImg" src="" alt="" style="max-height:80px;max-width:200px;display:none;object-fit:contain">
-            <span id="cliLogoPlaceholder" style="color:#64748b;font-size:12px">Clique para inserir URL da logo</span>
-          </div>
-          <div class="field"><label>Cor principal</label>
-            <div class="cli-color-row">
-              <input id="cliAparCor" type="color" value="#ff6a1a" class="cli-color-swatch" style="width:44px;height:44px;padding:2px">
-              <input id="cliAparCorHex" placeholder="#ff6a1a" style="width:120px;background:#060c18;border:1px solid rgba(14,165,233,.2);border-radius:8px;color:#e2e8f0;padding:8px 12px;font-size:13px;outline:none" oninput="document.getElementById('cliAparCor').value=this.value">
+          <!-- PREVIEW AO VIVO -->
+          <div class="apa-section">Preview do Portal</div>
+          <div class="apa-preview" id="apaPreviewBox">
+            <div class="apa-preview-bar" id="apaPreviewBar"></div>
+            <div class="apa-preview-body">
+              <div class="apa-preview-logo" id="apaPreviewLogo">
+                <span id="apaPreviewLogoTxt">Logo</span>
+                <img id="apaPreviewLogoImg" src="" alt="" style="display:none;max-width:100%;max-height:100%;object-fit:contain">
+              </div>
+              <div class="apa-preview-msg" id="apaPreviewMsg">Sua mensagem aparece aqui</div>
+              <div class="apa-preview-btn" id="apaPreviewBtn">Conectar ao Wi-Fi</div>
+              <div class="apa-preview-label">Prévia do portal do cliente</div>
             </div>
           </div>
-          <div class="field"><label>Mensagem no portal</label><textarea id="cliAparMsg" placeholder="Ex: Bem-vindo! Aproveite o Wi-Fi grátis."></textarea></div>
-          <div class="field"><label>Destino após conectar</label>
-            <select id="cliAparDest">
-              <option value="instagram">Instagram</option>
-              <option value="site">Site</option>
-              <option value="nenhum">Nenhum</option>
-            </select>
+
+          <!-- LOGO -->
+          <div class="apa-section">Logo da Loja</div>
+          <div class="field"><label>URL da logo (PNG, JPG, SVG)</label>
+            <input id="cliAparLogo" placeholder="https://..." oninput="apaAtualizarLogo(this.value)">
           </div>
-          <div class="field" id="cliAparInstaField"><label>Instagram (sem @)</label><input id="cliAparInsta" placeholder="minhaloja"></div>
+          <div style="font-size:11px;color:#64748b;margin-top:-8px;margin-bottom:12px">
+            Dica: use <a href="https://postimg.cc" target="_blank" style="color:#0ea5e9">postimg.cc</a> para hospedar sua logo gratuitamente
+          </div>
+
+          <!-- COR PRINCIPAL -->
+          <div class="apa-section">Cor Principal</div>
+          <div class="apa-paleta" id="apaPaleta">
+            <div class="apa-cor sel" style="background:#ff6a1a" data-cor="#ff6a1a" onclick="apaEscolherCor('#ff6a1a',this)" title="Laranja"></div>
+            <div class="apa-cor" style="background:#0ea5e9" data-cor="#0ea5e9" onclick="apaEscolherCor('#0ea5e9',this)" title="Azul ConectaY"></div>
+            <div class="apa-cor" style="background:#22c55e" data-cor="#22c55e" onclick="apaEscolherCor('#22c55e',this)" title="Verde"></div>
+            <div class="apa-cor" style="background:#a855f7" data-cor="#a855f7" onclick="apaEscolherCor('#a855f7',this)" title="Roxo"></div>
+            <div class="apa-cor" style="background:#f43f5e" data-cor="#f43f5e" onclick="apaEscolherCor('#f43f5e',this)" title="Vermelho"></div>
+            <div class="apa-cor" style="background:#f59e0b" data-cor="#f59e0b" onclick="apaEscolherCor('#f59e0b',this)" title="Amarelo"></div>
+            <div class="apa-cor" style="background:#06b6d4" data-cor="#06b6d4" onclick="apaEscolherCor('#06b6d4',this)" title="Ciano"></div>
+            <div class="apa-cor" style="background:#ec4899" data-cor="#ec4899" onclick="apaEscolherCor('#ec4899',this)" title="Rosa"></div>
+            <div class="apa-cor" style="background:#14b8a6" data-cor="#14b8a6" onclick="apaEscolherCor('#14b8a6',this)" title="Teal"></div>
+            <div class="apa-cor" style="background:#8b5cf6" data-cor="#8b5cf6" onclick="apaEscolherCor('#8b5cf6',this)" title="Índigo"></div>
+            <div class="apa-cor" style="background:#ef4444" data-cor="#ef4444" onclick="apaEscolherCor('#ef4444',this)" title="Vermelho vivo"></div>
+            <div class="apa-cor" style="background:#fff;border:1px solid rgba(255,255,255,.2)" data-cor="#ffffff" onclick="apaEscolherCor('#ffffff',this)" title="Branco"></div>
+          </div>
+          <div class="apa-cor-custom">
+            <input type="color" id="cliAparCor" value="#ff6a1a" oninput="apaEscolherCor(this.value,null)">
+            <input type="text" id="cliAparCorHex" value="#ff6a1a" placeholder="#ff6a1a" maxlength="7" oninput="apaCorHexManual(this.value)">
+            <span style="font-size:12px;color:#64748b">ou escreva o código hex</span>
+          </div>
+
+          <!-- TEXTO DO BOTÃO -->
+          <div class="apa-section">Texto do Botão</div>
+          <div class="field">
+            <input id="cliAparBotao" placeholder="Ex: Conectar ao Wi-Fi grátis" oninput="apaAtualizarBotao(this.value)">
+          </div>
+          <div class="apa-btn-group">
+            <button class="apa-btn-opt" onclick="apaSetBotao('Conectar ao Wi-Fi')">Conectar ao Wi-Fi</button>
+            <button class="apa-btn-opt" onclick="apaSetBotao('Acessar Internet')">Acessar Internet</button>
+            <button class="apa-btn-opt" onclick="apaSetBotao('Entrar grátis')">Entrar grátis</button>
+            <button class="apa-btn-opt" onclick="apaSetBotao('Quero Wi-Fi!')">Quero Wi-Fi!</button>
+          </div>
+
+          <!-- MENSAGEM -->
+          <div class="apa-section">Mensagem de Boas-vindas</div>
+          <div class="field">
+            <textarea id="cliAparMsg" placeholder="Ex: Bem-vindo! Aproveite o Wi-Fi grátis." rows="2" oninput="apaAtualizarMsg(this.value)"></textarea>
+          </div>
+
+          <!-- DESTINO -->
+          <div class="apa-section">Após Conectar, Redirecionar para</div>
+          <div class="apa-btn-group" id="apaDestGrp">
+            <button class="apa-btn-opt sel" id="apaDestInsta" onclick="apaSetDest('instagram')">📸 Instagram</button>
+            <button class="apa-btn-opt" id="apaDestSite" onclick="apaSetDest('site')">🌐 Site</button>
+            <button class="apa-btn-opt" id="apaDestNenhum" onclick="apaSetDest('nenhum')">🚫 Nenhum</button>
+          </div>
+          <input type="hidden" id="cliAparDest" value="instagram">
+          <div class="apa-destino-url" id="cliAparInstaField">
+            <div class="field"><label>Instagram (sem @)</label><input id="cliAparInsta" placeholder="minhaloja"></div>
+          </div>
+          <div class="apa-destino-url" id="cliAparSiteField" style="display:none">
+            <div class="field"><label>URL do site</label><input id="cliAparSiteUrl" placeholder="https://minhaloja.com.br"></div>
+          </div>
           <div style="margin-top:20px;display:flex;gap:10px">
             <button class="btn btn-primary" onclick="cliSalvarAparencia()">Salvar</button>
             <a id="cliLinkPortal" href="#" target="_blank" class="cli-preview-btn">🌐 Ver portal</a>
@@ -840,47 +915,103 @@ function cliDownloadVCF() {
   URL.revokeObjectURL(url);
 }
 
-// aparencia
+// ── APARÊNCIA ──
+var APA_COR = '#ff6a1a';
+var APA_DEST = 'instagram';
+
 function cliCarregarAparencia() {
-  document.getElementById('cliAparLogo').value  = CLI_LOJA.logo_url  || '';
-  document.getElementById('cliAparCor').value   = CLI_LOJA.cor       || '#ff6a1a';
-  document.getElementById('cliAparCorHex').value= CLI_LOJA.cor       || '#ff6a1a';
-  document.getElementById('cliAparMsg').value   = CLI_LOJA.mensagem  || '';
-  document.getElementById('cliAparInsta').value = CLI_LOJA.instagram || '';
-  var dest = CLI_LOJA.instagram ? 'instagram' : (CLI_LOJA.dominio ? 'site' : 'nenhum');
-  document.getElementById('cliAparDest').value  = dest;
-  document.getElementById('cliAparInstaField').style.display = dest === 'instagram' ? 'block' : 'none';
-  cliPreviewLogo(CLI_LOJA.logo_url || '');
+  var cor   = CLI_LOJA.cor       || '#ff6a1a';
+  var logo  = CLI_LOJA.logo_url  || '';
+  var msg   = CLI_LOJA.mensagem  || '';
+  var insta = CLI_LOJA.instagram || '';
+  var botao = CLI_LOJA.botao_txt || 'Conectar ao Wi-Fi';
+  var site  = CLI_LOJA.site_url  || '';
+  var dest  = insta ? 'instagram' : (site ? 'site' : 'nenhum');
+
+  document.getElementById('cliAparLogo').value    = logo;
+  document.getElementById('cliAparCor').value     = cor;
+  document.getElementById('cliAparCorHex').value  = cor;
+  document.getElementById('cliAparMsg').value     = msg;
+  document.getElementById('cliAparInsta').value   = insta;
+  document.getElementById('cliAparBotao').value   = botao;
+  document.getElementById('cliAparSiteUrl').value = site;
+
+  APA_COR  = cor;
+  APA_DEST = dest;
+  apaEscolherCor(cor, null);
+  apaSetDest(dest);
+  apaAtualizarLogo(logo);
+  apaAtualizarMsg(msg);
+  apaAtualizarBotao(botao);
 }
 
-function cliPreviewLogo(url) {
-  var img = document.getElementById('cliLogoImg');
-  var ph  = document.getElementById('cliLogoPlaceholder');
-  if (url && url.indexOf('http') === 0) {
-    img.src = url; img.style.display = 'block'; ph.style.display = 'none';
-  } else {
-    img.style.display = 'none'; ph.style.display = 'block';
+function apaEscolherCor(cor, el) {
+  APA_COR = cor;
+  document.getElementById('cliAparCor').value    = cor;
+  document.getElementById('cliAparCorHex').value = cor;
+  // marca paleta
+  document.querySelectorAll('.apa-cor').forEach(function(c){ c.classList.remove('sel'); });
+  if (el) el.classList.add('sel');
+  // atualiza preview
+  document.getElementById('apaPreviewBar').style.background = cor;
+  document.getElementById('apaPreviewBtn').style.background = cor;
+}
+
+function apaCorHexManual(val) {
+  if (/^#[0-9a-fA-F]{6}$/.test(val)) {
+    apaEscolherCor(val, null);
   }
 }
 
-document.getElementById('cliAparDest').addEventListener('change', function() {
-  document.getElementById('cliAparInstaField').style.display = this.value === 'instagram' ? 'block' : 'none';
-});
-document.getElementById('cliAparCor').addEventListener('input', function() {
-  document.getElementById('cliAparCorHex').value = this.value;
-});
+function apaAtualizarLogo(url) {
+  var img = document.getElementById('apaPreviewLogoImg');
+  var txt = document.getElementById('apaPreviewLogoTxt');
+  if (url && url.indexOf('http') === 0) {
+    img.src = url; img.style.display = 'block'; txt.style.display = 'none';
+  } else {
+    img.style.display = 'none'; txt.style.display = 'block';
+  }
+}
+
+function apaAtualizarMsg(msg) {
+  document.getElementById('apaPreviewMsg').textContent = msg || 'Sua mensagem aparece aqui';
+}
+
+function apaAtualizarBotao(txt) {
+  document.getElementById('apaPreviewBtn').textContent = txt || 'Conectar ao Wi-Fi';
+}
+
+function apaSetBotao(txt) {
+  document.getElementById('cliAparBotao').value = txt;
+  apaAtualizarBotao(txt);
+}
+
+function apaSetDest(dest) {
+  APA_DEST = dest;
+  document.getElementById('cliAparDest').value = dest;
+  document.getElementById('cliAparInstaField').style.display = dest === 'instagram' ? 'block' : 'none';
+  document.getElementById('cliAparSiteField').style.display  = dest === 'site'      ? 'block' : 'none';
+  // marca botoes
+  ['Insta','Site','Nenhum'].forEach(function(d) {
+    document.getElementById('apaDest'+d).classList.remove('sel');
+  });
+  var map = {instagram:'Insta', site:'Site', nenhum:'Nenhum'};
+  if (map[dest]) document.getElementById('apaDest'+map[dest]).classList.add('sel');
+}
 
 async function cliSalvarAparencia() {
-  var dados = {
-    logo_url:  document.getElementById('cliAparLogo').value.trim()  || null,
-    cor:       document.getElementById('cliAparCor').value,
-    mensagem:  document.getElementById('cliAparMsg').value.trim()   || null,
-    instagram: document.getElementById('cliAparInsta').value.trim() || null
-  };
+  var cor   = APA_COR;
+  var logo  = document.getElementById('cliAparLogo').value.trim()    || null;
+  var msg   = document.getElementById('cliAparMsg').value.trim()     || null;
+  var insta = document.getElementById('cliAparInsta').value.trim()   || null;
+  var botao = document.getElementById('cliAparBotao').value.trim()   || null;
+  var site  = document.getElementById('cliAparSiteUrl').value.trim() || null;
+
+  var dados = { cor: cor, logo_url: logo, mensagem: msg, instagram: insta };
   var r = await sb.from('portal_lojas').update(dados).eq('id', CLI_LOJA.id);
-  if (r.error) { toast('Erro ao salvar.', false); return; }
+  if (r.error) { toast('Erro ao salvar: ' + r.error.message, false); return; }
   Object.assign(CLI_LOJA, dados);
-  toast('Aparência salva!');
+  toast('Aparência salva com sucesso! ✨');
 }
 </script>
 </body>
