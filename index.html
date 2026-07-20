@@ -459,17 +459,22 @@ async function fazerLogin() {
 }
 
 async function verificarAcesso(user) {
+  console.log('[ConectaY] user.id:', user.id, 'user.email:', user.email);
+
   // 1. testa se é admin
-  var ra = await sb.from('admin_perfis').select('id').eq('user_id', user.id).maybeSingle();
-  if (ra.data) {
+  var ra = await sb.from('admin_perfis').select('papel').eq('email', user.email);
+  console.log('[ConectaY] admin_perfis result:', JSON.stringify(ra));
+  if (!ra.error && ra.data && ra.data.length > 0) {
     IS_ADMIN = true;
     esconder('pgLogin');
     mostrar('pgAdmin');
     admCarregar();
     return;
   }
+
   // 2. testa se é cliente
   var rc = await sb.from('portal_lojas').select('*').eq('email_acesso', user.email).maybeSingle();
+  console.log('[ConectaY] portal_lojas result:', JSON.stringify(rc));
   if (rc.data) {
     IS_ADMIN = false;
     CLI_LOJA = rc.data;
@@ -478,8 +483,10 @@ async function verificarAcesso(user) {
     cliIniciar();
     return;
   }
+
   // 3. sem acesso
-  toast('Acesso não autorizado.', false);
+  console.log('[ConectaY] SEM ACESSO — admin_perfis error:', ra.error, 'portal_lojas error:', rc.error);
+  toast('Acesso não autorizado. Veja o console (F12) para detalhes.', false);
   await sb.auth.signOut();
 }
 
