@@ -345,8 +345,7 @@ function baixarCSV() {
   const cols = [...new Set(LEADS.flatMap(l => Object.keys(l.dados||{})))];
   const head = ['Data/Hora',...cols];
   const linhas = LEADS.map(l => [new Date(l.criado_em).toLocaleString('pt-BR'),...cols.map(c=>(l.dados||{})[c]||'')]);
-  const csv = [head,...linhas].map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('
-');
+  const csv = [head,...linhas].map(r=>r.map(v=>'"'+String(v).replace(/"/g,'""')+'"').join(',')).join('\n');
   baixar('\ufeff'+csv, 'leads_'+LOJA.slug+'.csv', 'text/csv;charset=utf-8');
   toast('CSV baixado! ✅');
 }
