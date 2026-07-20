@@ -1,4 +1,4 @@
- <!DOCTYPE html><html lang="pt-BR"><head>
+<!DOCTYPE html><html lang="pt-BR"><head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Painel de Portais Wi-Fi</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -182,9 +182,22 @@ async function entrar(){
   const err=document.getElementById('loginErr'); err.textContent='';
   const {data,error}=await sb.auth.signInWithPassword({email,password});
   if(error){err.textContent='E-mail ou senha inválidos.';return}
-  mostrarApp(data.user);
+  await verificarAcesso(data.user);
 }
 async function sair(){await sb.auth.signOut();location.reload();}
+
+async function verificarAcesso(user){
+  // verifica se o usuário tem papel no painel admin (super, funcionario, visitante)
+  // se não tiver, é cliente ConectaY — redireciona pro painel deles
+  const {data,error}=await sb.from('admin_perfis').select('papel').eq('email',user.email).single();
+  if(error||!data){
+    // não tem papel no painel admin = é cliente ConectaY
+    await sb.auth.signOut();
+    document.getElementById('loginErr').textContent='Acesso negado. Use o painel do cliente em painel.conectay.com.br';
+    return;
+  }
+  mostrarApp(user);
+}
 
 function mostrarApp(user){
   document.getElementById('login').classList.add('hidden');
@@ -652,7 +665,7 @@ async function excluir(id){
 }
 
 // sessão persistente
-sb.auth.getSession().then(({data})=>{if(data.session)mostrarApp(data.session.user);});
+sb.auth.getSession().then(({data})=>{if(data.session)verificarAcesso(data.session.user);});
 document.getElementById('senha').addEventListener('keydown',e=>{if(e.key==='Enter')entrar();});
 </script>
 </body></html>
