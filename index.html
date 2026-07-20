@@ -367,6 +367,7 @@ label.fld small{color:var(--text-faint);font-weight:400}
 
 
 <script>
+var IS_CLIENTE = false;
 const SUPABASE_URL='https://iekxuehdrxsimqtfejxm.supabase.co';
 const SUPABASE_ANON_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlla3h1ZWhkcnhzaW1xdGZlanhtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1MDk0NzAsImV4cCI6MjA5MTA4NTQ3MH0.61zaRoTBK2XorXgAcGXcsN8yOY0MTRS4bIJ_X4vPjyA';
 const sb=supabase.createClient(SUPABASE_URL,SUPABASE_ANON_KEY);
@@ -416,6 +417,7 @@ function mostrarApp(user){
 
 let ACESSOS=[];
 async function carregar(){
+  if(IS_CLIENTE) return;
   const {data,error}=await sb.from('portal_lojas').select('*').order('criado_em',{ascending:false});  // inclui edit_token
   if(error){toast('Erro: '+error.message);return}
   LOJAS=data||[];
@@ -438,6 +440,7 @@ async function carregar(){
 
 // grafico geral: acessos por dia (14 dias)
 function renderGrafico(){
+  if(IS_CLIENTE) return;
   const dias=14, hoje=new Date(); hoje.setHours(0,0,0,0);
   const buckets=Array(dias).fill(0);
   ACESSOS.forEach(a=>{
@@ -458,6 +461,7 @@ function renderGrafico(){
 }
 
 function render(cont,cont7,contPrev7){
+  if(IS_CLIENTE) return;
   cont=cont||{};cont7=cont7||{};contPrev7=contPrev7||{};
   const ativas=LOJAS.filter(l=>l.ativo).length;
   const totalAcessos=Object.values(cont).reduce((a,b)=>a+b,0);
@@ -901,6 +905,7 @@ var CLI_LEADS = [];
 var CLI_CHART = null;
 
 async function iniciarCliente(user) {
+  IS_CLIENTE = true;
   // esconde TUDO do admin e mostra so o cliente
   var loginEl = document.getElementById('login');
   var appEl = document.getElementById('app');
