@@ -126,6 +126,12 @@ body{font-family:Inter,system-ui,sans-serif;background:#060c18;color:#e2e8f0;fon
 .tbl-empty{text-align:center;color:#64748b;padding:28px}
 
 /* ═══ MENSAGENS (fila de disparo 1-a-1) ═══ */
+.msg-filtros{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;max-width:640px}
+.msg-filtro{padding:7px 14px;border-radius:999px;border:1px solid rgba(14,165,233,.2);background:transparent;color:#94a3b8;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
+.msg-filtro:hover{border-color:rgba(14,165,233,.5);color:#e2e8f0}
+.msg-filtro.ativo{background:rgba(14,165,233,.15);color:#0ea5e9;border-color:#0ea5e9}
+.msg-filtro b{font-size:11px;opacity:.85;font-weight:800}
+.msg-filtro.vazio{opacity:.4}
 .msg-queue{display:flex;flex-direction:column;gap:13px;max-width:640px}
 .msg-card{background:#0d1526;border:1px solid rgba(14,165,233,.15);border-radius:14px;padding:16px 17px;transition:opacity .2s,transform .2s}
 .msg-card.saiu{opacity:0;transform:translateX(30px)}
@@ -137,6 +143,7 @@ body{font-family:Inter,system-ui,sans-serif;background:#060c18;color:#e2e8f0;fon
 .mb-recorrente{background:rgba(52,211,153,.14);color:#34d399}
 .mb-saudade{background:rgba(251,191,36,.14);color:#fbbf24}
 .mb-inativo{background:rgba(244,114,182,.14);color:#f472b6}
+.mb-aniversario{background:rgba(192,132,252,.16);color:#c084fc}
 .msg-txt{width:100%;background:#060c18;border:1px solid rgba(14,165,233,.2);border-radius:10px;color:#e2e8f0;padding:10px 13px;font-size:13px;font-family:inherit;line-height:1.45;resize:vertical;min-height:70px;outline:none}
 .msg-txt:focus{border-color:#0ea5e9}
 .msg-acoes{display:flex;gap:9px;margin-top:11px;flex-wrap:wrap}
@@ -502,6 +509,14 @@ body{font-family:Inter,system-ui,sans-serif;background:#060c18;color:#e2e8f0;fon
         <div class="card" style="padding:9px 16px"><span style="font-size:12px;color:#64748b">Pendentes:</span> <b id="cliMsgsCount" style="color:#0ea5e9;font-size:16px">—</b></div>
         <div style="flex:1"></div>
         <button class="btn-link" onclick="cliCarregarMsgs()">↻ Atualizar</button>
+      </div>
+      <div class="msg-filtros" id="cliMsgsFiltros">
+        <button class="msg-filtro ativo" data-cat="todas" onclick="cliFiltrarMsgs('todas')">Todas <b>0</b></button>
+        <button class="msg-filtro" data-cat="novo" onclick="cliFiltrarMsgs('novo')">Novos <b>0</b></button>
+        <button class="msg-filtro" data-cat="recorrente" onclick="cliFiltrarMsgs('recorrente')">Fiéis <b>0</b></button>
+        <button class="msg-filtro" data-cat="saudade" onclick="cliFiltrarMsgs('saudade')">Saudade <b>0</b></button>
+        <button class="msg-filtro" data-cat="inativo" onclick="cliFiltrarMsgs('inativo')">Reconquista <b>0</b></button>
+        <button class="msg-filtro" data-cat="aniversario" onclick="cliFiltrarMsgs('aniversario')">🎂 Aniversário <b>0</b></button>
       </div>
       <div id="cliMsgsLista" class="msg-queue"></div>
     </div>
@@ -996,6 +1011,7 @@ var CLI_LEADS   = [];
 var CLI_ONLINE  = [];
 var CLI_CHART   = null;
 var CLI_MSGS    = [];
+var CLI_MSGS_FILTRO = 'todas';
 
 async function cliIniciar(user) {
   document.getElementById('cliNome').textContent   = CLI_LOJA.nome || '—';
@@ -1177,7 +1193,25 @@ async function cliCarregarMsgs() {
 
 function cliRenderMsgs() {
   var lista = document.getElementById('cliMsgsLista');
+
+  // conta por categoria e atualiza os botões de filtro
+  var cont = {todas: CLI_MSGS.length, novo:0, recorrente:0, saudade:0, inativo:0, aniversario:0};
+  CLI_MSGS.forEach(function(m){ if (cont[m.categoria] != null) cont[m.categoria]++; });
   document.getElementById('cliMsgsCount').textContent = CLI_MSGS.length;
+  var botoes = document.querySelectorAll('#cliMsgsFiltros .msg-filtro');
+  botoes.forEach(function(b){
+    var cat = b.getAttribute('data-cat');
+    var n = cont[cat] || 0;
+    var bEl = b.querySelector('b'); if (bEl) bEl.textContent = n;
+    b.classList.toggle('vazio', cat !== 'todas' && n === 0);
+    b.classList.toggle('ativo', cat === CLI_MSGS_FILTRO);
+  });
+
+  // aplica o filtro selecionado
+  var itens = (CLI_MSGS_FILTRO === 'todas')
+    ? CLI_MSGS
+    : CLI_MSGS.filter(function(m){ return m.categoria === CLI_MSGS_FILTRO; });
+
   if (!CLI_MSGS.length) {
     lista.innerHTML = '<div class="msg-vazio">' +
       '<div class="ico">✓</div>' +
@@ -1186,8 +1220,15 @@ function cliRenderMsgs() {
       '</div>';
     return;
   }
-  var badge = {novo:'mb-novo', recorrente:'mb-recorrente', saudade:'mb-saudade', inativo:'mb-inativo'};
-  lista.innerHTML = CLI_MSGS.map(function(m) {
+  if (!itens.length) {
+    lista.innerHTML = '<div class="msg-vazio">' +
+      '<h3>Nada nesta categoria</h3>' +
+      '<p style="font-size:12px">Escolha outra categoria acima para ver as mensagens pendentes.</p>' +
+      '</div>';
+    return;
+  }
+  var badge = {novo:'mb-novo', recorrente:'mb-recorrente', saudade:'mb-saudade', inativo:'mb-inativo', aniversario:'mb-aniversario'};
+  lista.innerHTML = itens.map(function(m) {
     var primeiro = String(m.pessoa_nome || '').split(' ')[0] || 'Cliente';
     var cls = badge[m.categoria] || 'mb-novo';
     return '<div class="msg-card" id="msgc-' + m.disparo_id + '">' +
@@ -1232,6 +1273,11 @@ function cliMsgSome(id) {
       cliRenderMsgs();
     }, 200);
   }
+}
+
+function cliFiltrarMsgs(cat) {
+  CLI_MSGS_FILTRO = cat;
+  cliRenderMsgs();
 }
 
 // -- APARENCIA (simplificada: logo, cor primaria/secundaria, texto botao, mensagem, destino) --
