@@ -109,10 +109,18 @@ async function registrarAcesso(loja, mac, dispositivo) {
 async function registrarLead(loja, dados, mac) {
   if (!loja) return;
   try {
+    const registro = Object.assign({}, dados || {});
+    // Consentimento LGPD: se a pessoa marcou o aceite, guarda a PROVA
+    // (que aceitou, quando aceitou e o texto exato que foi mostrado).
+    if (registro.optin) {
+      registro.optin = true;
+      registro.optin_data = new Date().toISOString();
+      registro.optin_texto = 'Aceito receber novidades e ofertas no WhatsApp e concordo com a Política de Privacidade.';
+    }
     await fetch(`${SUPABASE_URL}/rest/v1/portal_leads`, {
       method: 'POST',
       headers: { ...H, Prefer: 'return=minimal' },
-      body: JSON.stringify({ loja_id: loja.id, slug: loja.slug, dados: dados || {}, mac: mac || null }),
+      body: JSON.stringify({ loja_id: loja.id, slug: loja.slug, dados: registro, mac: mac || null }),
     });
   } catch (e) { /* silencioso */ }
 }
