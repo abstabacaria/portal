@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ConectaY — Fila de mensagens</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0a0f1e; --panel:#111a30; --panel2:#0e1728;
+    --azul:#0ea5e9; --ciano:#22d3ee; --azul-esc:#0369a1;
+    --txt:#e6eefb; --muted:#8698b3; --linha:#1e2b45;
+    --novo:#22d3ee; --recorrente:#34d399; --saudade:#fbbf24; --inativo:#f472b6;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{
+    background:var(--navy); color:var(--txt);
+    font-family:'Inter',system-ui,sans-serif; line-height:1.5;
+    min-height:100vh;
+  }
+  .wrap{max-width:760px;margin:0 auto;padding:28px 18px 80px}
+
+  /* Cabeçalho */
+  header{display:flex;align-items:center;justify-content:space-between;
+    gap:14px;margin-bottom:26px;flex-wrap:wrap}
+  .brand{display:flex;align-items:center;gap:11px}
+  .logo{width:34px;height:34px;border-radius:9px;
+    background:linear-gradient(135deg,var(--azul),var(--ciano));
+    display:grid;place-items:center;font-family:'Sora';font-weight:700;
+    color:var(--navy);font-size:18px;box-shadow:0 4px 18px -4px var(--azul)}
+  .brand h1{font-family:'Sora';font-weight:600;font-size:19px;letter-spacing:-.01em}
+  .brand span{color:var(--ciano)}
+  .sub{color:var(--muted);font-size:13px;margin-top:1px}
+
+  .pill{background:var(--panel);border:1px solid var(--linha);
+    border-radius:999px;padding:7px 15px;font-size:13px;font-weight:600}
+  .pill b{color:var(--ciano)}
+
+  /* Setup / login */
+  .card{background:var(--panel);border:1px solid var(--linha);
+    border-radius:16px;padding:20px}
+  .setup{max-width:420px;margin:8vh auto 0}
+  .setup h2{font-family:'Sora';font-weight:600;font-size:17px;margin-bottom:5px}
+  .setup p{color:var(--muted);font-size:13px;margin-bottom:18px}
+  label{display:block;font-size:12px;font-weight:600;color:var(--muted);
+    margin:13px 0 6px;text-transform:uppercase;letter-spacing:.04em}
+  input,textarea,select{width:100%;background:var(--panel2);
+    border:1px solid var(--linha);border-radius:10px;padding:11px 13px;
+    color:var(--txt);font-family:inherit;font-size:14px;outline:none}
+  input:focus,textarea:focus,select:focus{border-color:var(--azul)}
+  textarea{resize:vertical;min-height:74px;line-height:1.45}
+
+  .btn{border:none;border-radius:10px;padding:11px 16px;font-family:inherit;
+    font-weight:600;font-size:14px;cursor:pointer;transition:.15s;
+    display:inline-flex;align-items:center;justify-content:center;gap:8px}
+  .btn-primary{background:linear-gradient(135deg,var(--azul),var(--ciano));
+    color:var(--navy);width:100%}
+  .btn-primary:hover{filter:brightness(1.08)}
+  .btn-wa{background:#25D366;color:#062b16;text-decoration:none;flex:1}
+  .btn-wa:hover{filter:brightness(1.06)}
+  .btn-ghost{background:transparent;border:1px solid var(--linha);color:var(--muted)}
+  .btn-ghost:hover{border-color:var(--azul);color:var(--txt)}
+  .err{color:#f87171;font-size:13px;margin-top:12px;min-height:18px}
+
+  /* Filtro */
+  .toolbar{display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap}
+  .toolbar select{width:auto;min-width:190px}
+  .toolbar .grow{flex:1}
+  .link{background:none;border:none;color:var(--muted);font-size:13px;
+    cursor:pointer;font-family:inherit}
+  .link:hover{color:var(--ciano)}
+
+  /* Cards da fila */
+  .queue{display:flex;flex-direction:column;gap:13px}
+  .msg{background:var(--panel);border:1px solid var(--linha);
+    border-radius:15px;padding:16px 17px;transition:.2s}
+  .msg.saiu{opacity:0;transform:translateX(30px)}
+  .msg .top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:5px}
+  .msg .nome{font-family:'Sora';font-weight:600;font-size:15.5px}
+  .msg .tel{color:var(--muted);font-size:13px;margin-bottom:11px}
+  .badge{font-size:11px;font-weight:700;padding:4px 10px;border-radius:999px;
+    text-transform:uppercase;letter-spacing:.04em;white-space:nowrap}
+  .b-novo{background:rgba(34,211,238,.14);color:var(--novo)}
+  .b-recorrente{background:rgba(52,211,153,.14);color:var(--recorrente)}
+  .b-saudade{background:rgba(251,191,36,.14);color:var(--saudade)}
+  .b-inativo{background:rgba(244,114,182,.14);color:var(--inativo)}
+  .msg .acoes{display:flex;gap:9px;margin-top:12px}
+
+  /* Estados */
+  .vazio{text-align:center;padding:60px 20px;color:var(--muted)}
+  .vazio .ico{font-size:38px;margin-bottom:10px}
+  .vazio h3{font-family:'Sora';font-weight:600;color:var(--txt);margin-bottom:4px}
+  .loading{text-align:center;padding:50px;color:var(--muted)}
+  .hide{display:none}
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);
+    background:var(--panel);border:1px solid var(--azul);color:var(--txt);
+    padding:12px 20px;border-radius:12px;font-size:14px;font-weight:600;
+    box-shadow:0 10px 40px -10px #000;opacity:0;transition:.25s;pointer-events:none}
+  .toast.on{opacity:1}
+</style>
+</head>
+<body>
+
+<!-- TELA DE CONFIGURAÇÃO / LOGIN -->
+<div id="tela-setup" class="wrap">
+  <div class="setup card">
+    <h2>Entrar no painel</h2>
+    <p>Fila de mensagens do ConectaY. Configure a conexão e faça login.</p>
+    <label>URL do Supabase</label>
+    <input id="cfg-url" placeholder="https://xxxx.supabase.co">
+    <label>Chave anon (public)</label>
+    <input id="cfg-key" placeholder="eyJhbGci...">
+    <label>E-mail</label>
+    <input id="cfg-email" type="email" placeholder="voce@email.com">
+    <label>Senha</label>
+    <input id="cfg-pass" type="password" placeholder="••••••••">
+    <div style="height:16px"></div>
+    <button class="btn btn-primary" onclick="entrar()">Entrar</button>
+    <div class="err" id="setup-err"></div>
+  </div>
+</div>
+
+<!-- PAINEL PRINCIPAL -->
+<div id="tela-painel" class="wrap hide">
+  <header>
+    <div class="brand">
+      <div class="logo">C</div>
+      <div>
+        <h1>Conecta<span>Y</span></h1>
+        <div class="sub">Fila de mensagens</div>
+      </div>
+    </div>
+    <div class="pill">Pendentes: <b id="contador">0</b></div>
+  </header>
+
+  <div class="toolbar">
+    <select id="filtro-loja" onchange="render()">
+      <option value="">Todas as lojas</option>
+    </select>
+    <div class="grow"></div>
+    <button class="link" onclick="carregar()">↻ Atualizar</button>
+    <button class="link" onclick="sair()">Sair</button>
+  </div>
+
+  <div id="lista" class="queue"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let sb=null, dados=[], lojas=[];
+
+// ---- Formata telefone pro wa.me (Brasil) ----
+function waNumero(tel){
+  let d=(tel||'').replace(/\D/g,'');
+  if(d.length===10||d.length===11) d='55'+d;   // adiciona código do Brasil
+  return d;
+}
+function linkWa(tel,msg){
+  return 'https://wa.me/'+waNumero(tel)+'?text='+encodeURIComponent(msg);
+}
+
+// ---- Login ----
+async function entrar(){
+  const url=document.getElementById('cfg-url').value.trim();
+  const key=document.getElementById('cfg-key').value.trim();
+  const email=document.getElementById('cfg-email').value.trim();
+  const pass=document.getElementById('cfg-pass').value;
+  const err=document.getElementById('setup-err');
+  err.textContent='';
+  if(!url||!key||!email||!pass){err.textContent='Preencha todos os campos.';return;}
+  try{
+    sb=supabase.createClient(url,key);
+    const {error}=await sb.auth.signInWithPassword({email,password:pass});
+    if(error){err.textContent='Login falhou: '+error.message;return;}
+    document.getElementById('tela-setup').classList.add('hide');
+    document.getElementById('tela-painel').classList.remove('hide');
+    carregar();
+  }catch(e){err.textContent='Erro de conexão: '+e.message;}
+}
+async function sair(){ if(sb) await sb.auth.signOut(); location.reload(); }
+
+// ---- Carrega a fila ----
+async function carregar(){
+  const lista=document.getElementById('lista');
+  lista.innerHTML='<div class="loading">Carregando fila…</div>';
+  const {data,error}=await sb.from('portal_disparos_prontos').select('*');
+  if(error){lista.innerHTML='<div class="vazio"><h3>Não consegui carregar</h3><p>'+error.message+'</p></div>';return;}
+  dados=data||[];
+  // monta filtro de lojas
+  lojas=[...new Map(dados.map(d=>[d.loja_id,d.loja_nome])).entries()];
+  const sel=document.getElementById('filtro-loja');
+  sel.innerHTML='<option value="">Todas as lojas</option>'+
+    lojas.map(([id,nome])=>`<option value="${id}">${nome}</option>`).join('');
+  render();
+}
+
+// ---- Desenha os cards ----
+function render(){
+  const filtro=document.getElementById('filtro-loja').value;
+  const itens=filtro?dados.filter(d=>String(d.loja_id)===filtro):dados;
+  document.getElementById('contador').textContent=itens.length;
+  const lista=document.getElementById('lista');
+
+  if(!itens.length){
+    lista.innerHTML=`<div class="vazio">
+      <div class="ico">✓</div>
+      <h3>Fila vazia</h3>
+      <p>Nada pra enviar agora. Quando alguém mudar de categoria, aparece aqui.</p>
+    </div>`;
+    return;
+  }
+
+  lista.innerHTML=itens.map(d=>{
+    const primeiro=(d.pessoa_nome||'').split(' ')[0]||'Cliente';
+    const cls={novo:'b-novo',recorrente:'b-recorrente',saudade:'b-saudade',inativo:'b-inativo'}[d.categoria]||'b-novo';
+    return `<div class="msg" id="msg-${d.disparo_id}">
+      <div class="top">
+        <div class="nome">${primeiro}</div>
+        <span class="badge ${cls}">${d.categoria_rotulo||d.categoria}</span>
+      </div>
+      <div class="tel">${d.telefone||'sem telefone'} · ${d.loja_nome}</div>
+      <textarea id="txt-${d.disparo_id}">${(d.mensagem_final||'').replace(/</g,'&lt;')}</textarea>
+      <div class="acoes">
+        <a class="btn btn-wa" href="#" onclick="abrir(event,${d.disparo_id},'${(d.telefone||'')}')">Abrir WhatsApp</a>
+        <button class="btn btn-ghost" onclick="enviado(${d.disparo_id})">✓ Enviado</button>
+        <button class="btn btn-ghost" onclick="pular(${d.disparo_id})">Pular</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ---- Abrir conversa no WhatsApp ----
+function abrir(ev,id,tel){
+  ev.preventDefault();
+  const msg=document.getElementById('txt-'+id).value;
+  window.open(linkWa(tel,msg),'_blank');
+}
+
+// ---- Marcar como enviado ----
+async function enviado(id){
+  const {error}=await sb.rpc('portal_disparo_enviado',{p_id:id});
+  if(error){toast('Erro: '+error.message);return;}
+  some(id); toast('Marcado como enviado');
+}
+// ---- Pular (cancela sem enviar) ----
+async function pular(id){
+  const {error}=await sb.rpc('portal_disparo_cancelar',{p_id:id});
+  if(error){toast('Erro: '+error.message);return;}
+  some(id); toast('Removido da fila');
+}
+function some(id){
+  const el=document.getElementById('msg-'+id);
+  if(el){el.classList.add('saiu');setTimeout(()=>{
+    dados=dados.filter(d=>d.disparo_id!==id);render();
+  },200);}
+}
+
+// ---- Toast ----
+let toastT;
+function toast(msg){
+  const t=document.getElementById('toast');
+  t.textContent=msg;t.classList.add('on');
+  clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('on'),2200);
+}
+
+// pré-preenche URL conhecida (ajuste se quiser)
+document.getElementById('cfg-url').value='https://iekxuehdrxsimqtfejxm.supabase.co';
+</script>
+</body>
+</html>
