@@ -112,6 +112,12 @@ body{font-family:Inter,system-ui,sans-serif;background:#060c18;color:#e2e8f0;fon
 .fld input:focus,.fld textarea:focus,.fld select:focus{border-color:#0ea5e9}
 .fld textarea{resize:vertical;min-height:60px}
 .fld-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.dom-group{display:flex;align-items:stretch;border:1px solid rgba(14,165,233,.2);border-radius:10px;background:#060c18;overflow:hidden}
+.dom-group input{border:none !important;border-radius:0;background:transparent;flex:1;min-width:0}
+.dom-group input:focus{box-shadow:none}
+.dom-suffix{display:flex;align-items:center;padding:0 12px;background:rgba(14,165,233,.1);color:#0ea5e9;font-size:13px;font-weight:700;white-space:nowrap;border-left:1px solid rgba(14,165,233,.2)}
+.dom-hint{font-size:11px;color:#64748b;margin-top:6px}
+.dom-hint b{color:#0ea5e9}
 .fld-section{font-size:10px;font-weight:700;color:#0ea5e9;text-transform:uppercase;letter-spacing:.8px;margin:20px 0 12px;padding-bottom:6px;border-bottom:1px solid rgba(14,165,233,.12)}
 .form-btns{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap}
 
@@ -341,7 +347,13 @@ body{font-family:Inter,system-ui,sans-serif;background:#060c18;color:#e2e8f0;fon
           <div class="fld"><label>Nome da Loja *</label><input id="fNome" placeholder="Ex: Gold Pipe"></div>
           <div class="fld"><label>Slug (ID único) *</label><input id="fSlug" placeholder="goldpipe"></div>
         </div>
-        <div class="fld"><label>Domínio</label><input id="fDominio" placeholder="goldpipe.conectay.com.br"></div>
+        <div class="fld"><label>Domínio</label>
+          <div class="dom-group">
+            <input id="fDominio" placeholder="goldpipe" autocapitalize="off" autocomplete="off" spellcheck="false" oninput="domToggleSuffix()">
+            <span class="dom-suffix" id="domSuffix">.conectay.com.br</span>
+          </div>
+          <div class="dom-hint">Digite só o nome (ex: <b>goldpipe</b>). Para domínio próprio, digite o endereço completo.</div>
+        </div>
         <div class="fld-row">
           <div class="fld"><label>Responsável</label><input id="fResp" placeholder="Nome completo"></div>
           <div class="fld"><label>WhatsApp</label><input id="fContato" placeholder="(21) 99999-9999"></div>
@@ -878,6 +890,7 @@ function admNovaLoja() {
   document.getElementById('fAtivo').value = 'true';
   document.getElementById('fPlano').value = 'mensal';
   admDestTab('instagram');
+  domToggleSuffix();
   ['nome','tel','email','aniv','bairro'].forEach(function(c) {
     var el = document.getElementById('fc_'+c); if (el) el.checked = (c === 'nome');
     var ob = document.getElementById('fc_'+c+'_obrig'); if (ob) ob.checked = (c === 'nome');
@@ -891,7 +904,8 @@ function admEditar(id) {
   document.getElementById('admFormTitulo').textContent = 'Editar Loja — ' + l.nome;
   document.getElementById('btnDel').style.display = 'inline-block';
   var set = function(fid, val) { var el = document.getElementById(fid); if (el) el.value = val || ''; };
-  set('fId', l.id); set('fNome', l.nome); set('fSlug', l.slug); set('fDominio', l.dominio);
+  set('fId', l.id); set('fNome', l.nome); set('fSlug', l.slug); set('fDominio', despirDominio(l.dominio));
+  domToggleSuffix();
   set('fResp', l.responsavel); set('fContato', l.contato); set('fDoc', l.documento);
   set('fEmailCliente', l.email_cliente); set('fLogo', l.logo_url); set('fMensagem', l.mensagem);
   set('fCor', l.cor || '#ff6a1a'); set('fCor2', l.cor2 || '#ff6a1a');
@@ -921,6 +935,26 @@ function admGetFormCampos() {
   return fc;
 }
 
+// Domínio: você digita só o nome; completamos com .conectay.com.br.
+// Se digitar um domínio completo (com ponto), respeita o domínio próprio.
+function montarDominio() {
+  var v = String(document.getElementById('fDominio').value || '').trim().toLowerCase();
+  v = v.replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/\s+/g, '');
+  if (!v) return null;
+  if (v.indexOf('.') > -1) return v;            // domínio próprio, usa como está
+  return v + '.conectay.com.br';                 // só o nome → completa
+}
+function despirDominio(dom) {
+  if (!dom) return '';
+  return String(dom).trim().toLowerCase().replace(/\.conectay\.com\.br$/, '');
+}
+// esconde o ".conectay.com.br" quando o valor já é um domínio próprio (tem ponto)
+function domToggleSuffix() {
+  var v = document.getElementById('fDominio').value || '';
+  var suf = document.getElementById('domSuffix');
+  if (suf) suf.style.display = v.indexOf('.') > -1 ? 'none' : '';
+}
+
 async function admSalvar() {
   var id    = document.getElementById('fId').value;
   var nome  = document.getElementById('fNome').value.trim();
@@ -930,7 +964,7 @@ async function admSalvar() {
   if (!nome || !slug) { toast('Nome e Slug são obrigatórios.', 'err'); return; }
   var dados = {
     nome: nome, slug: slug,
-    dominio:      document.getElementById('fDominio').value.trim() || null,
+    dominio:      montarDominio(),
     responsavel:  document.getElementById('fResp').value.trim()    || null,
     contato:      document.getElementById('fContato').value.trim() || null,
     documento:    document.getElementById('fDoc').value.trim()     || null,
