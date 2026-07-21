@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ConectaY · Wi-Fi que vira cliente</title>
+<meta name="description" content="Transforme o Wi-Fi da sua loja em uma máquina de captar clientes. Portal personalizado, CRM automático e mensagens de retorno no WhatsApp.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--azul:#0ea5e9;--ciano:#22d3ee;--escuro:#0369a1;--navy:#0a0f1e;--card:#101827;--borda:#1e293b;--texto:#e2e8f0;--mudo:#94a3b8}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--navy);color:var(--texto);font-family:'Inter',system-ui,sans-serif;line-height:1.6}
+h1,h2,h3,.marca{font-family:'Sora','Inter',sans-serif}
+a{color:var(--ciano);text-decoration:none}
+.wrap{max-width:1040px;margin:0 auto;padding:0 22px}
+header{display:flex;align-items:center;gap:12px;padding:18px 0}
+.marca{font-weight:800;font-size:1.15rem}.marca b{color:var(--azul)}
+header nav{margin-left:auto;display:flex;gap:20px;font-size:.88rem}
+header nav a{color:var(--mudo)}header nav a:hover{color:var(--texto)}
+.hero{padding:70px 0 60px;text-align:center;
+  background:radial-gradient(900px 500px at 50% -20%, #12213f 0%, transparent 70%)}
+.hero .hex{width:88px;height:88px;margin:0 auto 22px;display:block;animation:flutua 5s ease-in-out infinite}
+@keyframes flutua{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@media(prefers-reduced-motion:reduce){.hero .hex{animation:none}}
+.hero h1{font-size:clamp(1.9rem,5vw,3rem);font-weight:800;line-height:1.15;max-width:720px;margin:0 auto 16px}
+.hero h1 span{background:linear-gradient(135deg,var(--azul),var(--ciano));-webkit-background-clip:text;background-clip:text;color:transparent}
+.hero p{color:var(--mudo);max-width:560px;margin:0 auto 30px;font-size:1.05rem}
+.cta{display:inline-block;padding:15px 32px;border-radius:13px;font-weight:700;color:#fff;font-size:1rem;
+  background:linear-gradient(135deg,var(--azul),var(--ciano));box-shadow:0 10px 30px rgba(14,165,233,.35)}
+.cta:hover{transform:translateY(-2px);transition:.2s}
+.passos{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px;padding:50px 0}
+.passo{background:var(--card);border:1px solid var(--borda);border-radius:16px;padding:26px}
+.passo .num{font-family:'Sora';color:var(--ciano);font-weight:700;font-size:.8rem;letter-spacing:.1em;margin-bottom:10px}
+.passo h3{font-size:1.05rem;margin-bottom:8px}
+.passo p{color:var(--mudo);font-size:.9rem}
+section h2{font-size:1.6rem;text-align:center;margin-bottom:8px}
+section .sub{color:var(--mudo);text-align:center;max-width:520px;margin:0 auto 34px;font-size:.95rem}
+.feats{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;padding-bottom:60px}
+.feat{background:var(--card);border:1px solid var(--borda);border-radius:14px;padding:20px}
+.feat b{display:block;margin-bottom:5px;font-size:.95rem}
+.feat span{color:var(--mudo);font-size:.85rem}
+footer{border-top:1px solid var(--borda);padding:26px 0;color:var(--mudo);font-size:.82rem;
+  display:flex;gap:16px;flex-wrap:wrap;align-items:center}
+footer .fim{margin-left:auto;display:flex;gap:16px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <svg width="34" height="34" viewBox="0 0 64 64" fill="none">
+      <path d="M32 4 56 18v28L32 60 8 46V18L32 4Z" stroke="url(#g)" stroke-width="4" fill="#0b1220"/>
+      <path d="M20 34c6.6-6.6 17.4-6.6 24 0" stroke="#22d3ee" stroke-width="4" stroke-linecap="round"/>
+      <circle cx="32" cy="43" r="3" fill="#22d3ee"/>
+      <defs><linearGradient id="g" x1="8" y1="4" x2="56" y2="60"><stop stop-color="#0ea5e9"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs>
+    </svg>
+    <span class="marca">Conecta<b>Y</b></span>
+    <nav>
+      <a href="#como">Como funciona</a>
+      <a href="#recursos">Recursos</a>
+      <a href="https://instagram.com/conectaywifi" target="_blank" rel="noopener">Instagram</a>
+    </nav>
+  </header>
+</div>
+
+<div class="hero">
+  <div class="wrap">
+    <svg class="hex" viewBox="0 0 64 64" fill="none">
+      <path d="M32 4 56 18v28L32 60 8 46V18L32 4Z" stroke="url(#g2)" stroke-width="3" fill="#0b1220"/>
+      <path d="M17 32c8.3-8.3 21.7-8.3 30 0" stroke="#22d3ee" stroke-width="3" stroke-linecap="round"/>
+      <path d="M23 39c5-5 13-5 18 0" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="32" cy="46" r="2.8" fill="#22d3ee"/>
+      <defs><linearGradient id="g2" x1="8" y1="4" x2="56" y2="60"><stop stop-color="#0ea5e9"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs>
+    </svg>
+    <h1>O Wi-Fi grátis da sua loja pode <span>trazer o cliente de volta</span></h1>
+    <p>O ConectaY transforma a conexão em cadastro: nome, WhatsApp e aniversário direto no seu CRM — e mensagens prontas para trazer quem sumiu.</p>
+    <a class="cta" href="https://wa.me/5521?text=Quero%20o%20ConectaY%20na%20minha%20loja" >Quero na minha loja</a>
+  </div>
+</div>
+
+<div class="wrap">
+  <section id="como">
+    <h2>Como funciona</h2>
+    <p class="sub">Sem aplicativo, sem troca de roteador caro. Em 3 passos o Wi-Fi vira marketing.</p>
+    <div class="passos">
+      <div class="passo"><div class="num">PASSO 1</div><h3>Cliente conecta</h3>
+        <p>Ao entrar no Wi-Fi, o cliente vê o portal com a cara da sua loja: logo, cores e mensagem.</p></div>
+      <div class="passo"><div class="num">PASSO 2</div><h3>Você capta o contato</h3>
+        <p>Nome, WhatsApp e aniversário vão direto pro seu painel — com consentimento LGPD registrado.</p></div>
+      <div class="passo"><div class="num">PASSO 3</div><h3>O cliente volta</h3>
+        <p>O sistema separa quem é novo, quem é fiel e quem sumiu, e monta a mensagem certa pra cada um.</p></div>
+    </div>
+  </section>
+
+  <section id="recursos">
+    <h2>Tudo que vem junto</h2>
+    <p class="sub">Feito para bares, tabacarias, restaurantes, barbearias e qualquer negócio com movimento.</p>
+    <div class="feats">
+      <div class="feat"><b>📊 Painel com números reais</b><span>Visitas por dia, horários de pico, dispositivos, crescimento mês a mês.</span></div>
+      <div class="feat"><b>👥 CRM automático</b><span>Cada cliente vira um cadastro: visitas, última vez na loja, aniversário, tags.</span></div>
+      <div class="feat"><b>💬 Mensagens de retorno</b><span>Aniversário, "sentimos sua falta" e boas-vindas — prontas pra enviar no WhatsApp.</span></div>
+      <div class="feat"><b>⭐ Avaliações no Google</b><span>Depois de conectar, o cliente cai direto na sua página de avaliação.</span></div>
+      <div class="feat"><b>📸 Mais seguidores</b><span>Ou leve o cliente direto pro Instagram da loja após o login.</span></div>
+      <div class="feat"><b>🔒 LGPD de verdade</b><span>Opt-in registrado com data e texto, política de privacidade pública.</span></div>
+    </div>
+  </section>
+</div>
+
+<div class="wrap">
+  <footer>
+    <span>© 2026 ConectaY · Rio de Janeiro</span>
+    <div class="fim">
+      <a href="/privacidade">Política de Privacidade</a>
+      <a href="https://instagram.com/conectaywifi" target="_blank" rel="noopener">@conectaywifi</a>
+    </div>
+  </footer>
+</div>
+</body>
+</html>
