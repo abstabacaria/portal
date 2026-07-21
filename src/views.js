@@ -3,6 +3,8 @@
 // #F97316 sobre fundo grafite, com brilho de chama.
 
 const LOGO = '/static/logo.png';
+// Página de Política de Privacidade (hospede o privacidade.html neste endereço).
+const PRIVACIDADE_URL = 'https://conectay.com.br/privacidade';
 
 function layout({ title, body }) {
   return `<!doctype html>
@@ -148,6 +150,10 @@ function renderPortal({ ap, instagram, autoCode, error, marca }) {
       <input type="hidden" name="go" value="form">
       <div class="form-titulo">${escapeAttr(formTitulo)}</div>
       ${camposHtml}
+      <label class="optin">
+        <input type="checkbox" name="lead_optin" value="sim" required>
+        <span>Aceito receber novidades e ofertas no WhatsApp e concordo com a <a href="${escapeAttr(PRIVACIDADE_URL)}" target="_blank" rel="noopener">Política de Privacidade</a>.</span>
+      </label>
       <button type="submit" class="igbtn" id="btn">
         <span class="spin" aria-hidden="true"></span>
         <span class="lbl">✅ Cadastrar e conectar</span>
@@ -166,7 +172,7 @@ function renderPortal({ ap, instagram, autoCode, error, marca }) {
     </form>
     <div class="hint" id="hint">${hintTxt}</div>
     `}
-    <div class="foot">Ao conectar você concorda com nossos termos de uso.</div>
+    <div class="foot">Ao conectar você concorda com nossos <a href="${escapeAttr(PRIVACIDADE_URL)}" target="_blank" rel="noopener" style="color:inherit;text-decoration:underline">termos e política de privacidade</a>.</div>
     <div class="pby">
       <span>Wi-Fi por</span>
       <img src="https://i.postimg.cc/BQjJGBKf/logo-conectay-transparent.png" alt="ConectaY" style="height:36px;object-fit:contain;opacity:.9">
@@ -208,6 +214,9 @@ function renderPortal({ ap, instagram, autoCode, error, marca }) {
       .fld-form{width:100%;box-sizing:border-box;padding:14px 16px;margin:0 0 10px;border:1.5px solid #e5e7eb;border-radius:12px;font-size:16px;background:#fff;color:#111}
       .fld-form:focus{outline:none;border-color:${cor}}
       .form-titulo{font-weight:800;font-size:17px;margin:4px 0 14px;color:#1a1a1a}
+      .optin{display:flex;gap:9px;align-items:flex-start;margin:2px 2px 6px;font-size:12.5px;color:var(--muted);line-height:1.45;cursor:pointer}
+      .optin input{flex:0 0 18px;width:18px;height:18px;margin-top:1px;accent-color:${cor};cursor:pointer}
+      .optin a{color:${cor2};text-decoration:underline}
       .pby{text-align:center;margin-top:18px;padding-top:14px;border-top:1px solid rgba(255,255,255,.07);display:flex;align-items:center;justify-content:center;gap:7px}
       .pby span{font-size:10px;color:rgba(255,255,255,.35);letter-spacing:.5px}
       .logo-nome{font-size:26px;font-weight:900;background:linear-gradient(135deg,${cor},${cor2});-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;padding:8px 0}
@@ -218,13 +227,6 @@ function renderPortal({ ap, instagram, autoCode, error, marca }) {
 }
 
 function renderResult({ ok, title, msg, link }) {
-  // se for modo formulário, monta os campos que o cliente escolheu
-  const tiposInput = { nome:'text', telefone:'tel', email:'email', aniversario:'date', cpf:'text', cep:'text', bairro:'text' };
-  const camposHtml = ehForm ? marca.formCampos.map(c =>
-    `<input class="fld-form" type="${tiposInput[c.campo]||'text'}" name="lead_${c.campo}" placeholder="${escapeAttr(c.label)}${c.obrigatorio?' *':''}" ${c.obrigatorio?'required':''}>`
-  ).join('') : '';
-  const formTitulo = marca.formTitulo || 'Cadastre-se para usar o Wi-Fi';
-
   const body = `
     <div class="logo"><img src="${LOGO}" alt="Absolem Tabacaria"></div>
     <h1>${escapeAttr(title)}</h1>
