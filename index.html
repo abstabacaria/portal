@@ -125,6 +125,27 @@ body{font-family:Inter,system-ui,sans-serif;background:#060c18;color:#e2e8f0;fon
 .tbl tr:last-child td{border-bottom:none}
 .tbl-empty{text-align:center;color:#64748b;padding:28px}
 
+/* ═══ MENSAGENS (fila de disparo 1-a-1) ═══ */
+.msg-queue{display:flex;flex-direction:column;gap:13px;max-width:640px}
+.msg-card{background:#0d1526;border:1px solid rgba(14,165,233,.15);border-radius:14px;padding:16px 17px;transition:opacity .2s,transform .2s}
+.msg-card.saiu{opacity:0;transform:translateX(30px)}
+.msg-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px}
+.msg-nome{font-size:15px;font-weight:800}
+.msg-tel{color:#64748b;font-size:12px;margin-bottom:11px}
+.msg-badge{font-size:10px;font-weight:700;padding:4px 10px;border-radius:999px;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}
+.mb-novo{background:rgba(34,211,238,.14);color:#22d3ee}
+.mb-recorrente{background:rgba(52,211,153,.14);color:#34d399}
+.mb-saudade{background:rgba(251,191,36,.14);color:#fbbf24}
+.mb-inativo{background:rgba(244,114,182,.14);color:#f472b6}
+.msg-txt{width:100%;background:#060c18;border:1px solid rgba(14,165,233,.2);border-radius:10px;color:#e2e8f0;padding:10px 13px;font-size:13px;font-family:inherit;line-height:1.45;resize:vertical;min-height:70px;outline:none}
+.msg-txt:focus{border-color:#0ea5e9}
+.msg-acoes{display:flex;gap:9px;margin-top:11px;flex-wrap:wrap}
+.btn-wa{background:#25D366;color:#062b16;text-decoration:none;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;flex:1;text-align:center;font-family:inherit;display:inline-flex;align-items:center;justify-content:center;gap:7px;min-width:150px}
+.btn-wa:hover{filter:brightness(1.06)}
+.msg-vazio{text-align:center;padding:56px 20px;color:#64748b}
+.msg-vazio .ico{font-size:36px;margin-bottom:10px}
+.msg-vazio h3{font-size:15px;font-weight:800;color:#e2e8f0;margin-bottom:4px}
+
 /* APARENCIA */
 .apa-wrap{max-width:600px}
 .apa-section{font-size:10px;font-weight:700;color:#0ea5e9;text-transform:uppercase;letter-spacing:.8px;margin:22px 0 12px;padding-bottom:6px;border-bottom:1px solid rgba(14,165,233,.12)}
@@ -418,6 +439,7 @@ body{font-family:Inter,system-ui,sans-serif;background:#060c18;color:#e2e8f0;fon
     <div class="sb-menu">
       <div class="sb-item ativo" onclick="cliPg('dash')" id="cliTabDash"><span class="ico">📊</span><span class="lbl">Dashboard</span></div>
       <div class="sb-item" onclick="cliPg('leads')" id="cliTabLeads"><span class="ico">👥</span><span class="lbl">Leads</span></div>
+      <div class="sb-item" onclick="cliPg('msgs')" id="cliTabMsgs"><span class="ico">💬</span><span class="lbl">Mensagens</span></div>
       <div class="sb-item" onclick="cliPg('apa')" id="cliTabApa"><span class="ico">🎨</span><span class="lbl">Aparência</span></div>
     </div>
     <div class="sb-bottom">
@@ -470,6 +492,18 @@ body{font-family:Inter,system-ui,sans-serif;background:#060c18;color:#e2e8f0;fon
           </table>
         </div>
       </div>
+    </div>
+
+    <!-- mensagens (fila de disparo 1-a-1) -->
+    <div class="pg" id="cliPgMsgs">
+      <div class="pg-titulo">Mensagens</div>
+      <div class="pg-sub">Fila de mensagens para enviar no WhatsApp — um clique por pessoa</div>
+      <div style="display:flex;gap:12px;align-items:center;margin-bottom:16px;flex-wrap:wrap;max-width:640px">
+        <div class="card" style="padding:9px 16px"><span style="font-size:12px;color:#64748b">Pendentes:</span> <b id="cliMsgsCount" style="color:#0ea5e9;font-size:16px">—</b></div>
+        <div style="flex:1"></div>
+        <button class="btn-link" onclick="cliCarregarMsgs()">↻ Atualizar</button>
+      </div>
+      <div id="cliMsgsLista" class="msg-queue"></div>
     </div>
 
     <!-- aparencia -->
@@ -961,6 +995,7 @@ var CLI_LOJA    = null;
 var CLI_LEADS   = [];
 var CLI_ONLINE  = [];
 var CLI_CHART   = null;
+var CLI_MSGS    = [];
 
 async function cliIniciar(user) {
   document.getElementById('cliNome').textContent   = CLI_LOJA.nome || '—';
@@ -971,6 +1006,7 @@ async function cliIniciar(user) {
   cliCarregarDash();
   cliCarregarLeads();
   cliCarregarApa();
+  cliCarregarMsgs();
 }
 
 function cliPg(pg_id) {
@@ -978,6 +1014,7 @@ function cliPg(pg_id) {
   document.querySelectorAll('.sb-item').forEach(function(el) { el.classList.remove('ativo'); });
   if (pg_id === 'dash')  { document.getElementById('cliPgDash').classList.add('ativo');  document.getElementById('cliTabDash').classList.add('ativo'); }
   if (pg_id === 'leads') { document.getElementById('cliPgLeads').classList.add('ativo'); document.getElementById('cliTabLeads').classList.add('ativo'); }
+  if (pg_id === 'msgs')  { document.getElementById('cliPgMsgs').classList.add('ativo');  document.getElementById('cliTabMsgs').classList.add('ativo'); cliCarregarMsgs(); }
   if (pg_id === 'apa')   { document.getElementById('cliPgApa').classList.add('ativo');   document.getElementById('cliTabApa').classList.add('ativo'); }
 }
 
@@ -1109,6 +1146,92 @@ function cliDownloadVCF() {
   var a    = document.createElement('a'); a.href = url; a.download = 'leads_' + CLI_LOJA.slug + '.vcf'; a.click();
   URL.revokeObjectURL(url);
   toast('Contatos baixados!');
+}
+
+// ═══════════════════════════════════════════
+// CLIENTE — MENSAGENS (fila de disparo 1-a-1 via wa.me)
+// ═══════════════════════════════════════════
+
+// telefone -> número no formato do wa.me (adiciona 55 do Brasil se faltar)
+function waNumero(tel) {
+  var d = String(tel || '').replace(/\D/g, '');
+  if (d.length === 10 || d.length === 11) d = '55' + d;
+  return d;
+}
+function linkWa(tel, msg) {
+  return 'https://wa.me/' + waNumero(tel) + '?text=' + encodeURIComponent(msg);
+}
+
+async function cliCarregarMsgs() {
+  var lista = document.getElementById('cliMsgsLista');
+  lista.innerHTML = '<div class="msg-vazio">Carregando fila…</div>';
+  var r = await SB.from('portal_disparos_prontos').select('*').eq('loja_id', CLI_LOJA.id);
+  if (r.error) {
+    lista.innerHTML = '<div class="msg-vazio"><h3>Não consegui carregar</h3><p style="font-size:12px">' + esc(r.error.message) + '</p></div>';
+    document.getElementById('cliMsgsCount').textContent = '0';
+    return;
+  }
+  CLI_MSGS = r.data || [];
+  cliRenderMsgs();
+}
+
+function cliRenderMsgs() {
+  var lista = document.getElementById('cliMsgsLista');
+  document.getElementById('cliMsgsCount').textContent = CLI_MSGS.length;
+  if (!CLI_MSGS.length) {
+    lista.innerHTML = '<div class="msg-vazio">' +
+      '<div class="ico">✓</div>' +
+      '<h3>Fila vazia</h3>' +
+      '<p style="font-size:12px">Nada para enviar agora. Quando um cliente mudar de categoria, aparece aqui.</p>' +
+      '</div>';
+    return;
+  }
+  var badge = {novo:'mb-novo', recorrente:'mb-recorrente', saudade:'mb-saudade', inativo:'mb-inativo'};
+  lista.innerHTML = CLI_MSGS.map(function(m) {
+    var primeiro = String(m.pessoa_nome || '').split(' ')[0] || 'Cliente';
+    var cls = badge[m.categoria] || 'mb-novo';
+    return '<div class="msg-card" id="msgc-' + m.disparo_id + '">' +
+      '<div class="msg-top">' +
+        '<div class="msg-nome">' + esc(primeiro) + '</div>' +
+        '<span class="msg-badge ' + cls + '">' + esc(m.categoria_rotulo || m.categoria) + '</span>' +
+      '</div>' +
+      '<div class="msg-tel">' + esc(m.telefone || 'sem telefone') + '</div>' +
+      '<textarea class="msg-txt" id="msgt-' + m.disparo_id + '">' + esc(m.mensagem_final || '') + '</textarea>' +
+      '<div class="msg-acoes">' +
+        '<button class="btn-wa" onclick="cliAbrirWa(' + m.disparo_id + ',\'' + esc(m.telefone || '') + '\')">💬 Abrir WhatsApp</button>' +
+        '<button class="btn btn-ghost btn-sm" onclick="cliMsgEnviado(' + m.disparo_id + ')">✓ Enviado</button>' +
+        '<button class="btn btn-ghost btn-sm" onclick="cliMsgPular(' + m.disparo_id + ')">Pular</button>' +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+function cliAbrirWa(id, tel) {
+  var msg = document.getElementById('msgt-' + id).value;
+  window.open(linkWa(tel, msg), '_blank');
+}
+
+async function cliMsgEnviado(id) {
+  var r = await SB.from('portal_disparos').update({status:'enviado', enviado_em:new Date().toISOString()}).eq('id', id);
+  if (r.error) { toast('Erro: ' + r.error.message, 'err'); return; }
+  cliMsgSome(id); toast('Marcado como enviado');
+}
+
+async function cliMsgPular(id) {
+  var r = await SB.from('portal_disparos').update({status:'cancelado'}).eq('id', id);
+  if (r.error) { toast('Erro: ' + r.error.message, 'err'); return; }
+  cliMsgSome(id); toast('Removido da fila');
+}
+
+function cliMsgSome(id) {
+  var el = document.getElementById('msgc-' + id);
+  if (el) {
+    el.classList.add('saiu');
+    setTimeout(function() {
+      CLI_MSGS = CLI_MSGS.filter(function(m) { return m.disparo_id !== id; });
+      cliRenderMsgs();
+    }, 200);
+  }
 }
 
 // -- APARENCIA (simplificada: logo, cor primaria/secundaria, texto botao, mensagem, destino) --
