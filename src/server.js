@@ -100,7 +100,7 @@ async function acharLoja(req) {
   return await lojaPorDominio(req.headers.host);
 }
 
-// Constrói a \"marca\" a partir da loja achada pelo domínio.
+// Constrói a "marca" a partir da loja achada pelo domínio.
 // Se não achar (ex: domínio novo ainda não cadastrado), usa o padrão da Absolem
 // pra nunca deixar o cliente na mão.
 function marcaDaLoja(loja, host) {
@@ -215,9 +215,10 @@ app.post('/auth', async (req, res) => {
 
     // Liberado! Registra e manda o navegador de volta ao AP para soltar a internet.
     await logAccess({ ...base, result: 'granted', reason: outcome.reason });
-    // Se veio do botão do Instagram, após liberar a internet o AP manda o cliente
-    // para o Instagram (que abre normalmente, já com internet).
-    if (req.body.go === 'instagram') {
+    // Se veio do Instagram OU do formulário-com-Instagram, após liberar a internet
+    // o AP manda o cliente pro Instagram da loja (cadastro + seguir no mesmo passo).
+    const temInstaLoja = loja && loja.instagram;
+    if (req.body.go === 'instagram' || (req.body.go === 'form' && temInstaLoja)) {
       // Manda pro /ig do próprio portal, que abre o APP do Instagram (evita o "restrito" do navegador).
       ap.continue = 'https://' + (req.headers.host || 'wifi.absolemtabacaria.com') + '/ig';
     }
@@ -244,7 +245,19 @@ app.post('/auth', async (req, res) => {
 app.get('/health', (req, res) => res.json({ ok: true, ts: Date.now() }));
 
 // Página que abre o APP do Instagram (deep link), com fallback pro navegador.
-app.get('/ig', (req, res) => {
+// Resolve a loja pelo domínio pra abrir o Instagram DELA (não o global).
+app.get('/ig', async (req, res) => {
+  let appLink = IG_APP_LINK, webLink = IG_WEB_LINK;
+  try {
+    const loja = await lojaPorDominio(req.headers.host);
+    if (loja && loja.instagram) {
+      const h = String(loja.instagram)
+        .replace(/^https?:\/\/(www\.)?instagram\.com\//i, '')
+        .replace(/[\/?#].*$/, '')
+        .replace(/^@/, '');
+      if (h) { appLink = 'instagram://user?username=' + h; webLink = 'https://instagram.com/' + h; }
+    }
+  } catch (e) { /* se falhar, usa o global */ }
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.send(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -255,11 +268,11 @@ a{display:inline-block;margin-top:20px;background:linear-gradient(135deg,#ff6a1a
 <body><div class="box">
 <h1>📸 Abrindo o Instagram…</h1>
 <p>Estamos te levando pro nosso Instagram. Se não abrir sozinho, toque no botão abaixo.</p>
-<a href="${IG_APP_LINK}">Abrir Instagram</a>
+<a href="${appLink}">Abrir Instagram</a>
 </div>
 <script>
 (function(){
-  var app=${JSON.stringify(IG_APP_LINK)}, web=${JSON.stringify(IG_WEB_LINK)};
+  var app=${JSON.stringify(appLink)}, web=${JSON.stringify(webLink)};
   var t=setTimeout(function(){ window.location.href=web; }, 1400);
   function cancel(){ clearTimeout(t); }
   window.addEventListener('pagehide', cancel);
