@@ -135,7 +135,7 @@ function marcaDaLoja(loja) {
   return {
     nome: 'ConectaY', instagram: '', igHandle: '',
     cor: '#0ea5e9', cor2: '#22d3ee', corFundo: '#0a0f1e', corCard: '#101827',
-    logo: '/static/logo.png', mensagem: '', autoCode: AUTO_CODE,
+    logo: 'https://i.postimg.cc/BQjJGBKf/logo-conectay-transparent.png', mensagem: '', autoCode: AUTO_CODE,
     apSecret: AP_SECRET, destinoTipo: 'instagram', ativo: true, achou: false,
   };
 }
