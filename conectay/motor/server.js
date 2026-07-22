@@ -43,9 +43,9 @@ app.get('/', async (req, res) => {
     const loja = await lojaDoRequest(req);
     if (!loja) return res.status(404).send(views.telaErro('Portal não encontrado para este endereço.'));
     accessLog('portal_view', { loja: loja.slug, mac: c.mac });
-    const tela = loja.modo === 'instagram'
-      ? views.telaInstagram(loja, { mac: c.mac, continueUrl: c.continueUrl })
-      : views.telaFormulario(loja, { mac: c.mac, continueUrl: c.continueUrl });
+    const tela = (loja.destino_tipo === 'formulario')
+      ? views.telaFormulario(loja, { mac: c.mac, continueUrl: c.continueUrl })
+      : views.telaBotao(loja, { mac: c.mac, continueUrl: c.continueUrl });
     res.send(tela);
   } catch (e) {
     console.error(e);
@@ -68,10 +68,17 @@ app.post('/lead', async (req, res) => {
       return res.send(views.telaFormulario(loja, { erro: 'É preciso aceitar a política de privacidade para conectar.', mac: c.mac, continueUrl: c.continueUrl }));
     }
 
+    const extras = {};
+    for (const cp of views.lerCampos(loja.form_campos)) {
+      if (['nome','telefone'].includes(cp.campo)) continue;
+      const v = req.body[cp.campo];
+      if (v) extras[cp.campo] = String(v).slice(0, 200);
+    }
     await registrarLead(loja.id, {
       nome: String(req.body.nome || '').slice(0, 120),
       telefone,
       aniversario: /^\d{4}-\d{2}-\d{2}$/.test(req.body.aniversario || '') ? req.body.aniversario : null,
+      extras,
       mac: c.mac,
       userAgent: c.userAgent,
       optin: true,

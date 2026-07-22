@@ -87,8 +87,10 @@ async function registrarAcesso(lojaId, { mac, ip, userAgent }) {
 }
 
 // ---- Grava lead (o trigger no banco consolida em portal_pessoas) ----
-async function registrarLead(lojaId, { nome, telefone, aniversario, mac, userAgent, optin, optinTexto }) {
-  const dados = {};
+async function registrarLead(lojaId, { nome, telefone, aniversario, extras, mac, userAgent, optin, optinTexto }) {
+  const dados = Object.assign({}, extras || {});
+  if (nome) dados.nome = nome;
+  if (telefone) dados.telefone = telefone;
   if (aniversario) dados.aniversario = aniversario; // AAAA-MM-DD
   await rest('portal_leads', {
     method: 'POST',
