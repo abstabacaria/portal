@@ -1,1460 +1,1155 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ConectaY — Painel</title>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ConectaY · Painel</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <style>
+:root{
+  --azul:#0ea5e9; --ciano:#22d3ee; --navy:#070b16; --vidro:rgba(16,24,39,.72); --vidro2:rgba(13,21,36,.9);
+  --borda:#1e293b; --bordaHi:#2b3b55; --texto:#e2e8f0; --mudo:#8b9bb4; --fraco:#5b6b84;
+  --ok:#34d399; --alerta:#fbbf24; --erro:#f87171; --grad:linear-gradient(135deg,#0ea5e9,#22d3ee);
+}
 *{box-sizing:border-box;margin:0;padding:0}
-body{font-family:Inter,system-ui,sans-serif;background:#060c18;color:#e2e8f0;font-size:14px;line-height:1.5}
+body{background:var(--navy);color:var(--texto);font-family:'Inter',system-ui,sans-serif;min-height:100vh}
+body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:radial-gradient(900px 500px at 85% -10%, rgba(14,165,233,.13), transparent 60%),
+             radial-gradient(700px 500px at -10% 110%, rgba(34,211,238,.08), transparent 60%)}
+h1,h2,h3,.marca{font-family:'Sora','Inter',sans-serif}
+a{color:var(--ciano);text-decoration:none}
+button{font-family:inherit;cursor:pointer;transition:.18s}
+input,select,textarea{font-family:inherit;background:#0b1220;border:1px solid var(--borda);color:var(--texto);
+  border-radius:11px;padding:10px 13px;font-size:.9rem;outline:none;width:100%;transition:.18s}
+input:focus,select:focus,textarea:focus{border-color:var(--azul);box-shadow:0 0 0 3px rgba(14,165,233,.15)}
+label{font-size:.75rem;color:var(--mudo);display:block;margin:12px 0 6px;font-weight:500}
+::placeholder{color:var(--fraco)}
+small.dica{color:var(--fraco);font-size:.7rem;display:block;margin-top:4px}
 
-/* LOGIN */
-#pgLogin{min-height:100vh;display:flex;align-items:center;justify-content:center;background:#060c18}
-.login-box{width:360px;background:#0d1526;border:1px solid rgba(14,165,233,.2);border-radius:18px;padding:36px 28px;text-align:center}
-.login-box h2{font-size:14px;color:#64748b;margin:14px 0 22px;font-weight:400}
-.login-box input{width:100%;background:#060c18;border:1px solid rgba(14,165,233,.2);border-radius:10px;color:#e2e8f0;padding:11px 14px;font-size:14px;outline:none;margin-bottom:10px;font-family:inherit}
-.login-box input:focus{border-color:#0ea5e9}
-.login-box button{width:100%;background:linear-gradient(135deg,#0ea5e9,#22d3ee);border:none;border-radius:10px;color:#fff;font-size:14px;font-weight:700;padding:12px;cursor:pointer;margin-top:4px}
-.login-box button:disabled{opacity:.6;cursor:not-allowed}
-.login-erro{color:#f87171;font-size:12px;margin-top:10px;display:none;text-align:left;padding:8px 10px;background:rgba(248,113,113,.1);border-radius:8px}
+#telaLogin{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.cardLogin{width:100%;max-width:390px;background:var(--vidro);backdrop-filter:blur(14px);
+  border:1px solid var(--borda);border-radius:22px;padding:38px 30px;box-shadow:0 24px 70px rgba(0,0,0,.55)}
+.hex{width:62px;height:62px;margin:0 auto 16px;display:block}
+.cardLogin h1{text-align:center;font-size:1.45rem;margin-bottom:4px}
+.cardLogin .sub{text-align:center;color:var(--mudo);font-size:.84rem;margin-bottom:18px}
+.btnP{width:100%;margin-top:18px;padding:13px;border:0;border-radius:12px;font-weight:700;color:#fff;font-size:.95rem;
+  background:var(--grad);box-shadow:0 10px 26px rgba(14,165,233,.35)}
+.btnP:hover{transform:translateY(-1px)}
+.msgErro{background:#3b0d0d;border:1px solid #7f1d1d;color:#fecaca;border-radius:11px;padding:10px;
+  font-size:.82rem;margin-top:14px;display:none}
 
-/* TOAST */
-#toast{position:fixed;top:20px;right:20px;padding:10px 18px;border-radius:10px;font-size:13px;z-index:9999;display:none;max-width:300px;font-weight:600}
+#app{display:none;min-height:100vh}
+.shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh}
+aside{background:var(--vidro2);backdrop-filter:blur(12px);border-right:1px solid var(--borda);
+  padding:22px 14px;display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100vh}
+aside .marca{display:flex;align-items:center;gap:10px;font-weight:800;font-size:1.05rem;padding:0 10px 20px}
+aside .marca b{color:var(--azul)}
+aside .rotulo{font-size:.65rem;letter-spacing:.12em;color:var(--fraco);padding:14px 12px 6px;text-transform:uppercase}
+.navItem{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:11px;border:0;background:transparent;
+  color:var(--mudo);font-size:.88rem;font-weight:500;width:100%;text-align:left}
+.navItem svg{flex:none;opacity:.85}
+.navItem:hover{background:rgba(14,165,233,.08);color:var(--texto)}
+.navItem.on{background:linear-gradient(90deg,rgba(14,165,233,.18),rgba(34,211,238,.06));
+  color:#fff;box-shadow:inset 2px 0 0 var(--azul)}
+.navItem .pill{margin-left:auto;background:var(--grad);color:#04202e;border-radius:99px;font-size:.66rem;font-weight:700;padding:2px 8px}
+aside .rodape{margin-top:auto;padding:12px;border-top:1px solid var(--borda)}
+aside .rodape .quem{font-size:.78rem;font-weight:600}
+aside .rodape .papel{font-size:.68rem;color:var(--fraco)}
+.btnSair{margin-top:10px;width:100%;background:transparent;border:1px solid var(--borda);color:var(--mudo);
+  border-radius:9px;padding:8px;font-size:.78rem}
+.btnSair:hover{border-color:var(--erro);color:var(--erro)}
 
-/* SHARED SIDEBAR (redimensionável + colapsável) */
-:root{--sb-w:220px}
-.sb{width:var(--sb-w);min-height:100vh;background:#0d1526;border-right:1px solid rgba(14,165,233,.15);position:fixed;top:0;left:0;bottom:0;display:flex;flex-direction:column;z-index:100;transition:width .18s ease}
-.sb.resizing{transition:none}
-.sb-logo{padding:20px;border-bottom:1px solid rgba(14,165,233,.15);display:flex;align-items:center;justify-content:center;min-height:84px;overflow:hidden}
-.sb-info{padding:12px 20px;border-bottom:1px solid rgba(14,165,233,.15);overflow:hidden;white-space:nowrap}
-.sb-nome{font-size:13px;font-weight:800;overflow:hidden;text-overflow:ellipsis}
-.sb-email{font-size:11px;color:#64748b;margin-top:2px;word-break:break-all}
-.sb-menu{flex:1;padding:10px 0;overflow-y:auto;overflow-x:hidden}
-.sb-item{display:flex;align-items:center;gap:10px;padding:11px 18px;cursor:pointer;color:#94a3b8;font-size:13px;transition:background .15s,color .15s;border-left:3px solid transparent;white-space:nowrap;overflow:hidden}
-.sb-item:hover{background:rgba(14,165,233,.08);color:#e2e8f0}
-.sb-item.ativo{background:rgba(14,165,233,.12);color:#0ea5e9;border-left-color:#0ea5e9}
-.sb-item .ico{font-size:16px;width:20px;text-align:center;flex-shrink:0}
-.sb-item .lbl{overflow:hidden;text-overflow:ellipsis;transition:opacity .15s}
-.sb-bottom{padding:10px 0;border-top:1px solid rgba(14,165,233,.15)}
+.conteudo{padding:26px 30px;max-width:1240px;width:100%}
+.topo{display:flex;align-items:center;gap:14px;margin-bottom:24px;flex-wrap:wrap}
+.topo h1{font-size:1.3rem}
+.topo .data{color:var(--fraco);font-size:.8rem}
+.topo .fim{margin-left:auto;display:flex;gap:10px;align-items:center}
+#seletorLoja{width:auto;min-width:190px;background:var(--vidro)}
 
-/* handle de arraste na borda direita */
-.sb-resize{position:absolute;top:0;right:-3px;width:6px;height:100%;cursor:col-resize;z-index:110}
-.sb-resize:hover,.sb-resize.drag{background:rgba(14,165,233,.35)}
+.card{background:var(--vidro);backdrop-filter:blur(10px);border:1px solid var(--borda);border-radius:16px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(172px,1fr));gap:13px;margin-bottom:20px}
+.kpi{padding:17px 18px}
+.kpi .ic{width:34px;height:34px;border-radius:10px;background:rgba(14,165,233,.14);display:flex;
+  align-items:center;justify-content:center;margin-bottom:12px;color:var(--ciano)}
+.kpi .v{font-family:'Sora';font-size:1.7rem;font-weight:700;letter-spacing:-.02em}
+.kpi .l{color:var(--mudo);font-size:.74rem;margin-top:2px}
+.kpi .delta{font-size:.7rem;margin-top:7px;display:inline-flex;gap:4px;border-radius:99px;padding:3px 9px;font-weight:600}
+.delta.up{background:rgba(52,211,153,.12);color:var(--ok)}
+.delta.down{background:rgba(248,113,113,.12);color:var(--erro)}
+.graficos{display:grid;grid-template-columns:repeat(12,1fr);gap:13px}
+.gCard{padding:18px}
+.gCard h3{font-size:.8rem;color:var(--mudo);margin-bottom:14px;font-weight:600;display:flex;align-items:center;gap:8px}
+.gCard h3::before{content:'';width:7px;height:7px;border-radius:99px;background:var(--grad)}
+.gCard canvas{max-height:215px}
+.g-8{grid-column:span 8}.g-6{grid-column:span 6}.g-4{grid-column:span 4}
+@media(max-width:900px){.g-8,.g-6,.g-4{grid-column:span 12}}
 
-/* botão colapsar/expandir */
-.sb-toggle{position:absolute;top:14px;right:-13px;width:26px;height:26px;border-radius:50%;background:#0d1526;border:1px solid rgba(14,165,233,.3);color:#0ea5e9;font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:120;transition:transform .18s;box-shadow:0 2px 8px rgba(0,0,0,.4)}
-.sb-toggle:hover{background:rgba(14,165,233,.15)}
+.filtros{display:flex;gap:11px;flex-wrap:wrap;margin-bottom:16px;align-items:end}
+.filtros>div{flex:1;min-width:150px}
+.filtros .acao{flex:none;display:flex;gap:8px}
+.btnG{background:var(--vidro);border:1px solid var(--borda);color:var(--mudo);border-radius:10px;
+  padding:10px 15px;font-size:.82rem;font-weight:500}
+.btnG:hover{border-color:var(--azul);color:var(--texto)}
+.btnFb{background:rgba(24,95,165,.2);border-color:#185fa5;color:#85b7eb}
+.tWrap{overflow-x:auto;border-radius:16px;border:1px solid var(--borda)}
+table{width:100%;border-collapse:collapse;background:var(--vidro)}
+th,td{padding:12px 15px;text-align:left;font-size:.84rem;border-bottom:1px solid var(--borda);white-space:nowrap}
+th{color:var(--fraco);font-weight:600;font-size:.68rem;text-transform:uppercase;letter-spacing:.07em;background:var(--vidro2)}
+tbody tr:hover{background:rgba(14,165,233,.05)}
+tr:last-child td{border-bottom:0}
+.tag{display:inline-block;background:#12304a;color:var(--ciano);border-radius:99px;padding:2px 9px;font-size:.68rem;margin:1px}
+.badge{display:inline-flex;align-items:center;gap:5px;border-radius:99px;padding:3px 11px;font-size:.7rem;font-weight:600}
+.badge::before{content:'';width:5px;height:5px;border-radius:99px;background:currentColor}
+.b-novo{background:rgba(125,211,252,.12);color:#7dd3fc}
+.b-recorrente{background:rgba(110,231,183,.12);color:#6ee7b7}
+.b-saudade{background:rgba(252,211,77,.12);color:#fcd34d}
+.b-inativo{background:rgba(253,164,175,.12);color:#fda4af}
+.b-aniversario{background:rgba(196,181,253,.14);color:#c4b5fd}
+.b-vip{background:rgba(252,211,77,.12);color:#fcd34d}
+.b-ativo{background:rgba(110,231,183,.12);color:#6ee7b7}
+.b-bloqueado{background:rgba(253,164,175,.12);color:#fda4af}
 
-/* estado colapsado: só emojis */
-.sb.collapsed{--sb-w:64px}
-.sb.collapsed .sb-info,
-.sb.collapsed .sb-item .lbl{opacity:0;width:0;pointer-events:none}
-.sb.collapsed .sb-item{justify-content:center;gap:0;padding:11px 0}
-.sb.collapsed .sb-logo{padding:16px 8px}
-.sb.collapsed .sb-logo img{max-width:40px}
-.sb.collapsed .sb-toggle{transform:rotate(180deg)}
+.cats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.cats button{border:1px solid var(--borda);background:var(--vidro);color:var(--mudo);border-radius:99px;
+  padding:9px 16px;font-size:.8rem;font-weight:600}
+.cats button.on{border-color:transparent;color:#04202e;background:var(--grad)}
+.disparo{padding:17px 19px;margin-bottom:12px;display:flex;gap:15px;flex-wrap:wrap;align-items:center}
+.disparo .avatar{width:42px;height:42px;border-radius:12px;background:rgba(14,165,233,.14);color:var(--ciano);
+  display:flex;align-items:center;justify-content:center;font-weight:700;font-family:'Sora';flex:none}
+.disparo .info{flex:1;min-width:230px}
+.disparo .msg{color:var(--mudo);font-size:.84rem;margin-top:7px;line-height:1.55;
+  background:rgba(11,18,32,.6);border:1px solid var(--borda);border-radius:0 12px 12px 12px;padding:10px 13px}
+.btnZap{background:#16a34a;border:0;color:#fff;border-radius:11px;padding:11px 17px;font-weight:700;
+  font-size:.84rem;display:inline-flex;align-items:center;gap:7px}
+.btnOk{background:transparent;border:1px solid var(--borda);color:var(--mudo);border-radius:11px;padding:11px 15px;font-size:.84rem}
+.btnOk:hover{border-color:var(--ok);color:var(--ok)}
 
-/* MAIN */
-.main{margin-left:var(--sb-w);padding:28px;min-height:100vh;transition:margin-left .18s ease}
-.main.resizing{transition:none}
+/* ---------- Editor + Preview ---------- */
+.editorWrap{display:grid;grid-template-columns:1fr 320px;gap:18px;align-items:start}
+@media(max-width:1000px){.editorWrap{grid-template-columns:1fr}}
+.secao{font-family:'Sora';font-size:.82rem;color:var(--ciano);font-weight:700;letter-spacing:.03em;
+  margin:22px 0 4px;padding-top:14px;border-top:1px solid var(--borda);grid-column:1/-1}
+.secao:first-child{border-top:0;padding-top:0;margin-top:6px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:0 18px;padding:18px 22px 22px}
+.grid2 .full{grid-column:1/-1}
+.sufixo{display:flex;align-items:center}
+.sufixo input{border-radius:11px 0 0 11px}
+.sufixo span{background:var(--vidro2);border:1px solid var(--borda);border-left:0;border-radius:0 11px 11px 0;
+  padding:10px 13px;font-size:.84rem;color:var(--mudo);white-space:nowrap}
 
-/* MAIN */
-.main{margin-left:220px;padding:28px;min-height:100vh}
-.pg{display:none}
-.pg.ativo{display:block}
-.pg-titulo{font-family:Sora,sans-serif;font-size:22px;font-weight:800;background:linear-gradient(135deg,#0ea5e9,#22d3ee);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:4px}
-.pg-sub{font-size:12px;color:#64748b;margin-bottom:22px}
+.logoUp{border:2px dashed var(--borda);border-radius:14px;padding:18px;text-align:center;cursor:pointer;
+  background:rgba(11,18,32,.5);transition:.18s}
+.logoUp:hover{border-color:var(--azul);background:rgba(14,165,233,.06)}
+.logoUp img{max-width:110px;max-height:110px;object-fit:contain;border-radius:12px;display:block;margin:0 auto}
+.logoUp .ph{color:var(--fraco);font-size:.82rem}
+.logoUp .ph .ico{font-size:1.8rem;display:block;margin-bottom:6px}
 
-/* CARDS */
-.cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:14px;margin-bottom:22px}
-.card{background:#0d1526;border:1px solid rgba(14,165,233,.15);border-radius:14px;padding:16px}
-.card-label{font-size:10px;color:#64748b;font-weight:700;text-transform:uppercase;letter-spacing:.6px}
-.card-val{font-size:28px;font-weight:800;margin-top:6px}
-.card-sub{font-size:11px;color:#64748b;margin-top:3px}
+.presets{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.presets button{width:40px;height:28px;border-radius:8px;border:2px solid transparent;padding:0}
+.presets button:hover,.presets button.on{border-color:#fff}
 
-/* CHART */
-.chart-wrap{background:#0d1526;border:1px solid rgba(14,165,233,.15);border-radius:14px;padding:18px;margin-bottom:22px}
-.chart-titulo{font-size:13px;font-weight:700;margin-bottom:12px}
-.chart-box{position:relative;height:180px;width:100%}
+.campos{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+.campoLinha{display:flex;gap:8px;align-items:center;background:rgba(11,18,32,.6);border:1px solid var(--borda);
+  border-radius:11px;padding:9px 11px}
+.campoLinha input[type=text]{flex:1;padding:7px 10px;font-size:.83rem}
+.campoLinha select{width:auto;padding:7px 9px;font-size:.8rem}
+.campoLinha .obg{display:flex;align-items:center;gap:5px;font-size:.72rem;color:var(--mudo);white-space:nowrap}
+.campoLinha .obg input{width:16px;height:16px;accent-color:var(--azul)}
+.campoLinha .del{background:transparent;border:0;color:var(--erro);font-size:1.05rem;padding:0 4px}
 
-/* ONLINE */
-.online-wrap{background:#0d1526;border:1px solid rgba(14,165,233,.15);border-radius:14px;padding:18px;margin-bottom:22px}
-.online-header{display:flex;align-items:center;justify-content:space-between}
-.online-titulo{font-size:13px;font-weight:700;display:flex;align-items:center;gap:8px}
-.online-dot{width:8px;height:8px;border-radius:50%;background:#22c55e;animation:pulse 2s infinite}
-@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
-.online-count{font-size:32px;font-weight:800;color:#22c55e;margin:10px 0 4px}
-.online-sub{font-size:11px;color:#64748b}
+/* Preview */
+.previewBox{position:sticky;top:24px}
+.previewBox h3{font-size:.78rem;color:var(--mudo);margin-bottom:10px;text-align:center;font-weight:600}
+.fone{width:100%;max-width:300px;margin:0 auto;background:#0a0f1e;border:7px solid #1e293b;border-radius:30px;
+  padding:16px 12px 20px;box-shadow:0 18px 45px rgba(0,0,0,.5)}
+.fone .notch{width:56px;height:5px;background:#1e293b;border-radius:99px;margin:0 auto 14px}
+.pvCard{background:#101827;border:1px solid #1e293b;border-radius:17px;padding:20px 16px;text-align:center}
+.pvCard img{width:66px;height:66px;object-fit:contain;border-radius:14px;margin:0 auto 10px;display:block}
+.pvCard .tit{font-family:'Sora';font-size:.92rem;font-weight:700;margin-bottom:4px}
+.pvCard .sub{color:var(--mudo);font-size:.7rem;margin-bottom:12px;line-height:1.45}
+.pvCard .campo{background:#0b1220;border:1px solid #1e293b;border-radius:9px;padding:8px 10px;
+  font-size:.68rem;color:var(--fraco);text-align:left;margin-bottom:7px}
+.pvCard .campo b{color:var(--mudo);display:block;font-size:.6rem;font-weight:500;margin-bottom:2px}
+.pvCard .optin{display:flex;gap:6px;text-align:left;font-size:.58rem;color:var(--fraco);line-height:1.4;margin:10px 0 4px}
+.pvCard .optin i{width:12px;height:12px;border-radius:3px;background:var(--azul);flex:none;margin-top:1px;display:block}
+.pvCard .btn{border-radius:9px;padding:10px;font-family:'Sora';font-weight:700;font-size:.76rem;color:#fff;margin-top:8px}
+.pvCard .rod{font-size:.55rem;color:#475569;margin-top:11px}
 
-/* LOJAS (admin) */
-.lojas-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:14px}
-.loja-card{background:#0d1526;border:1px solid rgba(14,165,233,.15);border-radius:14px;padding:18px;cursor:pointer;transition:border-color .2s}
-.loja-card:hover{border-color:rgba(14,165,233,.4)}
-.loja-card-header{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:12px}
-.loja-nome{font-size:15px;font-weight:800}
-.loja-slug{font-size:11px;color:#64748b;margin-top:2px}
-.loja-dot{width:10px;height:10px;border-radius:50%;background:#22c55e;flex-shrink:0;margin-top:4px}
-.loja-dot.off{background:#ef4444}
-.loja-stats{display:flex;gap:16px}
-.loja-stat{font-size:11px;color:#64748b}
-.loja-stat b{display:block;font-size:16px;font-weight:800;color:#e2e8f0}
-.badge-online{display:inline-block;background:rgba(34,197,94,.15);color:#22c55e;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;margin-left:6px;vertical-align:middle}
-.badge-venc{display:inline-block;background:rgba(239,68,68,.15);color:#ef4444;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;margin-left:6px;vertical-align:middle}
+.vazio{color:var(--mudo);text-align:center;padding:52px 12px;font-size:.9rem}
+.vazio .emj{font-size:2rem;display:block;margin-bottom:10px}
+.aba{display:none}.aba.ativa{display:block;animation:surge .25s ease}
+@keyframes surge{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.aba.ativa{animation:none}}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#0d3a2e;color:#6ee7b7;
+  border:1px solid #14532d;border-radius:12px;padding:12px 22px;font-size:.87rem;display:none;z-index:120;
+  box-shadow:0 10px 30px rgba(0,0,0,.4)}
+.toast.ruim{background:#3b0d0d;border-color:#7f1d1d;color:#fecaca}
 
-/* FORMULARIOS ADMIN */
-.form-card{background:#0d1526;border:1px solid rgba(14,165,233,.15);border-radius:14px;padding:22px;max-width:660px}
-.form-card h3{font-size:15px;font-weight:800;margin-bottom:18px}
-.fld{margin-bottom:14px}
-.fld label{display:block;font-size:11px;color:#64748b;font-weight:700;margin-bottom:5px;text-transform:uppercase;letter-spacing:.5px}
-.fld input,.fld textarea,.fld select{width:100%;background:#060c18;border:1px solid rgba(14,165,233,.2);border-radius:10px;color:#e2e8f0;padding:10px 14px;font-size:13px;outline:none;font-family:inherit}
-.fld input:focus,.fld textarea:focus,.fld select:focus{border-color:#0ea5e9}
-.fld textarea{resize:vertical;min-height:60px}
-.fld-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.dom-group{display:flex;align-items:stretch;border:1px solid rgba(14,165,233,.2);border-radius:10px;background:#060c18;overflow:hidden}
-.dom-group input{border:none !important;border-radius:0;background:transparent;flex:1;min-width:0}
-.dom-group input:focus{box-shadow:none}
-.dom-suffix{display:flex;align-items:center;padding:0 12px;background:rgba(14,165,233,.1);color:#0ea5e9;font-size:13px;font-weight:700;white-space:nowrap;border-left:1px solid rgba(14,165,233,.2)}
-.dom-hint{font-size:11px;color:#64748b;margin-top:6px}
-.dom-hint b{color:#0ea5e9}
-.fld-section{font-size:10px;font-weight:700;color:#0ea5e9;text-transform:uppercase;letter-spacing:.8px;margin:20px 0 12px;padding-bottom:6px;border-bottom:1px solid rgba(14,165,233,.12)}
-.form-btns{display:flex;gap:10px;margin-top:20px;flex-wrap:wrap}
+/* Modal */
+.modalBg{position:fixed;inset:0;background:rgba(4,8,16,.8);backdrop-filter:blur(4px);z-index:100;
+  display:none;align-items:flex-start;justify-content:center;padding:26px 16px;overflow-y:auto}
+.modalBg.on{display:flex}
+.modal{background:#0d1524;border:1px solid var(--borda);border-radius:20px;max-width:1000px;width:100%;
+  box-shadow:0 30px 80px rgba(0,0,0,.6)}
+.modal .cab{display:flex;align-items:center;padding:18px 22px;border-bottom:1px solid var(--borda);position:sticky;top:0;
+  background:#0d1524;border-radius:20px 20px 0 0;z-index:2}
+.modal .cab h2{font-size:1.05rem}
+.modal .cab .x{margin-left:auto;background:transparent;border:0;color:var(--mudo);font-size:1.4rem;line-height:1}
+.modal .pe{display:flex;gap:10px;padding:16px 22px;border-top:1px solid var(--borda);position:sticky;bottom:0;
+  background:#0d1524;border-radius:0 0 20px 20px}
+.modal .pe .btnP{margin:0;max-width:200px}
 
-/* TABELA LEADS */
-.table-wrap{background:#0d1526;border:1px solid rgba(14,165,233,.15);border-radius:14px;overflow:hidden}
-.table-head{display:flex;align-items:center;justify-content:space-between;padding:16px 18px;border-bottom:1px solid rgba(14,165,233,.1)}
-.table-titulo{font-size:13px;font-weight:700}
-.tbl{width:100%;border-collapse:collapse}
-.tbl th{padding:10px 16px;font-size:10px;font-weight:700;color:#64748b;text-align:left;border-bottom:1px solid rgba(14,165,233,.1);text-transform:uppercase;letter-spacing:.5px}
-.tbl td{padding:11px 16px;font-size:12px;border-bottom:1px solid rgba(14,165,233,.05)}
-.tbl tr:last-child td{border-bottom:none}
-.tbl-empty{text-align:center;color:#64748b;padding:28px}
-
-/* ═══ MENSAGENS (fila de disparo 1-a-1) ═══ */
-.msg-filtros{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap;max-width:640px}
-.msg-filtro{padding:7px 14px;border-radius:999px;border:1px solid rgba(14,165,233,.2);background:transparent;color:#94a3b8;font-size:12px;font-weight:600;cursor:pointer;font-family:inherit;transition:all .15s;display:inline-flex;align-items:center;gap:6px}
-.msg-filtro:hover{border-color:rgba(14,165,233,.5);color:#e2e8f0}
-.msg-filtro.ativo{background:rgba(14,165,233,.15);color:#0ea5e9;border-color:#0ea5e9}
-.msg-filtro b{font-size:11px;opacity:.85;font-weight:800}
-.msg-filtro.vazio{opacity:.4}
-.msg-queue{display:flex;flex-direction:column;gap:13px;max-width:640px}
-.msg-card{background:#0d1526;border:1px solid rgba(14,165,233,.15);border-radius:14px;padding:16px 17px;transition:opacity .2s,transform .2s}
-.msg-card.saiu{opacity:0;transform:translateX(30px)}
-.msg-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:4px}
-.msg-nome{font-size:15px;font-weight:800}
-.msg-tel{color:#64748b;font-size:12px;margin-bottom:11px}
-.msg-badge{font-size:10px;font-weight:700;padding:4px 10px;border-radius:999px;text-transform:uppercase;letter-spacing:.4px;white-space:nowrap}
-.mb-novo{background:rgba(34,211,238,.14);color:#22d3ee}
-.mb-recorrente{background:rgba(52,211,153,.14);color:#34d399}
-.mb-saudade{background:rgba(251,191,36,.14);color:#fbbf24}
-.mb-inativo{background:rgba(244,114,182,.14);color:#f472b6}
-.mb-aniversario{background:rgba(192,132,252,.16);color:#c084fc}
-.msg-txt{width:100%;background:#060c18;border:1px solid rgba(14,165,233,.2);border-radius:10px;color:#e2e8f0;padding:10px 13px;font-size:13px;font-family:inherit;line-height:1.45;resize:vertical;min-height:70px;outline:none}
-.msg-txt:focus{border-color:#0ea5e9}
-.msg-acoes{display:flex;gap:9px;margin-top:11px;flex-wrap:wrap}
-.btn-wa{background:#25D366;color:#062b16;text-decoration:none;border:none;border-radius:10px;padding:10px 16px;font-size:13px;font-weight:700;cursor:pointer;flex:1;text-align:center;font-family:inherit;display:inline-flex;align-items:center;justify-content:center;gap:7px;min-width:150px}
-.btn-wa:hover{filter:brightness(1.06)}
-.msg-vazio{text-align:center;padding:56px 20px;color:#64748b}
-.msg-vazio .ico{font-size:36px;margin-bottom:10px}
-.msg-vazio h3{font-size:15px;font-weight:800;color:#e2e8f0;margin-bottom:4px}
-
-/* APARENCIA */
-.apa-wrap{max-width:600px}
-.apa-section{font-size:10px;font-weight:700;color:#0ea5e9;text-transform:uppercase;letter-spacing:.8px;margin:22px 0 12px;padding-bottom:6px;border-bottom:1px solid rgba(14,165,233,.12)}
-/* preview fiel ao portal real (views.js) */
-.apa-preview{border-radius:16px;overflow:hidden;max-width:300px;margin:0 auto 20px;box-shadow:0 12px 40px rgba(0,0,0,.5)}
-.apa-preview-screen{display:flex;align-items:center;justify-content:center;padding:26px 18px;min-height:300px;background:radial-gradient(120% 90% at 50% 12%,#3a271b 0%,#1a1512 45%,#0c0a09 100%);transition:background .3s}
-.apa-preview-card{width:100%;max-width:240px;background:linear-gradient(180deg,rgba(29,25,22,.9),rgba(16,13,11,.92));border:1px solid rgba(249,115,22,.25);border-radius:18px;padding:22px 18px 18px;position:relative;overflow:hidden;box-shadow:0 16px 40px rgba(0,0,0,.55),inset 0 1px 0 rgba(255,255,255,.04)}
-.apa-preview-card::before{content:"";position:absolute;inset:-40% 15% auto 15%;height:140px;background:radial-gradient(60% 60% at 50% 0,rgba(249,115,22,.5),transparent 70%);filter:blur(24px);pointer-events:none}
-.apa-preview-logo{text-align:center;position:relative;z-index:1;margin-bottom:8px;min-height:40px;display:flex;align-items:center;justify-content:center}
-.apa-preview-logo img{width:70%;max-width:150px;height:auto;display:block;margin:0 auto;filter:drop-shadow(0 4px 12px rgba(249,115,22,.35))}
-.apa-preview-logo .ph{font-size:15px;font-weight:800;color:#f4efe9}
-.apa-preview-titulo{position:relative;z-index:1;font-size:15px;font-weight:700;text-align:center;color:#f4efe9;margin:10px 0 3px}
-.apa-preview-msg{position:relative;z-index:1;font-size:10.5px;text-align:center;color:#b9a89b;line-height:1.5;margin:0 0 14px}
-.apa-preview-btn{position:relative;z-index:1;display:flex;align-items:center;justify-content:center;gap:7px;width:100%;padding:12px;border-radius:11px;border:none;font-size:11.5px;font-weight:800;color:#fff;cursor:default;box-sizing:border-box}
-.apa-preview-hint{position:relative;z-index:1;text-align:center;font-size:9.5px;color:#ffd7b0;background:rgba(249,115,22,.10);border:1px solid rgba(249,115,22,.25);border-radius:9px;padding:8px 10px;margin:12px 0 0;line-height:1.5}
-.apa-preview-rod{position:relative;z-index:1;text-align:center;margin-top:14px;padding-top:10px;border-top:1px solid rgba(255,255,255,.07);display:flex;align-items:center;justify-content:center;gap:6px}
-.apa-preview-rod span{font-size:8.5px;color:rgba(255,255,255,.35);letter-spacing:.5px}
-.apa-preview-rod img{height:22px;object-fit:contain;opacity:.9}
-.apa-upload{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-.apa-upload-status{font-size:12px;color:#64748b}
-.apa-upload-status.ok{color:#22c55e}
-.apa-upload-status.err{color:#f87171}
-.apa-upload-status.load{color:#0ea5e9}
-.apa-cores-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px}
-.apa-cor-item{background:#0d1526;border:1px solid rgba(14,165,233,.15);border-radius:12px;padding:12px}
-.apa-cor-label{font-size:10px;color:#64748b;font-weight:700;margin-bottom:8px;display:flex;align-items:center;gap:6px;text-transform:uppercase;letter-spacing:.4px}
-.apa-cor-label span{width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0}
-.apa-cor-row{display:flex;gap:8px;align-items:center}
-.apa-swatch{width:34px;height:34px;border-radius:8px;border:2px solid rgba(255,255,255,.15);cursor:pointer;flex-shrink:0}
-.apa-hex{flex:1;background:#060c18;border:1px solid rgba(14,165,233,.2);border-radius:8px;color:#e2e8f0;padding:7px 10px;font-size:12px;outline:none;font-family:monospace;min-width:0}
-.apa-hex:focus{border-color:#0ea5e9}
-
-/* DESTINO TABS */
-.dest-tabs{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
-.dest-tab{padding:8px 16px;border-radius:8px;border:1px solid rgba(14,165,233,.2);background:transparent;color:#94a3b8;font-size:12px;cursor:pointer;transition:all .15s;font-family:inherit}
-.dest-tab:hover{border-color:rgba(14,165,233,.5);color:#e2e8f0}
-.dest-tab.ativo{background:rgba(14,165,233,.15);color:#0ea5e9;border-color:#0ea5e9;font-weight:700}
-.dest-campo{display:none}
-.dest-campo.ativo{display:block}
-
-/* FORM BUILDER */
-.form-campos{background:#060c18;border:1px solid rgba(14,165,233,.1);border-radius:10px;padding:12px;margin-top:8px}
-.form-campo-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(14,165,233,.07)}
-.form-campo-item:last-child{border-bottom:none}
-.form-campo-nome{flex:1;font-size:13px}
-.form-campo-chk{accent-color:#0ea5e9;width:16px;height:16px;cursor:pointer}
-
-/* BOTOES */
-.btn{border:none;border-radius:10px;padding:10px 18px;font-size:13px;font-weight:700;cursor:pointer;transition:opacity .15s;font-family:inherit}
-.btn:hover{opacity:.85}
-.btn-primary{background:linear-gradient(135deg,#0ea5e9,#22d3ee);color:#fff}
-.btn-danger{background:rgba(239,68,68,.15);color:#ef4444;border:1px solid rgba(239,68,68,.3)}
-.btn-ghost{background:transparent;color:#94a3b8;border:1px solid rgba(148,163,184,.2)}
-.btn-sm{padding:7px 14px;font-size:12px;border-radius:8px}
-.btn-link{background:transparent;border:none;color:#0ea5e9;font-size:12px;cursor:pointer;padding:0;font-family:inherit}
-
-/* MODAL */
-.modal-bg{display:none;position:fixed;inset:0;background:rgba(6,12,24,.88);z-index:1000;align-items:center;justify-content:center}
-.modal-bg.open{display:flex}
-.modal{background:#0d1526;border:1px solid rgba(14,165,233,.2);border-radius:16px;padding:22px;width:92%;max-width:460px;max-height:80vh;overflow-y:auto}
-.modal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
-.modal-titulo{font-size:14px;font-weight:800}
-.modal-close{background:transparent;border:none;color:#64748b;cursor:pointer;font-size:20px;line-height:1}
-.online-item{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid rgba(14,165,233,.07)}
-.online-item:last-child{border-bottom:none}
-.online-mac{font-size:12px;font-family:monospace;color:#e2e8f0}
-.online-dev{font-size:11px;color:#64748b}
-.online-time{font-size:11px;color:#22c55e;font-weight:700}
-
-/* ═══════════ RESPONSIVO ═══════════ */
-
-/* Tablet e telas médias */
-@media (max-width: 900px) {
-  .fld-row{grid-template-columns:1fr}
-  .cards{grid-template-columns:repeat(auto-fill,minmax(130px,1fr))}
-  .lojas-grid{grid-template-columns:1fr}
-}
-
-/* Celular: sidebar vira barra no topo */
-@media (max-width: 680px) {
-  body{font-size:13px}
-  #pgCliente, #pgAdmin{display:block !important}
-  .sb{
-    position:static;width:100% !important;min-height:auto;flex-direction:row;flex-wrap:wrap;
-    border-right:none;border-bottom:1px solid rgba(14,165,233,.15);align-items:center
-  }
-  .sb-resize,.sb-toggle{display:none !important}
-  .sb.collapsed .sb-info,.sb.collapsed .sb-item .lbl{opacity:1;width:auto;pointer-events:auto}
-  .sb.collapsed .sb-item{justify-content:flex-start;gap:6px;padding:12px 14px}
-  .sb-logo{min-height:auto;padding:12px 16px;border-bottom:none;border-right:1px solid rgba(14,165,233,.12)}
-  .sb-logo img{height:32px !important;max-width:none !important}
-  .sb-info{padding:8px 14px;border-bottom:none;flex:1;min-width:0}
-  .sb-nome{font-size:12px}
-  .sb-email{font-size:10px}
-  .sb-menu{
-    order:3;flex-basis:100%;display:flex;flex-direction:row;overflow-x:auto;
-    padding:0;border-top:1px solid rgba(14,165,233,.12)
-  }
-  .sb-item{
-    border-left:none;border-bottom:3px solid transparent;padding:12px 14px;
-    white-space:nowrap;flex-shrink:0
-  }
-  .sb-item.ativo{border-left-color:transparent;border-bottom-color:#0ea5e9}
-  .sb-bottom{order:2;border-top:none;padding:0}
-  .sb-bottom .sb-item{padding:12px 16px}
-
-  .main{margin-left:0 !important;padding:18px 14px}
-  .pg-titulo{font-size:19px}
-
-  #pgLogin{padding:16px}
-  .login-box{width:100%;max-width:360px;padding:28px 22px}
-
-  .cards{grid-template-columns:1fr 1fr;gap:10px}
-  .card-val{font-size:24px}
-
-  .apa-cores-grid{grid-template-columns:1fr}
-  .apa-wrap{max-width:100%}
-  .form-card{padding:18px 16px}
-
-  .modal{width:94%;max-width:none;margin:0 12px}
-  .table-head{flex-direction:column;gap:10px;align-items:flex-start}
-
-  .dest-tabs{gap:6px}
-  .dest-tab{padding:8px 12px;font-size:11px}
-}
-
-/* Celular pequeno */
-@media (max-width: 380px) {
-  .cards{grid-template-columns:1fr}
-  .apa-upload{flex-direction:column;align-items:flex-start}
+@media(max-width:760px){
+  .shell{grid-template-columns:1fr}
+  aside{position:fixed;bottom:0;top:auto;height:auto;width:100%;flex-direction:row;padding:8px 10px;
+    border-right:0;border-top:1px solid var(--borda);z-index:20;overflow-x:auto}
+  aside .marca,aside .rotulo,aside .rodape{display:none}
+  .navItem{flex-direction:column;gap:4px;font-size:.62rem;padding:8px 10px;flex:1;justify-content:center;text-align:center}
+  .navItem .pill{display:none}
+  .conteudo{padding:18px 16px 90px}
 }
 </style>
 </head>
 <body>
 
-<div id="toast"></div>
-
-<!-- ════════ LOGIN ════════ -->
-<div id="pgLogin">
-  <div class="login-box">
-    <img src="https://i.postimg.cc/BQjJGBKf/logo-conectay-transparent.png" alt="ConectaY" style="height:160px;display:block;margin:0 auto">
-    <h2>Acesse seu painel</h2>
-    <input id="lgEmail" type="email" placeholder="seu@email.com">
-    <input id="lgSenha" type="password" placeholder="Senha">
-    <button id="lgBtn" onclick="fazerLogin()">Entrar</button>
-    <div class="login-erro" id="lgErro"></div>
+<!-- ============ LOGIN ============ -->
+<div id="telaLogin">
+  <div class="cardLogin">
+    <svg class="hex" viewBox="0 0 64 64" fill="none">
+      <path d="M32 4 56 18v28L32 60 8 46V18L32 4Z" stroke="url(#g1)" stroke-width="3" fill="#0b1220"/>
+      <path d="M20 34c6.6-6.6 17.4-6.6 24 0" stroke="#22d3ee" stroke-width="3" stroke-linecap="round"/>
+      <path d="M25 40c3.9-3.9 10.1-3.9 14 0" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/>
+      <circle cx="32" cy="46" r="2.6" fill="#22d3ee"/>
+      <defs><linearGradient id="g1" x1="8" y1="4" x2="56" y2="60"><stop stop-color="#0ea5e9"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs>
+    </svg>
+    <h1 class="marca">Conecta<span style="color:var(--azul)">Y</span></h1>
+    <p class="sub">Painel de Wi-Fi Marketing</p>
+    <label>E-mail</label><input id="loginEmail" type="email" autocomplete="username" placeholder="voce@email.com">
+    <label>Senha</label><input id="loginSenha" type="password" autocomplete="current-password" placeholder="••••••••">
+    <button class="btnP" onclick="entrar()">Entrar no painel</button>
+    <div class="msgErro" id="loginErro"></div>
   </div>
 </div>
 
-<!-- ════════ ADMIN ════════ -->
-<div id="pgAdmin" style="display:none">
-  <div class="sb" id="sbAdmin">
-    <div class="sb-resize" id="sbResizeAdmin"></div>
-    <button class="sb-toggle" onclick="sbToggle('sbAdmin')" title="Recolher/expandir menu">◀</button>
-    <div class="sb-logo"><img src="https://i.postimg.cc/BQjJGBKf/logo-conectay-transparent.png" alt="ConectaY" style="height:44px;display:block;margin:0 auto;object-fit:contain"></div>
-    <div class="sb-info">
-      <div class="sb-nome">Admin ConectaY</div>
-      <div class="sb-email" id="admEmail"></div>
+<!-- ============ APP ============ -->
+<div id="app">
+<div class="shell">
+  <aside>
+    <div class="marca">
+      <svg width="26" height="26" viewBox="0 0 64 64" fill="none">
+        <path d="M32 4 56 18v28L32 60 8 46V18L32 4Z" stroke="#0ea5e9" stroke-width="4" fill="#0b1220"/>
+        <path d="M20 34c6.6-6.6 17.4-6.6 24 0" stroke="#22d3ee" stroke-width="4" stroke-linecap="round"/>
+        <circle cx="32" cy="43" r="3" fill="#22d3ee"/>
+      </svg>
+      Conecta<b>Y</b>
     </div>
-    <div class="sb-menu">
-      <div class="sb-item ativo" onclick="admPg('lojas')" id="admTabLojas"><span class="ico">📋</span><span class="lbl">Lojas</span></div>
-      <div class="sb-item" onclick="admPg('nova')" id="admTabNova"><span class="ico">➕</span><span class="lbl">Nova Loja</span></div>
-      <div class="sb-item" onclick="admPg('grafico')" id="admTabGrafico"><span class="ico">📊</span><span class="lbl">Gráfico Geral</span></div>
+    <div class="rotulo">Menu</div>
+    <button class="navItem on" data-aba="dashboard" onclick="irAba('dashboard')">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>Dashboard</button>
+    <button class="navItem" data-aba="leads" onclick="irAba('leads')">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.4"/><path d="M2.8 20c.8-3.5 3.3-5.4 6.2-5.4s5.4 1.9 6.2 5.4"/><circle cx="17.2" cy="9.5" r="2.6"/><path d="M15.5 14.5c2.6.2 4.7 1.8 5.6 4.6"/></svg>Leads</button>
+    <button class="navItem" data-aba="mensagens" onclick="irAba('mensagens')">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.3 8.9 8.9 0 0 1-3.7-.8L3 20l1.1-5.4a8 8 0 0 1-.9-3.7A8.4 8.4 0 0 1 11.7 2.6 8.4 8.4 0 0 1 21 11.5Z"/></svg>
+      Mensagens <span class="pill" id="pillMsgs" style="display:none">0</span></button>
+    <button class="navItem" data-aba="aparencia" onclick="irAba('aparencia')">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v3M12 19v3M4.2 4.2 6.3 6.3M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8 6.3 17.7M17.7 6.3l2.1-2.1"/></svg>Aparência</button>
+    <button class="navItem" data-aba="lojas" id="navLojas" style="display:none" onclick="irAba('lojas')">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9.5 4.6 4h14.8L21 9.5M3 9.5v10A1.5 1.5 0 0 0 4.5 21h15a1.5 1.5 0 0 0 1.5-1.5v-10M3 9.5c0 1.7 1.5 3 3.2 3s3-1.3 3-3c0 1.7 1.4 3 3 3s2.8-1.3 2.8-3c0 1.7 1.4 3 3 3s3-1.3 3-3M9 21v-6h6v6"/></svg>
+      Lojas <span style="font-size:.62rem;color:var(--fraco)">admin</span></button>
+    <div class="rodape">
+      <div class="quem" id="quemNome">—</div>
+      <div class="papel" id="quemPapel">—</div>
+      <button class="btnSair" onclick="sair()">Sair</button>
     </div>
-    <div class="sb-bottom">
-      <div class="sb-item" onclick="sair()"><span class="ico">🚪</span><span class="lbl">Sair</span></div>
-    </div>
-  </div>
-  <div class="main">
+  </aside>
 
-    <!-- lojas -->
-    <div class="pg ativo" id="admPgLojas">
-      <div class="pg-titulo">Lojas</div>
-      <div class="pg-sub" id="admSubLojas">Carregando...</div>
-      <div class="lojas-grid" id="admLojasGrid"></div>
-    </div>
-
-    <!-- nova/editar loja -->
-    <div class="pg" id="admPgNova">
-      <div class="pg-titulo" id="admFormTitulo">Nova Loja</div>
-      <div class="pg-sub">Preencha os dados da loja</div>
-      <div class="form-card">
-        <input type="hidden" id="fId">
-        <div class="fld-section">Dados Básicos</div>
-        <div class="fld-row">
-          <div class="fld"><label>Nome da Loja *</label><input id="fNome" placeholder="Ex: Gold Pipe"></div>
-          <div class="fld"><label>Slug (ID único) *</label><input id="fSlug" placeholder="goldpipe"></div>
-        </div>
-        <div class="fld"><label>Domínio</label>
-          <div class="dom-group">
-            <input id="fDominio" placeholder="goldpipe" autocapitalize="off" autocomplete="off" spellcheck="false" oninput="domToggleSuffix()">
-            <span class="dom-suffix" id="domSuffix">.conectay.com.br</span>
-          </div>
-          <div class="dom-hint">Digite só o nome (ex: <b>goldpipe</b>). Para domínio próprio, digite o endereço completo.</div>
-        </div>
-        <div class="fld-row">
-          <div class="fld"><label>Responsável</label><input id="fResp" placeholder="Nome completo"></div>
-          <div class="fld"><label>WhatsApp</label><input id="fContato" placeholder="(21) 99999-9999"></div>
-        </div>
-        <div class="fld-row">
-          <div class="fld"><label>CPF / CNPJ</label><input id="fDoc" placeholder="000.000.000-00"></div>
-          <div class="fld"><label>Email de contato</label><input id="fEmailCliente" type="email" placeholder="loja@email.com"></div>
-        </div>
-
-        <div class="fld-section">Visual do Portal</div>
-        <div class="fld"><label>Logo (URL)</label><input id="fLogo" placeholder="https://..."></div>
-        <div class="fld"><label>Mensagem no portal</label><textarea id="fMensagem" placeholder="Ex: Bem-vindo! Aproveite o Wi-Fi."></textarea></div>
-        <div class="fld-row">
-          <div class="fld"><label>Cor principal</label><input id="fCor" type="color" value="#ff6a1a"></div>
-          <div class="fld"><label>Cor 2 (gradiente)</label><input id="fCor2" type="color" value="#ff6a1a"></div>
-        </div>
-
-        <div class="fld-section">Destino após conectar</div>
-        <div class="dest-tabs">
-          <button class="dest-tab ativo" id="dtabInsta" onclick="admDestTab('instagram')">📸 Instagram</button>
-          <button class="dest-tab" id="dtabWpp" onclick="admDestTab('whatsapp')">💬 WhatsApp</button>
-          <button class="dest-tab" id="dtabForm" onclick="admDestTab('formulario')">📋 Formulário</button>
-        </div>
-        <input type="hidden" id="fDestino" value="instagram">
-        <div class="dest-campo ativo" id="dcInsta">
-          <div class="fld"><label>Instagram (sem @)</label><input id="fInsta" placeholder="minhaloja"></div>
-        </div>
-        <div class="dest-campo" id="dcWpp">
-          <div class="fld"><label>Link do grupo WhatsApp</label><input id="fWpp" placeholder="https://chat.whatsapp.com/..."></div>
-        </div>
-        <div class="dest-campo" id="dcForm">
-          <div class="fld"><label>Título do formulário</label><input id="fFormTitulo" placeholder="Ex: Cadastre-se para usar o Wi-Fi"></div>
-          <div class="fld"><label>Campos do formulário</label>
-            <div class="form-campos">
-              <div class="form-campo-item"><input class="form-campo-chk" type="checkbox" id="fc_nome" checked> <label class="form-campo-nome" for="fc_nome">Nome</label> <input class="form-campo-chk" type="checkbox" id="fc_nome_obrig" checked title="Obrigatório"> <label for="fc_nome_obrig" style="font-size:10px;color:#64748b">Obrig.</label></div>
-              <div class="form-campo-item"><input class="form-campo-chk" type="checkbox" id="fc_tel"> <label class="form-campo-nome" for="fc_tel">Telefone / WhatsApp</label> <input class="form-campo-chk" type="checkbox" id="fc_tel_obrig"> <label for="fc_tel_obrig" style="font-size:10px;color:#64748b">Obrig.</label></div>
-              <div class="form-campo-item"><input class="form-campo-chk" type="checkbox" id="fc_email"> <label class="form-campo-nome" for="fc_email">E-mail</label> <input class="form-campo-chk" type="checkbox" id="fc_email_obrig"> <label for="fc_email_obrig" style="font-size:10px;color:#64748b">Obrig.</label></div>
-              <div class="form-campo-item"><input class="form-campo-chk" type="checkbox" id="fc_aniv"> <label class="form-campo-nome" for="fc_aniv">Data de aniversário</label> <input class="form-campo-chk" type="checkbox" id="fc_aniv_obrig"> <label for="fc_aniv_obrig" style="font-size:10px;color:#64748b">Obrig.</label></div>
-              <div class="form-campo-item"><input class="form-campo-chk" type="checkbox" id="fc_bairro"> <label class="form-campo-nome" for="fc_bairro">Bairro</label> <input class="form-campo-chk" type="checkbox" id="fc_bairro_obrig"> <label for="fc_bairro_obrig" style="font-size:10px;color:#64748b">Obrig.</label></div>
-            </div>
-          </div>
-        </div>
-
-        <div class="fld-section">Wi-Fi & Segurança</div>
-        <div class="fld-row">
-          <div class="fld"><label>AP Secret</label><input id="fSecret" placeholder="ABSOLEM"></div>
-          <div class="fld"><label>Código Wi-Fi</label><input id="fCodigo" placeholder="ABSOLEM"></div>
-        </div>
-
-        <div class="fld-section">Cobrança</div>
-        <div class="fld-row">
-          <div class="fld"><label>Plano</label>
-            <select id="fPlano"><option value="mensal">Mensal</option><option value="trimestral">Trimestral</option><option value="anual">Anual</option></select>
-          </div>
-          <div class="fld"><label>Vencimento</label><input id="fVenc" type="date"></div>
-        </div>
-        <div class="fld-row">
-          <div class="fld"><label>Valor Mensal (R$)</label><input id="fValor" type="number" step="0.01" placeholder="0.00"></div>
-          <div class="fld"><label>Status</label>
-            <select id="fAtivo"><option value="true">Ativo</option><option value="false">Desativado</option></select>
-          </div>
-        </div>
-        <div class="fld"><label>Observações</label><textarea id="fObs" placeholder="Anotações internas..."></textarea></div>
-
-        <div class="fld-section">Acesso ao Painel do Cliente</div>
-        <div class="fld-row">
-          <div class="fld"><label>Email de acesso</label><input id="fEmailAcesso" type="email" placeholder="dono@loja.com"></div>
-          <div class="fld"><label>Senha inicial</label><input id="fSenhaAcesso" type="password" placeholder="(em branco = não altera)"></div>
-        </div>
-
-        <div class="form-btns">
-          <button class="btn btn-primary" onclick="admSalvar()">💾 Salvar</button>
-          <button class="btn btn-ghost" onclick="admPg('lojas')">Cancelar</button>
-          <button class="btn btn-danger btn-sm" id="btnDel" style="display:none" onclick="admDeletar()">🗑 Excluir</button>
-        </div>
+  <div class="conteudo">
+    <div class="topo">
+      <div><h1 id="tituloAba">Dashboard</h1><div class="data" id="dataHoje"></div></div>
+      <div class="fim">
+        <select id="seletorLoja" style="display:none" onchange="trocarLoja()"></select>
+        <span id="nomeLojaFixo" style="color:var(--mudo);font-size:.86rem"></span>
       </div>
     </div>
 
-    <!-- grafico geral -->
-    <div class="pg" id="admPgGrafico">
-      <div class="pg-titulo">Gráfico Geral</div>
-      <div class="pg-sub">Todas as lojas — últimos 30 dias</div>
-      <div class="chart-wrap">
-        <div class="chart-titulo">Conexões por dia</div>
-        <div class="chart-box"><canvas id="admChart"></canvas></div>
+    <section class="aba ativa" id="aba-dashboard">
+      <div class="kpis" id="kpis"></div>
+      <div class="graficos">
+        <div class="card gCard g-8"><h3>Visitas — últimos 14 dias</h3><canvas id="ch14"></canvas></div>
+        <div class="card gCard g-4"><h3>Base por categoria</h3><canvas id="chCat"></canvas></div>
+        <div class="card gCard g-6"><h3>Horários de pico (30d)</h3><canvas id="chHora"></canvas></div>
+        <div class="card gCard g-6"><h3>Dias mais movimentados (30d)</h3><canvas id="chDia"></canvas></div>
+        <div class="card gCard g-6"><h3>Dispositivos</h3><canvas id="chDisp"></canvas></div>
+        <div class="card gCard g-6"><h3>Sistema operacional</h3><canvas id="chSO"></canvas></div>
       </div>
-    </div>
+    </section>
 
+    <section class="aba" id="aba-leads">
+      <div class="filtros">
+        <div><label>Buscar</label><input id="fBusca" placeholder="Nome ou telefone" oninput="renderLeads()"></div>
+        <div><label>Categoria</label><select id="fCat" onchange="renderLeads()">
+          <option value="">Todas</option><option value="novo">Novo</option><option value="recorrente">Recorrente</option>
+          <option value="saudade">Saudade</option><option value="inativo">Inativo</option></select></div>
+        <div><label>Status</label><select id="fStatus" onchange="renderLeads()">
+          <option value="">Todos</option><option value="ativo">Ativo</option><option value="vip">VIP</option>
+          <option value="bloqueado">Bloqueado</option></select></div>
+        <div class="acao"><label>&nbsp;</label>
+          <button class="btnG" onclick="exportarCSV()">⬇ CSV</button>
+          <button class="btnG btnFb" onclick="exportarFbAds()">⬇ Meta Ads</button>
+          <button class="btnG" onclick="exportarVcf()">📇 Agenda (.vcf)</button></div>
+      </div>
+      <div id="tabelaLeads"></div>
+    </section>
+
+    <section class="aba" id="aba-mensagens">
+      <div class="cats" id="catsMsg"></div>
+      <div id="listaDisparos"></div>
+    </section>
+
+    <!-- APARÊNCIA (cliente e admin) -->
+    <section class="aba" id="aba-aparencia">
+      <div class="editorWrap">
+        <div class="card"><div class="grid2" id="formAparencia"></div>
+          <div style="padding:0 22px 22px"><button class="btnP" style="max-width:210px" onclick="salvarAparencia()">Salvar alterações</button></div>
+        </div>
+        <div class="previewBox">
+          <h3>Prévia do portal</h3>
+          <div class="fone"><div class="notch"></div><div id="pvAparencia"></div></div>
+          <button class="btnG" style="width:100%;margin-top:12px" onclick="abrirPortalReal()">Abrir portal real ↗</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- LOJAS (admin) -->
+    <section class="aba" id="aba-lojas">
+      <div style="display:flex;margin-bottom:16px">
+        <button class="btnP" style="max-width:170px;margin:0" onclick="abrirEditor(null)">➕ Nova loja</button>
+      </div>
+      <div id="tabelaLojas"></div>
+    </section>
   </div>
 </div>
-
-<!-- ════════ CLIENTE ════════ -->
-<div id="pgCliente" style="display:none">
-  <div class="sb" id="sbCliente">
-    <div class="sb-resize" id="sbResizeCliente"></div>
-    <button class="sb-toggle" onclick="sbToggle('sbCliente')" title="Recolher/expandir menu">◀</button>
-    <div class="sb-logo"><img src="https://i.postimg.cc/BQjJGBKf/logo-conectay-transparent.png" alt="ConectaY" style="height:44px;display:block;margin:0 auto;object-fit:contain"></div>
-    <div class="sb-info">
-      <div class="sb-nome" id="cliNome">—</div>
-      <div class="sb-email" id="cliEmailEl">—</div>
-    </div>
-    <div class="sb-menu">
-      <div class="sb-item ativo" onclick="cliPg('dash')" id="cliTabDash"><span class="ico">📊</span><span class="lbl">Dashboard</span></div>
-      <div class="sb-item" onclick="cliPg('leads')" id="cliTabLeads"><span class="ico">👥</span><span class="lbl">Leads</span></div>
-      <div class="sb-item" onclick="cliPg('msgs')" id="cliTabMsgs"><span class="ico">💬</span><span class="lbl">Mensagens</span></div>
-      <div class="sb-item" onclick="cliPg('apa')" id="cliTabApa"><span class="ico">🎨</span><span class="lbl">Aparência</span></div>
-    </div>
-    <div class="sb-bottom">
-      <div class="sb-item" onclick="sair()"><span class="ico">🚪</span><span class="lbl">Sair</span></div>
-    </div>
-  </div>
-  <div class="main">
-
-    <!-- dashboard -->
-    <div class="pg ativo" id="cliPgDash">
-      <div class="pg-titulo">Dashboard</div>
-      <div class="pg-sub" id="cliSubDash">Bem-vindo!</div>
-      <div class="online-wrap">
-        <div class="online-header">
-          <div class="online-titulo"><span class="online-dot"></span>Online agora</div>
-          <button class="btn-link" onclick="cliCarregarOnline()">↻ Atualizar</button>
-        </div>
-        <div class="online-count" id="cliOnlineCount">—</div>
-        <div class="online-sub">conectados nos últimos 15 min</div>
-        <div style="margin-top:10px"><button class="btn-link" onclick="cliVerOnline()">👁 Ver lista detalhada</button></div>
-      </div>
-      <div class="cards">
-        <div class="card"><div class="card-label">Este mês</div><div class="card-val" id="cliMes">—</div><div class="card-sub">conexões</div></div>
-        <div class="card"><div class="card-label">Últimos 7 dias</div><div class="card-val" id="cli7d">—</div><div class="card-sub">conexões</div></div>
-        <div class="card"><div class="card-label">Últimos 30 dias</div><div class="card-val" id="cli30d">—</div><div class="card-sub">conexões</div></div>
-        <div class="card"><div class="card-label">Mês anterior</div><div class="card-val" id="cliAnt">—</div><div class="card-sub">conexões</div></div>
-      </div>
-      <div class="chart-wrap">
-        <div class="chart-titulo">Conexões por dia — últimos 30 dias</div>
-        <div class="chart-box"><canvas id="cliChart"></canvas></div>
-      </div>
-    </div>
-
-    <!-- leads -->
-    <div class="pg" id="cliPgLeads">
-      <div class="pg-titulo">Leads</div>
-      <div class="pg-sub">Clientes que preencheram o formulário</div>
-      <div class="table-wrap">
-        <div class="table-head">
-          <div class="table-titulo" id="cliLeadsTitulo">Cadastros</div>
-          <div style="display:flex;gap:8px">
-            <button class="btn btn-ghost btn-sm" onclick="cliDownloadCSV()">⬇ CSV</button>
-            <button class="btn btn-ghost btn-sm" onclick="cliDownloadVCF()">📇 Contatos</button>
-          </div>
-        </div>
-        <div style="overflow-x:auto">
-          <table class="tbl">
-            <thead><tr><th>Nome</th><th>Telefone</th><th>E-mail</th><th>Aniversário</th><th>Bairro</th><th>Data</th></tr></thead>
-            <tbody id="cliLeadsBody"><tr><td colspan="6" class="tbl-empty">Carregando...</td></tr></tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- mensagens (fila de disparo 1-a-1) -->
-    <div class="pg" id="cliPgMsgs">
-      <div class="pg-titulo">Mensagens</div>
-      <div class="pg-sub">Fila de mensagens para enviar no WhatsApp — um clique por pessoa</div>
-      <div style="display:flex;gap:12px;align-items:center;margin-bottom:16px;flex-wrap:wrap;max-width:640px">
-        <div class="card" style="padding:9px 16px"><span style="font-size:12px;color:#64748b">Pendentes:</span> <b id="cliMsgsCount" style="color:#0ea5e9;font-size:16px">—</b></div>
-        <div style="flex:1"></div>
-        <button class="btn-link" onclick="cliCarregarMsgs()">↻ Atualizar</button>
-      </div>
-      <div class="msg-filtros" id="cliMsgsFiltros">
-        <button class="msg-filtro ativo" data-cat="todas" onclick="cliFiltrarMsgs('todas')">Todas <b>0</b></button>
-        <button class="msg-filtro" data-cat="novo" onclick="cliFiltrarMsgs('novo')">Novos <b>0</b></button>
-        <button class="msg-filtro" data-cat="recorrente" onclick="cliFiltrarMsgs('recorrente')">Fiéis <b>0</b></button>
-        <button class="msg-filtro" data-cat="saudade" onclick="cliFiltrarMsgs('saudade')">Saudade <b>0</b></button>
-        <button class="msg-filtro" data-cat="inativo" onclick="cliFiltrarMsgs('inativo')">Reconquista <b>0</b></button>
-        <button class="msg-filtro" data-cat="aniversario" onclick="cliFiltrarMsgs('aniversario')">🎂 Aniversário <b>0</b></button>
-      </div>
-      <div id="cliMsgsLista" class="msg-queue"></div>
-    </div>
-
-    <!-- aparencia -->
-    <div class="pg" id="cliPgApa">
-      <div class="pg-titulo">Aparência</div>
-      <div class="pg-sub">Personalize o portal Wi-Fi da sua loja</div>
-      <div class="apa-wrap">
-
-        <!-- preview ao vivo (fiel ao portal real) -->
-        <div class="apa-section">Preview ao Vivo</div>
-        <div style="font-size:11px;color:#64748b;margin-bottom:10px">É assim que o cliente final vê o portal ao conectar. Os textos são padronizados pelo ConectaY — você personaliza logo, cores e destino.</div>
-        <div class="apa-preview">
-          <div class="apa-preview-screen">
-            <div class="apa-preview-card">
-              <div class="apa-preview-logo">
-                <img id="apaLogoImg" src="" alt="" style="display:none">
-                <span class="ph" id="apaLogoTxt">Sua Loja</span>
-              </div>
-              <div class="apa-preview-titulo">Wi-Fi liberado</div>
-              <div class="apa-preview-msg" id="apaSubEl">Toque no botão abaixo para seguir a gente e conectar à internet.</div>
-              <div class="apa-preview-btn" id="apaBtnEl" style="background:linear-gradient(135deg,#ff6a1a,#ff6a1a)"><span id="apaBtnTxt">📸 Seguir no Instagram e conectar</span></div>
-              <div class="apa-preview-hint" id="apaHintEl">Você será direcionado ao nosso Instagram com a internet já liberada.</div>
-              <div class="apa-preview-rod">
-                <span>Wi-Fi por</span>
-                <img src="https://i.postimg.cc/BQjJGBKf/logo-conectay-transparent.png" alt="ConectaY">
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- logo -->
-        <div class="apa-section">Logo da Loja</div>
-        <div class="fld">
-          <label>Enviar arquivo (PNG, JPG, SVG · até 2 MB)</label>
-          <div class="apa-upload">
-            <input type="file" id="apaLogoFile" accept="image/png,image/jpeg,image/svg+xml,image/webp" style="display:none" onchange="apaUploadLogo(this.files[0])">
-            <button type="button" class="btn btn-ghost btn-sm" id="apaUploadBtn" onclick="document.getElementById('apaLogoFile').click()">📤 Escolher imagem</button>
-            <span class="apa-upload-status" id="apaUploadStatus"></span>
-          </div>
-        </div>
-        <div class="fld">
-          <label>Ou cole uma URL</label>
-          <input id="apaLogo" placeholder="https://..." oninput="apaUpdateLogo(this.value)">
-        </div>
-        <div style="font-size:11px;color:#64748b;margin-top:-8px;margin-bottom:14px">O upload é hospedado com segurança. Para colar uma URL, você pode usar <a href="https://postimg.cc" target="_blank" style="color:#0ea5e9">postimg.cc</a>.</div>
-
-        <!-- cores -->
-        <div class="apa-section">Cores do Botão</div>
-        <div class="apa-cores-grid">
-          <div class="apa-cor-item">
-            <div class="apa-cor-label"><span id="dot_cor" style="background:#ff6a1a"></span>Cor Primária</div>
-            <div class="apa-cor-row">
-              <input type="color" class="apa-swatch" id="cor_cor" value="#ff6a1a" oninput="apaSetCor('cor',this.value)">
-              <input type="text" class="apa-hex" id="hex_cor" value="#ff6a1a" maxlength="7" oninput="apaHexInput('cor',this.value)">
-            </div>
-          </div>
-          <div class="apa-cor-item">
-            <div class="apa-cor-label"><span id="dot_cor2" style="background:#ff6a1a"></span>Cor Secundária</div>
-            <div class="apa-cor-row">
-              <input type="color" class="apa-swatch" id="cor_cor2" value="#ff6a1a" oninput="apaSetCor('cor2',this.value)">
-              <input type="text" class="apa-hex" id="hex_cor2" value="#ff6a1a" maxlength="7" oninput="apaHexInput('cor2',this.value)">
-            </div>
-          </div>
-        </div>
-        <div style="font-size:11px;color:#64748b;margin:-6px 0 14px">O botão do portal usa um gradiente que vai da cor primária até a secundária. Para cor sólida, use a mesma nos dois.</div>
-
-        <!-- destino -->
-        <div class="apa-section">Após Conectar, Redirecionar para</div>
-        <div class="dest-tabs">
-          <button class="dest-tab ativo" id="cliDtabInsta" onclick="cliDestTab('instagram')">📸 Instagram</button>
-          <button class="dest-tab" id="cliDtabWpp" onclick="cliDestTab('whatsapp')">💬 WhatsApp</button>
-          <button class="dest-tab" id="cliDtabForm" onclick="cliDestTab('formulario')">📋 Formulário</button>
-          <button class="dest-tab" id="cliDtabNenhum" onclick="cliDestTab('nenhum')">🚫 Nenhum</button>
-        </div>
-        <input type="hidden" id="apaDestino" value="instagram">
-        <div class="dest-campo ativo" id="cliDcInsta">
-          <div class="fld"><label>Instagram (sem @)</label><input id="apaInsta" placeholder="minhaloja"></div>
-        </div>
-        <div class="dest-campo" id="cliDcWpp">
-          <div class="fld"><label>Link do grupo WhatsApp</label><input id="apaWpp" placeholder="https://chat.whatsapp.com/..."></div>
-        </div>
-        <div class="dest-campo" id="cliDcForm">
-          <div class="fld" style="color:#64748b;font-size:12px;padding:10px;background:#060c18;border-radius:10px">
-            O formulário é configurado pelo administrador. Seus campos e título já estão definidos.
-          </div>
-        </div>
-        <div class="dest-campo" id="cliDcNenhum"></div>
-
-        <div style="margin-top:20px;display:flex;gap:10px;align-items:center">
-          <button class="btn btn-primary" onclick="cliSalvarApa()">💾 Salvar Aparência</button>
-          <a id="cliLinkPortal" href="#" target="_blank" class="btn-link">🌐 Ver meu portal</a>
-        </div>
-      </div>
-    </div>
-
-  </div>
 </div>
 
-<!-- modal online cliente -->
-<div class="modal-bg" id="modalOnline">
+<!-- ============ MODAL EDITOR DE LOJA ============ -->
+<div class="modalBg" id="modalBg">
   <div class="modal">
-    <div class="modal-header">
-      <div class="modal-titulo" id="modalOnlineTitulo">Online agora</div>
-      <button class="modal-close" onclick="document.getElementById('modalOnline').classList.remove('open')">✕</button>
+    <div class="cab"><h2 id="modalTitulo">Nova loja</h2><button class="x" onclick="fecharEditor()">×</button></div>
+    <div class="editorWrap" style="padding:0 0 0 0">
+      <div><div class="grid2" id="formLoja"></div></div>
+      <div class="previewBox" style="padding:20px 20px 0 0">
+        <h3>Prévia do portal</h3>
+        <div class="fone"><div class="notch"></div><div id="pvLoja"></div></div>
+      </div>
     </div>
-    <div id="modalOnlineBody"></div>
+    <div class="pe">
+      <button class="btnP" onclick="salvarLoja()">Salvar loja</button>
+      <button class="btnG" onclick="fecharEditor()">Cancelar</button>
+      <span id="statusLoja" style="align-self:center;font-size:.8rem;color:var(--mudo)"></span>
+    </div>
   </div>
 </div>
+
+<div class="toast" id="toast"></div>
 
 <script>
-// ═══════════════════════════════════════════
-// CONFIG
-// ═══════════════════════════════════════════
-const SB  = supabase.createClient('https://iekxuehdrxsimqtfejxm.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlla3h1ZWhkcnhzaW1xdGZlanhtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1MDk0NzAsImV4cCI6MjA5MTA4NTQ3MH0.61zaRoTBK2XorXgAcGXcsN8yOY0MTRS4bIJ_X4vPjyA');
-const EDGE = 'https://iekxuehdrxsimqtfejxm.supabase.co/functions/v1/smart-responder';
+/* =========================================================
+   CONFIG
+========================================================= */
+const CFG = window.CONECTAY || {};
+const SUPABASE_URL = CFG.url || 'https://iekxuehdrxsimqtfejxm.supabase.co';
+const SUPABASE_ANON_KEY = CFG.anonKey || '';
+const EDGE_CRIAR_USUARIO = SUPABASE_URL + '/functions/v1/smart-responder';
 
-// ═══════════════════════════════════════════
-// SIDEBAR REDIMENSIONÁVEL + COLAPSÁVEL
-// ═══════════════════════════════════════════
-var SB_MIN = 64;      // largura colapsada (só emojis)
-var SB_MAX = 320;     // largura máxima
-var SB_SNAP = 140;    // abaixo disso, colapsa
-var SB_DEFAULT = 220;
-
-function sbLargura() {
-  try {
-    var v = localStorage.getItem('conectay_sb_w');
-    return v ? parseInt(v, 10) : SB_DEFAULT;
-  } catch (e) { return SB_DEFAULT; }
-}
-function sbColapsado() {
-  try { return localStorage.getItem('conectay_sb_collapsed') === '1'; }
-  catch (e) { return false; }
-}
-function sbSalvar(w, colapsado) {
-  try {
-    localStorage.setItem('conectay_sb_w', w);
-    localStorage.setItem('conectay_sb_collapsed', colapsado ? '1' : '0');
-  } catch (e) {}
-}
-
-function sbAplicar(w, colapsado) {
-  if (colapsado) {
-    document.documentElement.style.setProperty('--sb-w', SB_MIN + 'px');
-  } else {
-    document.documentElement.style.setProperty('--sb-w', w + 'px');
-  }
-  ['sbAdmin','sbCliente'].forEach(function(id) {
-    var el = document.getElementById(id);
-    if (el) el.classList.toggle('collapsed', colapsado);
+if (!SUPABASE_ANON_KEY || SUPABASE_ANON_KEY === 'COLE_AQUI_SUA_ANON_KEY') {
+  document.addEventListener('DOMContentLoaded', () => {
+    const e = document.getElementById('loginErro');
+    if (e) { e.textContent = 'Falta colar a anon key no arquivo config.js.'; e.style.display = 'block'; }
   });
 }
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY || 'sem-chave');
+let eu=null, lojas=[], lojaAtual=null, pessoas=[], disparos=[], catFiltro='';
+let edit=null;           // loja em edição no modal
+const charts={};
+const titulos={dashboard:'Dashboard',leads:'Leads',mensagens:'Mensagens',aparencia:'Aparência',lojas:'Lojas'};
+const TEMAS=[
+  {n:'Escuro',      f:'#0a0f1e', f2:'#12213f', c:'#101827'},
+  {n:'Meia-noite',  f:'#000000', f2:'#171717', c:'#111111'},
+  {n:'Claro',       f:'#f1f5f9', f2:'#e2e8f0', c:'#ffffff'},
+  {n:'Areia',       f:'#fff7ed', f2:'#ffedd5', c:'#ffffff'},
+  {n:'Verde',       f:'#052e1f', f2:'#064e3b', c:'#07352a'},
+  {n:'Vinho',       f:'#1c0812', f2:'#3b0d1f', c:'#25101a'},
+  {n:'Roxo',        f:'#12071f', f2:'#2e1065', c:'#1b0d2b'},
+  {n:'Grafite',     f:'#18181b', f2:'#27272a', c:'#212124'}
+];
+function lum(hex){ const h=String(hex||'#000').replace('#','');
+  const v=h.length===3?h.split('').map(c=>c+c).join(''):h;
+  const n=parseInt(v.slice(0,6)||'000000',16), r=(n>>16)&255, g=(n>>8)&255, b=n&255;
+  const f=c=>{c/=255;return c<=.03928?c/12.92:Math.pow((c+.055)/1.055,2.4)};
+  return .2126*f(r)+.7152*f(g)+.0722*f(b); }
+function paletaPv(l){ const card=l.cor_card||'#101827', fundo=l.cor_fundo||'#0a0f1e', claro=lum(card)>.45;
+  return { c1:l.cor||'#0ea5e9', c2:l.cor2||l.cor||'#22d3ee', fundo, fundo2:l.cor_fundo2||fundo, card,
+    texto:claro?'#0f172a':'#e2e8f0', mudo:claro?'#475569':'#94a3b8',
+    borda:claro?'rgba(15,23,42,.14)':'#1e293b', input:claro?'rgba(255,255,255,.7)':'#0b1220' }; }
 
-function sbToggle(id) {
-  var colapsado = !sbColapsado();
-  var w = sbLargura();
-  sbAplicar(w, colapsado);
-  sbSalvar(w, colapsado);
+const PRESETS=[['#0ea5e9','#22d3ee'],['#ff6a1a','#8a3000'],['#70008f','#c026d3'],['#16a34a','#4ade80'],
+               ['#e11d48','#fb7185'],['#f59e0b','#fbbf24'],['#1e293b','#475569'],['#7c3aed','#a78bfa']];
+const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+document.getElementById('dataHoje').textContent =
+  new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});
+
+/* ---------------- Sessão ---------------- */
+async function entrar(){
+  const { error } = await sb.auth.signInWithPassword({
+    email: document.getElementById('loginEmail').value.trim(),
+    password: document.getElementById('loginSenha').value });
+  if (error){ const e=document.getElementById('loginErro');
+    e.textContent = /Invalid API key/i.test(error.message) ? 'Chave do Supabase não configurada no painel.' : 'E-mail ou senha inválidos.';
+    e.style.display='block'; return; }
+  iniciar();
+}
+async function sair(){ await sb.auth.signOut(); location.reload(); }
+
+async function iniciar(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if (!session) return;
+  const { data:perfil } = await sb.from('portal_usuarios').select('*').eq('user_id', session.user.id).single();
+  if (!perfil){ alert('Seu usuário ainda não foi liberado no painel.'); return sair(); }
+  eu = perfil;
+  telaLogin.style.display='none'; app.style.display='block';
+  quemNome.textContent = session.user.email.split('@')[0];
+  quemPapel.textContent = eu.papel==='admin' ? 'Administrador' : 'Cliente';
+
+  const { data:ls } = await sb.from('portal_lojas').select('*').order('nome');
+  lojas = ls || [];
+  if (eu.papel==='admin'){
+    navLojas.style.display='flex';
+    seletorLoja.style.display='inline-block';
+    seletorLoja.innerHTML = lojas.map(l=>`<option value="${l.id}">${esc(l.nome)}</option>`).join('');
+    lojaAtual = lojas[0] || null;
+    renderLojasAdmin();
+  } else {
+    lojaAtual = lojas.find(l=>String(l.id)===String(eu.loja_id)) || lojas[0] || null;
+    nomeLojaFixo.textContent = lojaAtual ? lojaAtual.nome : '';
+  }
+  if (lojaAtual) await carregarTudo();
+}
+function trocarLoja(){
+  lojaAtual = lojas.find(l=>String(l.id)===seletorLoja.value);
+  carregarTudo();
+}
+async function carregarTudo(){
+  await Promise.all([carregarDashboard(), carregarLeads(), carregarDisparos()]);
+  montarAparencia();
 }
 
-function sbInitResize(handleId, sbId) {
-  var handle = document.getElementById(handleId);
-  if (!handle) return;
-  handle.addEventListener('mousedown', function(e) {
-    e.preventDefault();
-    if (window.innerWidth <= 680) return; // desativado no mobile
-    var sb = document.getElementById(sbId);
-    var main = sb.closest('#pgAdmin, #pgCliente').querySelector('.main');
-    sb.classList.add('resizing'); if (main) main.classList.add('resizing');
-    handle.classList.add('drag');
-    function mover(ev) {
-      var w = ev.clientX;
-      if (w < SB_SNAP) {
-        sbAplicar(SB_MIN, true);
-      } else {
-        w = Math.min(Math.max(w, SB_SNAP), SB_MAX);
-        sbAplicar(w, false);
-      }
+/* ---------------- Dashboard ---------------- */
+const ICO={
+  hoje:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M4.9 4.9 7 7M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1 7 17M17 7l2.1-2.1"/></svg>',
+  mes:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l5-5 4 3 6-7 3 3M3 21h18"/></svg>',
+  unicos:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c1-3.8 3.6-5.7 7-5.7s6 1.9 7 5.7"/></svg>',
+  rec:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 11a8 8 0 1 0-2.3 6.3M20 5v6h-6"/></svg>',
+  novos:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="8" r="3.4"/><path d="M3.5 20c.8-3.4 3.2-5.3 6.5-5.3M17 14v6M14 17h6"/></svg>',
+  base:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5.5" rx="8" ry="3"/><path d="M4 5.5v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6M4 11.5v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg>'};
+
+async function carregarDashboard(){
+  const { data, error } = await sb.rpc('portal_dashboard', { p_loja: lojaAtual.id });
+  if (error){ console.error(error); return; }
+  const d=data, cresc = d.mes_anterior>0 ? Math.round((d.mes_atual-d.mes_anterior)/d.mes_anterior*100) : null;
+  kpis.innerHTML = [
+    [ICO.hoje,'Visitas hoje',d.hoje],[ICO.mes,'Visitas no mês',d.mes_atual,cresc],
+    [ICO.unicos,'Visitantes únicos',d.unicos],[ICO.rec,'Clientes recorrentes',d.recorrentes],
+    [ICO.novos,'Novos cadastros (30d)',d.novos_30d],[ICO.base,'Base total (CRM)',d.total_leads]
+  ].map(([ic,l,v,dl])=>`<div class="card kpi"><div class="ic">${ic}</div>
+    <div class="v">${(v??0).toLocaleString('pt-BR')}</div><div class="l">${l}</div>
+    ${dl!=null?`<span class="delta ${dl>=0?'up':'down'}">${dl>=0?'↑':'↓'} ${Math.abs(dl)}% vs mês anterior</span>`:''}</div>`).join('');
+
+  const A='#0ea5e9', C='#22d3ee';
+  desenhar('ch14','line',{labels:(d.ultimos_14d||[]).map(x=>x.dia.slice(8)+'/'+x.dia.slice(5,7)),
+    datasets:[{data:(d.ultimos_14d||[]).map(x=>x.n),borderColor:A,borderWidth:2.5,backgroundColor:gradArea(),
+      fill:true,tension:.4,pointRadius:0,pointHoverRadius:5,pointBackgroundColor:C}]});
+  const hs=Array.from({length:24},(_,h)=>({h,n:0})); (d.por_hora||[]).forEach(x=>hs[x.h].n=x.n);
+  const mh=Math.max(...hs.map(x=>x.n));
+  desenhar('chHora','bar',{labels:hs.map(x=>x.h+'h'),
+    datasets:[{data:hs.map(x=>x.n),backgroundColor:hs.map(x=>x.n===mh&&x.n>0?C:'rgba(14,165,233,.45)'),borderRadius:5}]});
+  const nd=['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'], ds=Array.from({length:7},(_,i)=>({d:i+1,n:0}));
+  (d.por_dia_semana||[]).forEach(x=>ds[x.d-1].n=x.n);
+  const md=Math.max(...ds.map(x=>x.n));
+  desenhar('chDia','bar',{labels:nd,
+    datasets:[{data:ds.map(x=>x.n),backgroundColor:ds.map(x=>x.n===md&&x.n>0?C:'rgba(14,165,233,.45)'),borderRadius:5}]});
+  desenhar('chDisp','doughnut',{labels:(d.dispositivos||[]).map(x=>x.k),
+    datasets:[{data:(d.dispositivos||[]).map(x=>x.n),backgroundColor:[A,C,'#818cf8','#64748b'],borderWidth:0,hoverOffset:6}]});
+  desenhar('chSO','doughnut',{labels:(d.sistemas||[]).map(x=>x.k),
+    datasets:[{data:(d.sistemas||[]).map(x=>x.n),backgroundColor:[C,A,'#a78bfa','#f472b6','#64748b'],borderWidth:0,hoverOffset:6}]});
+  desenhar('chCat','doughnut',{labels:(d.categorias||[]).map(x=>x.k),
+    datasets:[{data:(d.categorias||[]).map(x=>x.n),backgroundColor:['#7dd3fc','#6ee7b7','#fcd34d','#fda4af'],borderWidth:0,hoverOffset:6}]});
+}
+function gradArea(){ const c=ch14.getContext('2d'), g=c.createLinearGradient(0,0,0,220);
+  g.addColorStop(0,'rgba(14,165,233,.28)'); g.addColorStop(1,'rgba(14,165,233,0)'); return g; }
+function desenhar(id,tipo,dados){
+  if (charts[id]) charts[id].destroy();
+  const o={maintainAspectRatio:true,plugins:{legend:{display:tipo==='doughnut',position:'bottom',
+      labels:{color:'#8b9bb4',boxWidth:10,padding:14,font:{size:11}}},
+    tooltip:{backgroundColor:'#0d1524',borderColor:'#1e293b',borderWidth:1,titleColor:'#e2e8f0',bodyColor:'#8b9bb4',cornerRadius:9,padding:10}},
+    scales:tipo==='doughnut'?{}:{x:{ticks:{color:'#5b6b84',font:{size:10}},grid:{display:false}},
+      y:{ticks:{color:'#5b6b84',font:{size:10}},grid:{color:'rgba(30,41,59,.5)'},beginAtZero:true,border:{display:false}}}};
+  if (tipo==='doughnut') o.cutout='68%';
+  charts[id]=new Chart(document.getElementById(id),{type:tipo,data:dados,options:o});
+}
+
+/* ---------------- Leads ---------------- */
+async function carregarLeads(){
+  const { data } = await sb.from('portal_pessoas').select('*')
+    .eq('loja_id', lojaAtual.id).order('ultima_visita',{ascending:false}).limit(2000);
+  pessoas = data || []; renderLeads();
+}
+function renderLeads(){
+  const q=(fBusca.value||'').toLowerCase(), cat=fCat.value, st=fStatus.value;
+  const lista=pessoas.filter(p=>(!q||(p.nome||'').toLowerCase().includes(q)||(p.telefone||'').includes(q))
+    &&(!cat||p.categoria===cat)&&(!st||p.status===st));
+  if(!lista.length){ tabelaLeads.innerHTML='<div class="card vazio"><span class="emj">🔍</span>Nenhum lead encontrado.</div>'; return; }
+  tabelaLeads.innerHTML=`<div class="tWrap"><table><thead><tr><th>Nome</th><th>WhatsApp</th><th>Visitas</th>
+    <th>Última</th><th>Categoria</th><th>Status</th><th>Tags</th><th></th></tr></thead><tbody>
+    ${lista.map(p=>`<tr><td><b>${esc(p.nome)||'—'}</b>${(p.aniversario)?' 🎂':''}</td>
+    <td><a href="https://wa.me/55${p.telefone}" target="_blank">${fmtTel(p.telefone)}</a></td>
+    <td>${p.total_visitas}</td><td>${p.ultima_visita?fmtData(p.ultima_visita):'—'}</td>
+    <td><span class="badge b-${p.categoria}">${p.categoria}</span></td>
+    <td><span class="badge b-${p.status||'ativo'}">${p.status||'ativo'}</span></td>
+    <td>${(p.tags||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join('')||'—'}</td>
+    <td><button class="btnG" style="padding:6px 10px" onclick="editarPessoa(${p.id})">✏️</button></td></tr>`).join('')}
+    </tbody></table></div>`;
+}
+const fmtTel=t=>t&&t.length>=10?`(${t.slice(0,2)}) ${t.slice(2,-4)}-${t.slice(-4)}`:t;
+const fmtData=d=>{const[a,m,x]=d.split('-');return `${x}/${m}/${a.slice(2)}`};
+
+async function editarPessoa(id){
+  const p=pessoas.find(x=>x.id===id); if(!p) return;
+  const tags=prompt('Tags separadas por vírgula:',(p.tags||[]).join(', ')); if(tags===null) return;
+  const obs=prompt('Observações:',p.observacoes||''); if(obs===null) return;
+  const st=prompt('Status (ativo / vip / bloqueado):',p.status||'ativo'); if(st===null) return;
+  const novo={tags:tags.split(',').map(t=>t.trim()).filter(Boolean),observacoes:obs,
+    status:['ativo','vip','bloqueado'].includes(st.trim())?st.trim():'ativo'};
+  const {error}=await sb.from('portal_pessoas').update(novo).eq('id',id);
+  if(error) return toast('Erro: '+error.message,true);
+  Object.assign(p,novo); renderLeads(); toast('Lead atualizado');
+}
+function baixar(nome,txt,tipo){ const b=new Blob(['\ufeff'+txt],{type:(tipo||'text/csv')+';charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=nome; a.click(); }
+
+// devolve a lista JÁ FILTRADA pela tela (busca, categoria, status)
+function pessoasFiltradas(){
+  const q=(fBusca.value||'').toLowerCase(), cat=fCat.value, st=fStatus.value;
+  return pessoas.filter(p=>(!q||(p.nome||'').toLowerCase().includes(q)||(p.telefone||'').includes(q))
+    &&(!cat||p.categoria===cat)&&(!st||p.status===st));
+}
+function sufixoArquivo(){
+  const p=[lojaAtual.slug];
+  if(fCat.value) p.push(fCat.value);
+  if(fStatus.value) p.push(fStatus.value);
+  return p.join('_')+'_'+new Date().toISOString().slice(0,10);
+}
+function exportarCSV(){
+  const lista=pessoasFiltradas();
+  if(!lista.length) return toast('Nenhum lead nos filtros atuais',true);
+  const L=[['nome','telefone','aniversario','primeira_visita','ultima_visita','visitas','categoria','status','tags','obs']];
+  lista.forEach(p=>L.push([p.nome||'',p.telefone,p.aniversario||'',p.primeira_visita||'',p.ultima_visita||'',
+    p.total_visitas,p.categoria,p.status||'ativo',(p.tags||[]).join('|'),(p.observacoes||'').replace(/\n/g,' ')]));
+  baixar(`leads_${sufixoArquivo()}.csv`, L.map(l=>l.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(';')).join('\n'));
+  toast(`CSV exportado (${lista.length} leads)`);
+}
+function exportarFbAds(){
+  const lista=pessoasFiltradas().filter(p=>p.status!=='bloqueado');
+  if(!lista.length) return toast('Nenhum lead nos filtros atuais',true);
+  const L=[['phone','fn']];
+  lista.forEach(p=>L.push([`+55${p.telefone}`,(p.nome||'').split(' ')[0].toLowerCase()]));
+  baixar(`meta_ads_${sufixoArquivo()}.csv`, L.map(l=>l.join(',')).join('\n'));
+  toast(`Audiência com ${lista.length} contatos — suba em Públicos personalizados`);
+}
+function exportarVcf(){
+  const lista=pessoasFiltradas().filter(p=>p.telefone && p.status!=='bloqueado');
+  if(!lista.length) return toast('Nenhum lead nos filtros atuais',true);
+  const marca=(lojaAtual.nome||'').slice(0,18);
+  const vcf=lista.map(p=>{
+    const nome=((p.nome||'Cliente').replace(/[\r\n;]/g,' ').trim())+' · '+marca;
+    const l=['BEGIN:VCARD','VERSION:3.0',`N:;${nome};;;`,`FN:${nome}`,
+             `TEL;TYPE=CELL:+55${p.telefone}`,`NOTE:${p.categoria} · ${p.total_visitas} visita(s) · ConectaY`];
+    if(p.aniversario && /^\d{4}-\d{2}-\d{2}$/.test(p.aniversario)) l.push(`BDAY:${p.aniversario}`);
+    l.push('END:VCARD');
+    return l.join('\r\n');
+  }).join('\r\n');
+  baixar(`agenda_${sufixoArquivo()}.vcf`, vcf, 'text/vcard');
+  toast(`${lista.length} contatos no .vcf — abra o arquivo no celular pra importar`);
+}
+
+/* ---------------- Mensagens ---------------- */
+async function carregarDisparos(){
+  const { data } = await sb.from('portal_disparos_prontos').select('*')
+    .eq('loja_id', lojaAtual.id).order('criado_em',{ascending:false}).limit(500);
+  disparos = data || [];
+  pillMsgs.textContent=disparos.length; pillMsgs.style.display=disparos.length?'inline-block':'none';
+  renderDisparos();
+}
+function renderDisparos(){
+  const cs=['','aniversario','saudade','inativo','recorrente','novo'];
+  const rot={'':'Todas','aniversario':'🎂 Aniversário','saudade':'🥺 Saudade','inativo':'😴 Inativo','recorrente':'🤝 Recorrente','novo':'✨ Novo'};
+  catsMsg.innerHTML=cs.map(c=>{const n=c?disparos.filter(d=>d.categoria===c).length:disparos.length;
+    return `<button class="${catFiltro===c?'on':''}" onclick="catFiltro='${c}';renderDisparos()">${rot[c]} · ${n}</button>`}).join('');
+  const lista=catFiltro?disparos.filter(d=>d.categoria===catFiltro):disparos;
+  if(!lista.length){ listaDisparos.innerHTML='<div class="card vazio"><span class="emj">🎉</span>Nenhuma mensagem pendente.<br><small style="color:var(--fraco)">Geradas automaticamente todo dia às 7h.</small></div>'; return; }
+  listaDisparos.innerHTML=lista.map(d=>`<div class="card disparo">
+    <div class="avatar">${(d.nome||'C').trim()[0].toUpperCase()}</div>
+    <div class="info"><b>${esc(d.nome)||'Cliente'}</b>
+      <span style="color:var(--fraco);font-size:.82rem"> · ${fmtTel(d.telefone)} · ${d.total_visitas||0} visita(s)</span>
+      <span class="badge b-${d.categoria}" style="margin-left:6px">${d.categoria}</span>
+      <div class="msg">${esc(d.mensagem)}</div></div>
+    <a class="btnZap" target="_blank" href="https://wa.me/55${d.telefone}?text=${encodeURIComponent(d.mensagem)}"
+       onclick="setTimeout(()=>marcarEnviado(${d.id}),400)">Abrir WhatsApp</a>
+    <button class="btnOk" onclick="marcarEnviado(${d.id})">✓ Enviado</button></div>`).join('');
+}
+async function marcarEnviado(id){
+  const {error}=await sb.from('portal_disparos').update({status:'enviado',enviado_em:new Date().toISOString()}).eq('id',id);
+  if(error) return toast('Erro: '+error.message,true);
+  disparos=disparos.filter(d=>d.id!==id);
+  pillMsgs.textContent=disparos.length; pillMsgs.style.display=disparos.length?'inline-block':'none';
+  renderDisparos(); toast('Marcado como enviado ✓');
+}
+
+/* =========================================================
+   CAMPOS DO FORMULÁRIO (aceita os 2 formatos do banco)
+========================================================= */
+function lerCampos(fc){
+  const padrao=[{campo:'nome',label:'Seu nome',obrigatorio:false},
+                {campo:'telefone',label:'WhatsApp',obrigatorio:true},
+                {campo:'aniversario',label:'Data de aniversário',obrigatorio:false}];
+  if(!fc) return padrao;
+  if(Array.isArray(fc)){ const l=fc.map(c=>({campo:c.campo||c.nome||c.key,
+      label:c.label||c.rotulo||c.campo, obrigatorio:!!(c.obrigatorio??c.obrig??c.req)})).filter(c=>c.campo);
+    return l.length?l:padrao; }
+  if(typeof fc==='object'){ const l=Object.entries(fc).map(([k,v])=>({campo:k,
+      label:(v&&(v.label||v.rotulo))||k.charAt(0).toUpperCase()+k.slice(1),
+      obrigatorio:!!(v&&(v.obrig??v.obrigatorio??v.req))}));
+    return l.length?l:padrao; }
+  return padrao;
+}
+
+/* =========================================================
+   PREVIEW DO PORTAL (ao vivo)
+========================================================= */
+function preview(l){
+  const p=paletaPv(l), t=l.destino_tipo||'instagram';
+  const logo=l.logo_url?`<img src="${esc(l.logo_url)}" alt="">`:'';
+  const rot = t==='whatsapp'?'Entrar no grupo do WhatsApp'
+            : t==='google_review'?'Avalie a gente no Google ⭐'
+            : t==='formulario'?(l.botao_txt||'Conectar ao Wi-Fi')
+            : `Seguir @${(l.instagram||'sualoja').replace('@','')}`;
+  const sub = t==='formulario'?'Preencha rapidinho e conecte-se em segundos.'
+            : t==='whatsapp'?'Entre no nosso grupo e navegue à vontade.'
+            : t==='google_review'?'Deixe sua avaliação e navegue à vontade.'
+            : 'Siga a gente no Instagram e navegue à vontade.';
+  const campos = t==='formulario' ? lerCampos(l.form_campos).map(c=>
+     `<div class="campo" style="background:${p.input};border-color:${p.borda};color:${p.mudo}">
+        <b style="color:${p.mudo}">${esc(c.label)}${c.obrigatorio?' *':''}</b>${
+        c.campo==='telefone'?'(21) 99999-9999':c.campo==='aniversario'?'dd/mm/aaaa':'...'}</div>`).join('') : '';
+  const optin = t==='formulario'
+    ? `<div class="optin" style="color:${p.mudo}"><i style="background:${p.c1}"></i><span>Aceito receber novidades da ${esc(l.nome||'loja')} no WhatsApp e a Política de Privacidade.</span></div>`
+    : '';
+  return `<div style="background:${p.fundo===p.fundo2?p.fundo:`linear-gradient(160deg,${p.fundo},${p.fundo2})`};
+      border-radius:14px;padding:14px 10px">
+    <div class="pvCard" style="background:${p.card};border-color:${p.borda};color:${p.texto}">${logo}
+    <div class="tit" style="color:${p.texto}">${esc(l.form_titulo|| 'Wi-Fi grátis · '+(l.nome||'Sua Loja'))}</div>
+    <div class="sub" style="color:${p.mudo}">${sub}</div>${campos}${optin}
+    <div class="btn" style="background:linear-gradient(135deg,${esc(p.c1)},${esc(p.c2)})">${esc(rot)}</div>
+    ${l.vcard_ativo?`<div class="btn" style="background:${p.input};border:1px solid ${p.borda};color:${p.texto};margin-top:6px">📇 Salvar nosso contato</div>`:''}
+    <div class="rod" style="color:${p.mudo}">Powered by ConectaY</div></div></div>`;
+}
+
+/* =========================================================
+   UPLOAD DE LOGO (comprime e guarda em logo_url)
+========================================================= */
+function escolherLogo(destinoInputId, previewFn){
+  const inp=document.createElement('input'); inp.type='file'; inp.accept='image/*';
+  inp.onchange=()=>{ const f=inp.files[0]; if(!f) return;
+    if(f.size>4*1024*1024) return toast('Imagem muito grande (máx 4 MB)',true);
+    const fr=new FileReader();
+    fr.onload=()=>{ const img=new Image();
+      img.onload=()=>{ const M=320, r=Math.min(M/img.width,M/img.height,1);
+        const cv=document.createElement('canvas'); cv.width=img.width*r; cv.height=img.height*r;
+        cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+        const b64=cv.toDataURL('image/png');
+        document.getElementById(destinoInputId).value=b64;
+        previewFn(); toast('Logo carregada — lembre de salvar');
+      };
+      img.onerror=()=>toast('Não consegui ler essa imagem',true);
+      img.src=fr.result; };
+    fr.readAsDataURL(f); };
+  inp.click();
+}
+
+/* =========================================================
+   ABA APARÊNCIA (cliente edita a própria loja)
+========================================================= */
+function montarAparencia(){
+  const l=lojaAtual; if(!l) return;
+  formAparencia.innerHTML=`
+    <div class="secao">🎨 Identidade</div>
+    <div class="full"><label>Nome da loja</label><input id="ap_nome" value="${esc(l.nome)}" oninput="pvAp()"></div>
+    <div class="full"><label>Logo</label>
+      <div class="logoUp" onclick="escolherLogo('ap_logo',pvAp)">
+        <div id="ap_logoBox"></div></div>
+      <input type="hidden" id="ap_logo" value="${esc(l.logo_url)}">
+      <small class="dica">Clique pra enviar PNG ou JPG (redimensiono automaticamente).</small></div>
+    <div><label>Cor principal</label><input type="color" id="ap_cor" value="${l.cor||'#0ea5e9'}" style="height:44px;padding:4px" oninput="pvAp()"></div>
+    <div><label>Cor secundária (gradiente)</label><input type="color" id="ap_cor2" value="${l.cor2||l.cor||'#22d3ee'}" style="height:44px;padding:4px" oninput="pvAp()"></div>
+    <div class="full"><label>Paletas do botão</label><div class="presets" id="ap_presets"></div></div>
+    <div class="full"><label>Tema do portal</label><div class="presets" id="ap_temas"></div>
+      <small class="dica">Clique num tema pra aplicar fundo e cartão. A cor do texto se ajusta sozinha pro contraste.</small></div>
+    <div><label>Cor de fundo</label><input type="color" id="ap_fundo" style="height:44px;padding:4px" oninput="pvAp()"></div>
+    <div><label>Fundo — 2ª cor (degradê)</label><input type="color" id="ap_fundo2" style="height:44px;padding:4px" oninput="pvAp()"></div>
+    <div class="full"><label>Cor do cartão</label><input type="color" id="ap_card" style="height:44px;padding:4px" oninput="pvAp()"></div>
+
+
+    <div class="secao">🎯 O que o cliente faz pra conectar</div>
+    <div class="full"><label>Destino</label>
+      <select id="ap_destino" onchange="pvAp()">
+        <option value="instagram">📸 Seguir no Instagram</option>
+        <option value="whatsapp">💬 Entrar no grupo do WhatsApp</option>
+        <option value="formulario">📝 Preencher formulário (coleta leads)</option>
+        <option value="google_review">⭐ Avaliar no Google</option>
+      </select></div>
+    <div class="full" id="ap_wrapInsta"><label>Instagram (sem @)</label><input id="ap_insta" value="${esc((l.instagram||'').replace('@',''))}" oninput="pvAp()"></div>
+    <div class="full" id="ap_wrapWpp"><label>Link do grupo do WhatsApp</label><input id="ap_wpp" value="${esc(l.whatsapp_link)}" placeholder="https://chat.whatsapp.com/..."></div>
+    <div class="full" id="ap_wrapGoogle"><label>Link de avaliação do Google</label><input id="ap_google" value="${esc(l.google_review_url)}" placeholder="https://g.page/r/..."></div>
+    <div class="full" id="ap_wrapForm">
+      <label>Título do portal</label><input id="ap_formTitulo" value="${esc(l.form_titulo)}" placeholder="Wi-Fi grátis · ${esc(l.nome)}" oninput="pvAp()">
+      <label style="margin-top:12px">Texto do botão</label><input id="ap_botao" value="${esc(l.botao_txt)}" placeholder="Conectar ao Wi-Fi" oninput="pvAp()">
+      <label style="margin-top:12px">Campos do formulário</label>
+      <div class="campos" id="ap_campos"></div>
+      <button class="btnG" style="margin-top:8px" onclick="addCampo('ap')">➕ Adicionar campo</button>
+      <small class="dica">Quanto menos campos, mais gente preenche. Peça só o essencial.</small></div>
+
+
+    <div class="secao">🧠 Portal inteligente</div>
+    <div class="full">
+      <label style="display:flex;align-items:center;gap:9px;cursor:pointer">
+        <input type="checkbox" id="ap_rotAtiva" style="width:18px;height:18px;accent-color:var(--azul)" onchange="pvAp()">
+        <span style="color:var(--texto);font-size:.86rem">Reconhecer clientes que já vieram</span></label>
+      <small class="dica">O portal identifica o aparelho. Quem <b>já se cadastrou não preenche o formulário de novo</b>
+      e, a cada visita, recebe um pedido diferente da lista abaixo.</small></div>
+    <div class="full" id="ap_wrapRot">
+      <label>Rodízio de pedidos (na ordem)</label>
+      <div style="display:flex;flex-direction:column;gap:7px">
+        <label style="display:flex;align-items:center;gap:8px;margin:0;color:var(--texto);font-size:.83rem">
+          <input type="checkbox" class="ap_rotD" value="instagram" style="width:16px;height:16px;accent-color:var(--azul)">📸 Seguir no Instagram</label>
+        <label style="display:flex;align-items:center;gap:8px;margin:0;color:var(--texto);font-size:.83rem">
+          <input type="checkbox" class="ap_rotD" value="whatsapp" style="width:16px;height:16px;accent-color:var(--azul)">💬 Entrar no grupo do WhatsApp</label>
+        <label style="display:flex;align-items:center;gap:8px;margin:0;color:var(--texto);font-size:.83rem">
+          <input type="checkbox" class="ap_rotD" value="google_review" style="width:16px;height:16px;accent-color:var(--azul)">⭐ Avaliar no Google</label>
+        <label style="display:flex;align-items:center;gap:8px;margin:0;color:var(--texto);font-size:.83rem">
+          <input type="checkbox" class="ap_rotD" value="site" style="width:16px;height:16px;accent-color:var(--azul)">🌐 Visitar o site</label>
+      </div>
+      <small class="dica">Só entram no rodízio os que estiverem preenchidos acima (link do grupo, Instagram etc.).</small>
+      <label style="margin-top:12px">Pedir o cadastro de novo a cada</label>
+      <select id="ap_recad">
+        <option value="0">Nunca (cadastra uma vez só)</option>
+        <option value="6">6 meses</option><option value="12">12 meses</option>
+      </select>
+      <small class="dica">Útil pra manter a base atualizada sem incomodar quem vem sempre.</small></div>
+
+    <div class="secao">📇 Cartão de contato</div>
+    <div class="full">
+      <label style="display:flex;align-items:center;gap:9px;cursor:pointer">
+        <input type="checkbox" id="ap_vcardAtivo" style="width:18px;height:18px;accent-color:var(--azul)" onchange="pvAp()">
+        <span style="color:var(--texto);font-size:.86rem">Oferecer "Salvar nosso contato" após conectar</span>
+      </label>
+      <small class="dica">O cliente salva seu número na agenda dele. Isso libera <b>lista de transmissão</b> no WhatsApp
+      (só entrega pra quem tem seu número salvo) e faz seus status aparecerem pra ele.</small></div>
+    <div id="ap_wrapVcard">
+      <label>WhatsApp da loja</label><input id="ap_vcardTel" placeholder="(21) 99999-9999"></div>
+    <div id="ap_wrapVcard2">
+      <label>Nome que aparece na agenda</label><input id="ap_vcardNome" placeholder="Absolem Tabacaria"></div>`;
+  ap_destino.value = l.destino_tipo || 'instagram';
+  ap_rotAtiva.checked = !!l.rotacao_ativa;
+  ap_recad.value = String(l.recadastro_meses||0);
+  (function(){ const sel=l.rotacao_destinos||['instagram','whatsapp'];
+    document.querySelectorAll('.ap_rotD').forEach(c=>c.checked=sel.includes(c.value)); })();
+  ap_vcardAtivo.checked = !!l.vcard_ativo;
+  ap_vcardTel.value = l.vcard_telefone || '';
+  ap_vcardNome.value = l.vcard_nome || l.nome || '';
+  ap_fundo.value = l.cor_fundo || '#0a0f1e';
+  ap_fundo2.value = l.cor_fundo2 || l.cor_fundo || '#12213f';
+  ap_card.value = l.cor_card || '#101827';
+  renderTemas('ap_temas','ap',pvAp);
+  renderPresets('ap_presets','ap_cor','ap_cor2',pvAp);
+  renderCampos('ap', lerCampos(l.form_campos));
+  pvAp();
+}
+function pvAp(){
+  const l=lerFormAparencia();
+  ap_logoBox.innerHTML = l.logo_url ? `<img src="${esc(l.logo_url)}" alt="">`
+    : '<div class="ph"><span class="ico">🖼️</span>Clique pra enviar a logo<br><small>PNG ou JPG</small></div>';
+  ap_wrapInsta.style.display  = l.destino_tipo==='instagram'?'block':'none';
+  ap_wrapWpp.style.display    = l.destino_tipo==='whatsapp'?'block':'none';
+  ap_wrapGoogle.style.display = l.destino_tipo==='google_review'?'block':'none';
+  ap_wrapForm.style.display   = l.destino_tipo==='formulario'?'block':'none';
+  ap_wrapRot.style.display = ap_rotAtiva.checked?'block':'none';
+  const vc = ap_vcardAtivo.checked;
+  ap_wrapVcard.style.display = vc?'block':'none';
+  ap_wrapVcard2.style.display = vc?'block':'none';
+  pvAparencia.innerHTML = preview(l);
+}
+function lerFormAparencia(){
+  return { nome:ap_nome.value, logo_url:ap_logo.value, cor:ap_cor.value, cor2:ap_cor2.value,
+    destino_tipo:ap_destino.value, instagram:ap_insta.value.replace('@',''),
+    whatsapp_link:ap_wpp.value, google_review_url:ap_google.value,
+    form_titulo:ap_formTitulo.value, botao_txt:ap_botao.value, form_campos:colherCampos('ap'),
+    vcard_ativo:ap_vcardAtivo.checked, vcard_telefone:ap_vcardTel.value.replace(/\D/g,''),
+    vcard_nome:ap_vcardNome.value,
+    cor_fundo:ap_fundo.value, cor_fundo2:ap_fundo2.value, cor_card:ap_card.value,
+    rotacao_ativa:ap_rotAtiva.checked, recadastro_meses:Number(ap_recad.value||0),
+    rotacao_destinos:[...document.querySelectorAll('.ap_rotD')].filter(c=>c.checked).map(c=>c.value) };
+}
+async function salvarAparencia(){
+  const f=lerFormAparencia();
+  const upd={ nome:f.nome.trim(), logo_url:f.logo_url||null, cor:f.cor, cor2:f.cor2,
+    destino_tipo:f.destino_tipo, instagram:f.instagram.trim()||null,
+    whatsapp_link:f.whatsapp_link.trim()||null, google_review_url:f.google_review_url.trim()||null,
+    form_titulo:f.form_titulo.trim()||null, botao_txt:f.botao_txt.trim()||null,
+    form_campos:f.destino_tipo==='formulario'?f.form_campos:lojaAtual.form_campos,
+    vcard_ativo:f.vcard_ativo, vcard_telefone:f.vcard_telefone||null,
+    vcard_nome:f.vcard_nome.trim()||null,
+    cor_fundo:f.cor_fundo, cor_fundo2:f.cor_fundo2, cor_card:f.cor_card,
+    rotacao_ativa:f.rotacao_ativa, recadastro_meses:f.recadastro_meses,
+    rotacao_destinos:f.rotacao_ativa?['formulario',...f.rotacao_destinos]
+      :((lojaAtual.rotacao_destinos||[]).length?lojaAtual.rotacao_destinos:['formulario','instagram','whatsapp']) };
+  if(upd.rotacao_ativa && !f.rotacao_destinos.length)
+    return toast('Escolha ao menos um pedido pro rodízio',true);
+  if(upd.vcard_ativo && (upd.vcard_telefone||'').length<10)
+    return toast('Informe o WhatsApp da loja com DDD pro cartão de contato',true);
+  if(upd.destino_tipo==='whatsapp' && !upd.whatsapp_link) return toast('Informe o link do grupo do WhatsApp',true);
+  if(upd.destino_tipo==='google_review' && !upd.google_review_url) return toast('Informe o link de avaliação do Google',true);
+  ['rotacao_destinos','rotacao_ativa','recadastro_meses','vcard_ativo',
+   'cor','cor2','cor_fundo','cor_card'].forEach(k=>{ if(upd[k]==null) delete upd[k]; });
+  const {error}=await sb.from('portal_lojas').update(upd).eq('id',lojaAtual.id);
+  if(error) return toast('Erro ao salvar: '+error.message,true);
+  Object.assign(lojaAtual,upd); toast('Aparência salva ✓');
+}
+function abrirPortalReal(){
+  const d=lojaAtual.dominio||`${lojaAtual.slug}.conectay.com.br`;
+  window.open('https://'+d,'_blank');
+}
+
+/* ---- Presets e campos (compartilhado) ---- */
+function renderTemas(elId,pref,cb){
+  document.getElementById(elId).innerHTML = TEMAS.map(t=>
+    `<button title="${t.n}" style="background:linear-gradient(135deg,${t.f},${t.f2});border-color:${t.c}"
+      onclick="aplicarTema('${pref}','${t.f}','${t.f2}','${t.c}');${cb.name}()"></button>`).join('');
+}
+function aplicarTema(pref,f,f2,c){
+  document.getElementById(pref+'_fundo').value=f;
+  document.getElementById(pref+'_fundo2').value=f2;
+  document.getElementById(pref+'_card').value=c;
+}
+function renderPresets(elId,c1Id,c2Id,cb){
+  document.getElementById(elId).innerHTML = PRESETS.map((p,i)=>
+    `<button title="Paleta ${i+1}" style="background:linear-gradient(135deg,${p[0]},${p[1]})"
+      onclick="document.getElementById('${c1Id}').value='${p[0]}';document.getElementById('${c2Id}').value='${p[1]}';${cb.name}()"></button>`).join('');
+}
+function renderCampos(pref, lista){
+  const box=document.getElementById(pref+'_campos');
+  box.innerHTML = lista.map((c,i)=>linhaCampo(pref,c,i)).join('');
+}
+function linhaCampo(pref,c,i){
+  const tipos=['nome','telefone','aniversario','email','cpf','endereco'];
+  return `<div class="campoLinha" data-i="${i}">
+    <select onchange="pref_pv('${pref}')" class="cpChave">
+      ${tipos.map(t=>`<option value="${t}" ${c.campo===t?'selected':''}>${t}</option>`).join('')}
+    </select>
+    <input type="text" class="cpLabel" value="${esc(c.label)}" placeholder="Rótulo" oninput="pref_pv('${pref}')">
+    <label class="obg"><input type="checkbox" class="cpObg" ${c.obrigatorio?'checked':''} onchange="pref_pv('${pref}')">obrig.</label>
+    <button class="del" onclick="this.parentElement.remove();pref_pv('${pref}')">🗑</button></div>`;
+}
+function addCampo(pref){
+  const box=document.getElementById(pref+'_campos');
+  box.insertAdjacentHTML('beforeend', linhaCampo(pref,{campo:'email',label:'E-mail',obrigatorio:false},box.children.length));
+  pref_pv(pref);
+}
+function colherCampos(pref){
+  return [...document.querySelectorAll('#'+pref+'_campos .campoLinha')].map(l=>({
+    campo:l.querySelector('.cpChave').value,
+    label:l.querySelector('.cpLabel').value||l.querySelector('.cpChave').value,
+    obrigatorio:l.querySelector('.cpObg').checked }));
+}
+function pref_pv(pref){ pref==='ap'?pvAp():pvLj(); }
+
+/* =========================================================
+   ADMIN — LISTA E EDITOR COMPLETO DE LOJAS
+========================================================= */
+function renderLojasAdmin(){
+  tabelaLojas.innerHTML=`<div class="tWrap"><table><thead><tr><th>Loja</th><th>Domínio</th><th>Destino</th>
+    <th>Plano</th><th>Valor</th><th>Venc.</th><th>Status</th><th></th></tr></thead><tbody>
+    ${lojas.map(l=>`<tr>
+      <td><b>${esc(l.nome)}</b><br><small style="color:var(--fraco)">${esc(l.slug)}</small></td>
+      <td>${esc(l.dominio)||'—'}</td>
+      <td>${({instagram:'📸 Instagram',whatsapp:'💬 Grupo WhatsApp',formulario:'📝 Formulário',google_review:'⭐ Google'})[l.destino_tipo]||'—'}</td>
+      <td>${esc(l.plano)||'—'}</td>
+      <td>${l.valor_mensal?('R$ '+Number(l.valor_mensal).toFixed(2)):'—'}</td>
+      <td>${l.dia_vencimento?('dia '+l.dia_vencimento):'—'}</td>
+      <td><span class="badge ${l.ativo?'b-ativo':'b-bloqueado'}">${l.ativo?'ativa':'desligada'}</span></td>
+      <td style="display:flex;gap:6px">
+        <button class="btnG" style="padding:6px 10px" onclick="abrirEditor(${l.id})">✏️</button>
+        <button class="btnG" style="padding:6px 10px" onclick="alternarAtivo(${l.id})">${l.ativo?'⏸':'▶️'}</button>
+      </td></tr>`).join('')}</tbody></table></div>`;
+}
+async function alternarAtivo(id){
+  const l=lojas.find(x=>x.id===id);
+  const {error}=await sb.from('portal_lojas').update({ativo:!l.ativo}).eq('id',id);
+  if(error) return toast('Erro: '+error.message,true);
+  l.ativo=!l.ativo; renderLojasAdmin(); toast(l.ativo?'Loja ativada':'Loja desligada');
+}
+
+function abrirEditor(id){
+  edit = id ? Object.assign({}, lojas.find(l=>l.id===id)) : {};
+  modalTitulo.textContent = id ? 'Editar loja' : 'Nova loja';
+  statusLoja.textContent='';
+  const l=edit;
+  formLoja.innerHTML=`
+    <div class="secao">🏪 Dados do contratante</div>
+    <div><label>Nome da loja *</label><input id="lj_nome" value="${esc(l.nome)}" oninput="pvLj()"></div>
+    <div><label>Slug (identificador) *</label><input id="lj_slug" value="${esc(l.slug)}" placeholder="goldpipe" ${l.id?'disabled':''}></div>
+    <div><label>Responsável</label><input id="lj_responsavel" value="${esc(l.responsavel)}"></div>
+    <div><label>Contato (telefone)</label><input id="lj_contato" value="${esc(l.contato)}"></div>
+    <div><label>CPF / CNPJ</label><input id="lj_documento" value="${esc(l.documento)}"></div>
+    <div><label>E-mail do contratante</label><input id="lj_email" value="${esc(l.email_cliente)}"></div>
+    <div class="full"><label>Endereço</label><input id="lj_endereco" value="${esc(l.endereco)}"></div>
+
+    <div class="secao">🔑 Acesso do cliente ao painel</div>
+    <div><label>E-mail de acesso</label><input id="lj_emailAcesso" value="${esc(l.email_acesso)}" placeholder="cliente@email.com"></div>
+    <div><label>Senha ${l.id?'<small>(vazio = não alterar)</small>':'inicial'}</label>
+      <input id="lj_senhaAcesso" type="password" placeholder="${l.id?'••••••••':'mínimo 6 caracteres'}"></div>
+
+    <div class="secao">🌐 Portal</div>
+    <div class="full"><label>Domínio</label>
+      <div class="sufixo"><input id="lj_dominio" value="${esc((l.dominio||'').replace('.conectay.com.br',''))}" placeholder="goldpipe" oninput="sufixoDominio()">
+      <span id="lj_sufixo">.conectay.com.br</span></div>
+      <small class="dica">Só o nome. Com ponto (ex.: minhaloja.com.br) vira domínio próprio.</small></div>
+    <div class="full"><label>O que o cliente faz pra conectar</label>
+      <select id="lj_destino" onchange="pvLj()">
+        <option value="instagram">📸 Seguir no Instagram</option>
+        <option value="whatsapp">💬 Entrar no grupo do WhatsApp</option>
+        <option value="formulario">📝 Preencher formulário (coleta leads)</option>
+        <option value="google_review">⭐ Avaliar no Google</option>
+      </select></div>
+    <div class="full" id="lj_wrapInsta"><label>Instagram (sem @)</label><input id="lj_insta" value="${esc((l.instagram||'').replace('@',''))}" oninput="pvLj()"></div>
+    <div class="full" id="lj_wrapWpp"><label>Link do grupo do WhatsApp</label><input id="lj_wpp" value="${esc(l.whatsapp_link)}" placeholder="https://chat.whatsapp.com/..."></div>
+    <div class="full" id="lj_wrapGoogle"><label>Link de avaliação do Google</label><input id="lj_google" value="${esc(l.google_review_url)}" placeholder="https://g.page/r/..."></div>
+    <div class="full" id="lj_wrapForm">
+      <label>Título do portal</label><input id="lj_formTitulo" value="${esc(l.form_titulo)}" oninput="pvLj()">
+      <label style="margin-top:12px">Texto do botão</label><input id="lj_botao" value="${esc(l.botao_txt)}" placeholder="Conectar ao Wi-Fi" oninput="pvLj()">
+      <label style="margin-top:12px">Campos do formulário</label>
+      <div class="campos" id="lj_campos"></div>
+      <button class="btnG" style="margin-top:8px" onclick="addCampo('lj')">➕ Adicionar campo</button></div>
+
+    <div class="secao">🎨 Aparência</div>
+    <div class="full"><label>Logo</label>
+      <div class="logoUp" onclick="escolherLogo('lj_logo',pvLj)"><div id="lj_logoBox"></div></div>
+      <input type="hidden" id="lj_logo" value="${esc(l.logo_url)}"></div>
+    <div><label>Cor principal</label><input type="color" id="lj_cor" value="${l.cor||'#0ea5e9'}" style="height:44px;padding:4px" oninput="pvLj()"></div>
+    <div><label>Cor secundária</label><input type="color" id="lj_cor2" value="${l.cor2||l.cor||'#22d3ee'}" style="height:44px;padding:4px" oninput="pvLj()"></div>
+    <div class="full"><label>Paletas do botão</label><div class="presets" id="lj_presets"></div></div>
+    <div class="full"><label>Tema do portal</label><div class="presets" id="lj_temas"></div>
+      <small class="dica">Clique num tema pra aplicar fundo e cartão. A cor do texto se ajusta sozinha pro contraste.</small></div>
+    <div><label>Cor de fundo</label><input type="color" id="lj_fundo" style="height:44px;padding:4px" oninput="pvLj()"></div>
+    <div><label>Fundo — 2ª cor (degradê)</label><input type="color" id="lj_fundo2" style="height:44px;padding:4px" oninput="pvLj()"></div>
+    <div class="full"><label>Cor do cartão</label><input type="color" id="lj_card" style="height:44px;padding:4px" oninput="pvLj()"></div>
+
+
+
+    <div class="secao">🧠 Portal inteligente</div>
+    <div class="full">
+      <label style="display:flex;align-items:center;gap:9px;cursor:pointer">
+        <input type="checkbox" id="lj_rotAtiva" style="width:18px;height:18px;accent-color:var(--azul)" onchange="pvLj()">
+        <span style="color:var(--texto);font-size:.86rem">Reconhecer clientes que já vieram</span></label>
+      <small class="dica">O portal identifica o aparelho. Quem <b>já se cadastrou não preenche o formulário de novo</b>
+      e, a cada visita, recebe um pedido diferente da lista abaixo.</small></div>
+    <div class="full" id="lj_wrapRot">
+      <label>Rodízio de pedidos (na ordem)</label>
+      <div style="display:flex;flex-direction:column;gap:7px">
+        <label style="display:flex;align-items:center;gap:8px;margin:0;color:var(--texto);font-size:.83rem">
+          <input type="checkbox" class="lj_rotD" value="instagram" style="width:16px;height:16px;accent-color:var(--azul)">📸 Seguir no Instagram</label>
+        <label style="display:flex;align-items:center;gap:8px;margin:0;color:var(--texto);font-size:.83rem">
+          <input type="checkbox" class="lj_rotD" value="whatsapp" style="width:16px;height:16px;accent-color:var(--azul)">💬 Entrar no grupo do WhatsApp</label>
+        <label style="display:flex;align-items:center;gap:8px;margin:0;color:var(--texto);font-size:.83rem">
+          <input type="checkbox" class="lj_rotD" value="google_review" style="width:16px;height:16px;accent-color:var(--azul)">⭐ Avaliar no Google</label>
+        <label style="display:flex;align-items:center;gap:8px;margin:0;color:var(--texto);font-size:.83rem">
+          <input type="checkbox" class="lj_rotD" value="site" style="width:16px;height:16px;accent-color:var(--azul)">🌐 Visitar o site</label>
+      </div>
+      <small class="dica">Só entram no rodízio os que estiverem preenchidos acima (link do grupo, Instagram etc.).</small>
+      <label style="margin-top:12px">Pedir o cadastro de novo a cada</label>
+      <select id="lj_recad">
+        <option value="0">Nunca (cadastra uma vez só)</option>
+        <option value="6">6 meses</option><option value="12">12 meses</option>
+      </select>
+      <small class="dica">Útil pra manter a base atualizada sem incomodar quem vem sempre.</small></div>
+
+    <div class="secao">📇 Cartão de contato</div>
+    <div class="full">
+      <label style="display:flex;align-items:center;gap:9px;cursor:pointer">
+        <input type="checkbox" id="lj_vcardAtivo" style="width:18px;height:18px;accent-color:var(--azul)" onchange="pvLj()">
+        <span style="color:var(--texto);font-size:.86rem">Oferecer "Salvar nosso contato" após conectar</span></label>
+      <small class="dica">Libera lista de transmissão no WhatsApp e faz os status da loja aparecerem pro cliente.</small></div>
+    <div id="lj_wrapVcard"><label>WhatsApp da loja</label><input id="lj_vcardTel" placeholder="(21) 99999-9999"></div>
+    <div id="lj_wrapVcard2"><label>Nome na agenda</label><input id="lj_vcardNome" placeholder="Nome da loja"></div>
+
+    <div class="secao">📶 Wi-Fi / roteador</div>
+    <div><label>Código do Wi-Fi <small>(libera a internet)</small></label><input id="lj_codigo" value="${esc(l.codigo_wifi)}" placeholder="ex: FULANO2026"></div>
+    <div><label>Segredo do AP <small>(mesma senha no roteador)</small></label><input id="lj_secret" value="${esc(l.ap_secret)}" placeholder="senha forte"></div>
+
+    <div class="secao">💰 Cobrança <small style="color:var(--fraco);font-weight:400">(controle interno)</small></div>
+    <div><label>Valor mensal (R$)</label><input id="lj_valor" type="number" step="0.01" value="${l.valor_mensal??''}"></div>
+    <div><label>Dia do vencimento</label><input id="lj_diavenc" type="number" min="1" max="31" value="${l.dia_vencimento??''}"></div>
+    <div><label>Plano</label><input id="lj_plano" value="${esc(l.plano)}" placeholder="Básico / Pro"></div>
+    <div><label>Status do pagamento</label>
+      <select id="lj_statusPg">
+        <option value="">—</option><option value="em dia">em dia</option>
+        <option value="pendente">pendente</option><option value="atrasado">atrasado</option></select></div>
+    <div class="full"><label>Observações</label><textarea id="lj_obs" rows="2">${esc(l.obs)}</textarea></div>`;
+
+  lj_destino.value = l.destino_tipo || 'instagram';
+  lj_statusPg.value = l.status_pagamento || '';
+  lj_rotAtiva.checked = !!l.rotacao_ativa;
+  lj_recad.value = String(l.recadastro_meses||0);
+  (function(){ const sel=l.rotacao_destinos||['instagram','whatsapp'];
+    document.querySelectorAll('.lj_rotD').forEach(c=>c.checked=sel.includes(c.value)); })();
+  lj_vcardAtivo.checked = !!l.vcard_ativo;
+  lj_vcardTel.value = l.vcard_telefone || '';
+  lj_vcardNome.value = l.vcard_nome || l.nome || '';
+  lj_fundo.value = l.cor_fundo || '#0a0f1e';
+  lj_fundo2.value = l.cor_fundo2 || l.cor_fundo || '#12213f';
+  lj_card.value = l.cor_card || '#101827';
+  renderTemas('lj_temas','lj',pvLj);
+  renderPresets('lj_presets','lj_cor','lj_cor2',pvLj);
+  renderCampos('lj', lerCampos(l.form_campos));
+  sufixoDominio(); pvLj();
+  modalBg.classList.add('on');
+}
+function fecharEditor(){ modalBg.classList.remove('on'); edit=null; }
+function sufixoDominio(){ lj_sufixo.style.display = lj_dominio.value.includes('.') ? 'none':'inline-block'; }
+function lerFormLoja(){
+  return { nome:lj_nome.value, logo_url:lj_logo.value, cor:lj_cor.value, cor2:lj_cor2.value,
+    destino_tipo:lj_destino.value, instagram:lj_insta.value.replace('@',''),
+    whatsapp_link:lj_wpp.value, google_review_url:lj_google.value,
+    form_titulo:lj_formTitulo.value, botao_txt:lj_botao.value, form_campos:colherCampos('lj'),
+    vcard_ativo:lj_vcardAtivo.checked, vcard_telefone:lj_vcardTel.value.replace(/\D/g,''),
+    vcard_nome:lj_vcardNome.value,
+    cor_fundo:lj_fundo.value, cor_fundo2:lj_fundo2.value, cor_card:lj_card.value,
+    rotacao_ativa:lj_rotAtiva.checked, recadastro_meses:Number(lj_recad.value||0),
+    rotacao_destinos:[...document.querySelectorAll('.lj_rotD')].filter(c=>c.checked).map(c=>c.value) };
+}
+function pvLj(){
+  const l=lerFormLoja();
+  lj_logoBox.innerHTML = l.logo_url ? `<img src="${esc(l.logo_url)}" alt="">`
+    : '<div class="ph"><span class="ico">🖼️</span>Clique pra enviar a logo<br><small>PNG ou JPG</small></div>';
+  lj_wrapInsta.style.display  = l.destino_tipo==='instagram'?'block':'none';
+  lj_wrapWpp.style.display    = l.destino_tipo==='whatsapp'?'block':'none';
+  lj_wrapGoogle.style.display = l.destino_tipo==='google_review'?'block':'none';
+  lj_wrapForm.style.display   = l.destino_tipo==='formulario'?'block':'none';
+  lj_wrapRot.style.display    = lj_rotAtiva.checked?'block':'none';
+  lj_wrapVcard.style.display  = lj_vcardAtivo.checked?'block':'none';
+  lj_wrapVcard2.style.display = lj_vcardAtivo.checked?'block':'none';
+  pvLoja.innerHTML = preview(l);
+}
+
+async function salvarLoja(){
+  const f=lerFormLoja();
+  const nome=f.nome.trim(), slug=(edit.slug||lj_slug.value).trim().toLowerCase();
+  if(!nome||!slug) return toast('Preencha nome e slug',true);
+  let dominio=lj_dominio.value.trim().toLowerCase();
+  if(dominio && !dominio.includes('.')) dominio+='.conectay.com.br';
+  if(f.destino_tipo==='whatsapp' && !f.whatsapp_link.trim()) return toast('Informe o link do grupo',true);
+  if(f.vcard_ativo && (f.vcard_telefone||'').length<10) return toast('Informe o WhatsApp da loja com DDD pro cartão de contato',true);
+  if(f.destino_tipo==='google_review' && !f.google_review_url.trim()) return toast('Informe o link de avaliação',true);
+
+  const emailAcesso=lj_emailAcesso.value.trim(), senhaAcesso=lj_senhaAcesso.value.trim();
+  if(!edit.id && emailAcesso && !senhaAcesso) return toast('Informe a senha inicial do cliente',true);
+  if(senhaAcesso && senhaAcesso.length<6) return toast('A senha precisa ter ao menos 6 caracteres',true);
+
+  const dados={ nome, slug, dominio:dominio||null,
+    responsavel:lj_responsavel.value.trim()||null, contato:lj_contato.value.trim()||null,
+    documento:lj_documento.value.trim()||null, email_cliente:lj_email.value.trim()||null,
+    endereco:lj_endereco.value.trim()||null, email_acesso:emailAcesso||null,
+    destino_tipo:f.destino_tipo, instagram:f.instagram.trim()||null,
+    whatsapp_link:f.whatsapp_link.trim()||null, google_review_url:f.google_review_url.trim()||null,
+    form_titulo:f.form_titulo.trim()||null, botao_txt:f.botao_txt.trim()||null,
+    form_campos:f.destino_tipo==='formulario'?f.form_campos:(edit.form_campos||null),
+    logo_url:f.logo_url||null, cor:f.cor, cor2:f.cor2,
+    vcard_ativo:f.vcard_ativo, vcard_telefone:f.vcard_telefone||null, vcard_nome:f.vcard_nome.trim()||null,
+    cor_fundo:f.cor_fundo, cor_fundo2:f.cor_fundo2, cor_card:f.cor_card,
+    rotacao_ativa:f.rotacao_ativa, recadastro_meses:f.recadastro_meses,
+    rotacao_destinos:f.rotacao_ativa?['formulario',...f.rotacao_destinos]
+      :((edit.rotacao_destinos||[]).length?edit.rotacao_destinos:['formulario','instagram','whatsapp']),
+    codigo_wifi:lj_codigo.value.trim()||null, ap_secret:lj_secret.value.trim()||null,
+    valor_mensal:lj_valor.value?Number(lj_valor.value):null,
+    dia_vencimento:lj_diavenc.value?Number(lj_diavenc.value):null,
+    plano:lj_plano.value.trim()||null, status_pagamento:lj_statusPg.value||null,
+    obs:lj_obs.value.trim()||null };
+
+  // colunas NOT NULL: se vier vazio, não envia (o banco usa o padrão)
+  ['rotacao_destinos','rotacao_ativa','recadastro_meses','vcard_ativo',
+   'cor','cor2','cor_fundo','cor_card'].forEach(k=>{ if(dados[k]==null) delete dados[k]; });
+
+  statusLoja.textContent='Salvando...';
+  let lojaId=edit.id, erro=null;
+  if(edit.id){
+    const {error}=await sb.from('portal_lojas').update(dados).eq('id',edit.id); erro=error;
+  } else {
+    dados.ativo=true;
+    const {data,error}=await sb.from('portal_lojas').insert(dados).select().single();
+    erro=error; if(data) lojaId=data.id;
+  }
+  if(erro){ statusLoja.textContent=''; return toast('Erro: '+erro.message,true); }
+
+  // cria/atualiza o login do cliente via RPC própria (SECURITY DEFINER)
+  if(emailAcesso && senhaAcesso){
+    statusLoja.textContent='Criando login do cliente...';
+    const { data:res, error:errRpc } = await sb.rpc('conectay_criar_usuario',
+      { p_email: emailAcesso, p_senha: senhaAcesso, p_loja_id: lojaId });
+    if(errRpc){
+      toast('Loja salva, mas o login NÃO foi criado: '+errRpc.message+
+            ' — recarregue a página com Ctrl+Shift+R e tente de novo.', true);
+    } else if(res && res.ok === false){
+      toast('Loja salva, mas o login falhou: '+res.erro, true);
+    } else {
+      toast('Loja salva e login do cliente criado ✓');
     }
-    function soltar(ev) {
-      document.removeEventListener('mousemove', mover);
-      document.removeEventListener('mouseup', soltar);
-      sb.classList.remove('resizing'); if (main) main.classList.remove('resizing');
-      handle.classList.remove('drag');
-      var w = ev.clientX;
-      if (w < SB_SNAP) { sbSalvar(SB_DEFAULT, true); }
-      else { w = Math.min(Math.max(w, SB_SNAP), SB_MAX); sbSalvar(w, false); }
-    }
-    document.addEventListener('mousemove', mover);
-    document.addEventListener('mouseup', soltar);
-  });
-}
-
-window.addEventListener('DOMContentLoaded', function() {
-  sbAplicar(sbLargura(), sbColapsado());
-  sbInitResize('sbResizeAdmin', 'sbAdmin');
-  sbInitResize('sbResizeCliente', 'sbCliente');
-});
-
-// ═══════════════════════════════════════════
-// UTILS
-// ═══════════════════════════════════════════
-function toast(msg, tipo) {
-  var t = document.getElementById('toast');
-  t.textContent = msg;
-  t.style.background = tipo === 'err' ? '#ef4444' : '#0ea5e9';
-  t.style.color = '#fff';
-  t.style.display = 'block';
-  clearTimeout(t._to);
-  t._to = setTimeout(function() { t.style.display = 'none'; }, 3000);
-}
-function esc(v) {
-  return String(v == null ? '' : v).replace(/[&<>"]/g, function(c) {
-    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];
-  });
-}
-function fmtData(iso) {
-  if (!iso) return '';
-  return new Date(iso).toLocaleDateString('pt-BR');
-}
-function pg(id) {
-  var el = document.getElementById(id);
-  if (id === 'pgAdmin' || id === 'pgCliente') { el.style.display = 'flex'; }
-  else { el.style.display = 'block'; }
-}
-function hidePg(id) { document.getElementById(id).style.display = 'none'; }
-
-// ═══════════════════════════════════════════
-// AUTH
-// ═══════════════════════════════════════════
-window.addEventListener('DOMContentLoaded', async function() {
-  var s = await SB.auth.getSession();
-  if (s.data && s.data.session) verificarAcesso(s.data.session.user);
-});
-
-async function fazerLogin() {
-  var email = document.getElementById('lgEmail').value.trim();
-  var senha  = document.getElementById('lgSenha').value;
-  var erro   = document.getElementById('lgErro');
-  var btn    = document.getElementById('lgBtn');
-  erro.style.display = 'none';
-  if (!email || !senha) { erro.textContent = 'Preencha e-mail e senha.'; erro.style.display = 'block'; return; }
-  btn.textContent = 'Entrando...'; btn.disabled = true;
-  var r = await SB.auth.signInWithPassword({ email: email, password: senha });
-  btn.textContent = 'Entrar'; btn.disabled = false;
-  if (r.error) { erro.textContent = 'E-mail ou senha incorretos.'; erro.style.display = 'block'; return; }
-  verificarAcesso(r.data.user);
-}
-
-async function verificarAcesso(user) {
-  var ra = await SB.from('admin_perfis').select('papel').eq('email', user.email);
-  if (!ra.error && ra.data && ra.data.length > 0) {
-    document.getElementById('admEmail').textContent = user.email;
-    hidePg('pgLogin');
-    pg('pgAdmin');
-    admCarregar();
-    return;
-  }
-  var rc = await SB.from('portal_lojas').select('*').eq('email_acesso', user.email).maybeSingle();
-  if (!rc.error && rc.data) {
-    CLI_LOJA = rc.data;
-    hidePg('pgLogin');
-    pg('pgCliente');
-    cliIniciar(user);
-    return;
-  }
-  toast('Acesso não autorizado.', 'err');
-  await SB.auth.signOut();
-}
-
-async function sair() { await SB.auth.signOut(); location.reload(); }
-
-// ═══════════════════════════════════════════
-// ADMIN
-// ═══════════════════════════════════════════
-var ADM_LOJAS   = [];
-var ADM_ACESSOS = [];
-var ADM_CHART   = null;
-
-async function admCarregar() {
-  var ini30 = new Date(Date.now() - 30*864e5).toISOString();
-  var rl = await SB.from('portal_lojas').select('*').order('criado_em', {ascending: false});
-  ADM_LOJAS = rl.data || [];
-  var ra = await SB.from('portal_acessos').select('loja_id,criado_em').gte('criado_em', ini30);
-  ADM_ACESSOS = ra.data || [];
-  admRenderLojas();
-  admOnlineBadges();
-}
-
-function admRenderLojas() {
-  var box  = document.getElementById('admLojasGrid');
-  var hoje = new Date().toISOString().slice(0,10);
-  document.getElementById('admSubLojas').textContent = ADM_LOJAS.length + ' loja(s) cadastrada(s)';
-  if (!ADM_LOJAS.length) { box.innerHTML = '<div style="color:#64748b">Nenhuma loja cadastrada.</div>'; return; }
-  box.innerHTML = ADM_LOJAS.map(function(l) {
-    var venc = l.vencimento && l.vencimento <= hoje;
-    var cnt  = ADM_ACESSOS.filter(function(a) { return a.loja_id === l.id; }).length;
-    var dest = l.destino_tipo || 'instagram';
-    var destIcon = dest === 'instagram' ? '📸' : dest === 'whatsapp' ? '💬' : dest === 'formulario' ? '📋' : '—';
-    return '<div class="loja-card" onclick="admEditar(' + l.id + ')">' +
-      '<div class="loja-card-header">' +
-        '<div><div class="loja-nome">' + esc(l.nome) +
-          (venc ? '<span class="badge-venc">VENCIDA</span>' : '') +
-          '<span class="badge-online" id="bl_' + l.id + '" style="display:none">0 online</span>' +
-        '</div>' +
-        '<div class="loja-slug">@' + esc(l.slug) + ' · ' + destIcon + ' ' + dest + '</div></div>' +
-        '<div class="loja-dot' + (l.ativo ? '' : ' off') + '"></div>' +
-      '</div>' +
-      '<div class="loja-stats">' +
-        '<div class="loja-stat"><b>' + cnt + '</b>30 dias</div>' +
-        (l.vencimento ? '<div class="loja-stat"><b>' + l.vencimento + '</b>vence</div>' : '') +
-      '</div>' +
-    '</div>';
-  }).join('');
-}
-
-async function admOnlineBadges() {
-  var ini15 = new Date(Date.now() - 15*60000).toISOString();
-  var r = await SB.from('portal_acessos').select('loja_id').gte('criado_em', ini15);
-  var cnt = {};
-  (r.data || []).forEach(function(a) { cnt[a.loja_id] = (cnt[a.loja_id] || 0) + 1; });
-  ADM_LOJAS.forEach(function(l) {
-    var b = document.getElementById('bl_' + l.id);
-    if (!b) return;
-    var n = cnt[l.id] || 0;
-    if (n > 0) { b.textContent = n + ' online'; b.style.display = 'inline-block'; }
-  });
-}
-
-function admPg(pg_id) {
-  document.querySelectorAll('.pg').forEach(function(el) { el.classList.remove('ativo'); });
-  document.querySelectorAll('.sb-item').forEach(function(el) { el.classList.remove('ativo'); });
-  if (pg_id === 'lojas')   { document.getElementById('admPgLojas').classList.add('ativo');   document.getElementById('admTabLojas').classList.add('ativo'); }
-  if (pg_id === 'nova')    { document.getElementById('admPgNova').classList.add('ativo');    document.getElementById('admTabNova').classList.add('ativo'); admNovaLoja(); }
-  if (pg_id === 'editar')  { document.getElementById('admPgNova').classList.add('ativo'); }
-  if (pg_id === 'grafico') { document.getElementById('admPgGrafico').classList.add('ativo'); document.getElementById('admTabGrafico').classList.add('ativo'); admRenderChart(); }
-}
-
-function admDestTab(dest) {
-  document.getElementById('fDestino').value = dest;
-  ['Insta','Wpp','Form'].forEach(function(d) { document.getElementById('dtab'+d).classList.remove('ativo'); });
-  ['Insta','Wpp','Form'].forEach(function(d) { document.getElementById('dc'+d).classList.remove('ativo'); });
-  var map = {instagram:'Insta', whatsapp:'Wpp', formulario:'Form'};
-  if (map[dest]) { document.getElementById('dtab'+map[dest]).classList.add('ativo'); document.getElementById('dc'+map[dest]).classList.add('ativo'); }
-}
-
-function admNovaLoja() {
-  document.getElementById('admFormTitulo').textContent = 'Nova Loja';
-  document.getElementById('btnDel').style.display = 'none';
-  ['fId','fNome','fSlug','fDominio','fResp','fContato','fDoc','fEmailCliente',
-   'fLogo','fMensagem','fSecret','fCodigo','fObs','fVenc','fValor','fEmailAcesso','fSenhaAcesso','fFormTitulo','fInsta','fWpp'].forEach(function(id) {
-    var el = document.getElementById(id);
-    if (el) el.value = '';
-  });
-  document.getElementById('fCor').value = '#ff6a1a';
-  document.getElementById('fCor2').value = '#ff6a1a';
-  document.getElementById('fAtivo').value = 'true';
-  document.getElementById('fPlano').value = 'mensal';
-  admDestTab('instagram');
-  domToggleSuffix();
-  ['nome','tel','email','aniv','bairro'].forEach(function(c) {
-    var el = document.getElementById('fc_'+c); if (el) el.checked = (c === 'nome');
-    var ob = document.getElementById('fc_'+c+'_obrig'); if (ob) ob.checked = (c === 'nome');
-  });
-}
-
-function admEditar(id) {
-  var l = ADM_LOJAS.find(function(x) { return x.id === id; });
-  if (!l) return;
-  admPg('editar');
-  document.getElementById('admFormTitulo').textContent = 'Editar Loja — ' + l.nome;
-  document.getElementById('btnDel').style.display = 'inline-block';
-  var set = function(fid, val) { var el = document.getElementById(fid); if (el) el.value = val || ''; };
-  set('fId', l.id); set('fNome', l.nome); set('fSlug', l.slug); set('fDominio', despirDominio(l.dominio));
-  domToggleSuffix();
-  set('fResp', l.responsavel); set('fContato', l.contato); set('fDoc', l.documento);
-  set('fEmailCliente', l.email_cliente); set('fLogo', l.logo_url); set('fMensagem', l.mensagem);
-  set('fCor', l.cor || '#ff6a1a'); set('fCor2', l.cor2 || '#ff6a1a');
-  set('fSecret', l.ap_secret); set('fCodigo', l.codigo_wifi);
-  set('fObs', l.obs); set('fVenc', l.vencimento); set('fValor', l.valor_mensal);
-  set('fEmailAcesso', l.email_acesso); set('fSenhaAcesso', '');
-  set('fInsta', l.instagram); set('fWpp', l.whatsapp_link); set('fFormTitulo', l.form_titulo);
-  document.getElementById('fAtivo').value = l.ativo ? 'true' : 'false';
-  document.getElementById('fPlano').value = l.plano || 'mensal';
-  admDestTab(l.destino_tipo || 'instagram');
-  var fc = l.form_campos || {};
-  ['nome','tel','email','aniv','bairro'].forEach(function(c) {
-    var el = document.getElementById('fc_'+c); if (el) el.checked = !!fc[c];
-    var ob = document.getElementById('fc_'+c+'_obrig'); if (ob) ob.checked = !!(fc[c] && fc[c].obrig);
-  });
-}
-
-function admGetFormCampos() {
-  var fc = {};
-  ['nome','tel','email','aniv','bairro'].forEach(function(c) {
-    var el = document.getElementById('fc_'+c);
-    if (el && el.checked) {
-      var ob = document.getElementById('fc_'+c+'_obrig');
-      fc[c] = {obrig: !!(ob && ob.checked)};
-    }
-  });
-  return fc;
-}
-
-// Domínio: você digita só o nome; completamos com .conectay.com.br.
-// Se digitar um domínio completo (com ponto), respeita o domínio próprio.
-function montarDominio() {
-  var v = String(document.getElementById('fDominio').value || '').trim().toLowerCase();
-  v = v.replace(/^https?:\/\//, '').replace(/\/.*$/, '').replace(/\s+/g, '');
-  if (!v) return null;
-  if (v.indexOf('.') > -1) return v;            // domínio próprio, usa como está
-  return v + '.conectay.com.br';                 // só o nome → completa
-}
-function despirDominio(dom) {
-  if (!dom) return '';
-  return String(dom).trim().toLowerCase().replace(/\.conectay\.com\.br$/, '');
-}
-// esconde o ".conectay.com.br" quando o valor já é um domínio próprio (tem ponto)
-function domToggleSuffix() {
-  var v = document.getElementById('fDominio').value || '';
-  var suf = document.getElementById('domSuffix');
-  if (suf) suf.style.display = v.indexOf('.') > -1 ? 'none' : '';
-}
-
-async function admSalvar() {
-  var id    = document.getElementById('fId').value;
-  var nome  = document.getElementById('fNome').value.trim();
-  var slug  = document.getElementById('fSlug').value.trim().toLowerCase().replace(/[^a-z0-9]/g,'');
-  var email = document.getElementById('fEmailAcesso').value.trim();
-  var senha = document.getElementById('fSenhaAcesso').value;
-  if (!nome || !slug) { toast('Nome e Slug são obrigatórios.', 'err'); return; }
-  var dados = {
-    nome: nome, slug: slug,
-    dominio:      montarDominio(),
-    responsavel:  document.getElementById('fResp').value.trim()    || null,
-    contato:      document.getElementById('fContato').value.trim() || null,
-    documento:    document.getElementById('fDoc').value.trim()     || null,
-    email_cliente:document.getElementById('fEmailCliente').value.trim() || null,
-    logo_url:     document.getElementById('fLogo').value.trim()    || null,
-    mensagem:     document.getElementById('fMensagem').value.trim()|| null,
-    cor:          document.getElementById('fCor').value,
-    cor2:         document.getElementById('fCor2').value,
-    instagram:    document.getElementById('fInsta').value.trim()   || null,
-    whatsapp_link:document.getElementById('fWpp').value.trim()     || null,
-    destino_tipo: document.getElementById('fDestino').value,
-    form_titulo:  document.getElementById('fFormTitulo').value.trim() || null,
-    form_campos:  admGetFormCampos(),
-    ap_secret:    document.getElementById('fSecret').value.trim()  || null,
-    codigo_wifi:  document.getElementById('fCodigo').value.trim()  || null,
-    obs:          document.getElementById('fObs').value.trim()     || null,
-    vencimento:   document.getElementById('fVenc').value           || null,
-    valor_mensal: parseFloat(document.getElementById('fValor').value) || null,
-    ativo:        document.getElementById('fAtivo').value === 'true',
-    plano:        document.getElementById('fPlano').value,
-    email_acesso: email || null
-  };
-  var r = id
-    ? await SB.from('portal_lojas').update(dados).eq('id', id)
-    : await SB.from('portal_lojas').insert(dados);
-  if (r.error) { toast('Erro: ' + r.error.message, 'err'); return; }
-  if (email && senha) {
-    var s = await SB.auth.getSession();
-    var token = s.data.session ? s.data.session.access_token : '';
-    try {
-      await fetch(EDGE, {
-        method: 'POST',
-        headers: {'Content-Type':'application/json', 'Authorization':'Bearer '+token},
-        body: JSON.stringify({action:'criar_usuario_cliente', email: email, senha: senha})
-      });
-    } catch(e) {}
-  }
-  toast('Salvo com sucesso!');
-  admCarregar();
-  admPg('lojas');
-}
-
-async function admDeletar() {
-  var id = document.getElementById('fId').value;
-  if (!id || !confirm('Excluir esta loja e todos os dados?')) return;
-  await SB.from('portal_lojas').delete().eq('id', id);
-  toast('Loja excluída.');
-  admCarregar();
-  admPg('lojas');
-}
-
-function admRenderChart() {
-  var dias = {};
-  var hoje = new Date(); hoje.setHours(0,0,0,0);
-  for (var i = 29; i >= 0; i--) {
-    var d = new Date(hoje - i*864e5);
-    var k = d.toLocaleDateString('pt-BR', {day:'2-digit',month:'2-digit'});
-    dias[k] = 0;
-  }
-  ADM_ACESSOS.forEach(function(a) {
-    var d = new Date(a.criado_em); d.setHours(0,0,0,0);
-    var k = d.toLocaleDateString('pt-BR', {day:'2-digit',month:'2-digit'});
-    if (k in dias) dias[k]++;
-  });
-  if (ADM_CHART) { ADM_CHART.destroy(); ADM_CHART = null; }
-  ADM_CHART = new Chart(document.getElementById('admChart'), {
-    type: 'bar',
-    data: { labels: Object.keys(dias), datasets: [{ data: Object.values(dias), backgroundColor:'rgba(14,165,233,.3)', borderColor:'rgba(14,165,233,.8)', borderWidth:1.5, borderRadius:4 }] },
-    options: { responsive:true, maintainAspectRatio:false, animation:false, plugins:{legend:{display:false}}, scales:{ x:{grid:{color:'rgba(255,255,255,.04)'}, ticks:{color:'#64748b',font:{size:10},maxRotation:0,maxTicksLimit:10}}, y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#64748b',font:{size:10}},beginAtZero:true} } }
-  });
-}
-
-// ═══════════════════════════════════════════
-// CLIENTE
-// ═══════════════════════════════════════════
-var CLI_LOJA    = null;
-var CLI_LEADS   = [];
-var CLI_ONLINE  = [];
-var CLI_CHART   = null;
-var CLI_MSGS    = [];
-var CLI_MSGS_FILTRO = 'todas';
-
-async function cliIniciar(user) {
-  document.getElementById('cliNome').textContent   = CLI_LOJA.nome || '—';
-  document.getElementById('cliEmailEl').textContent = user.email;
-  document.getElementById('cliSubDash').textContent = 'Portal: ' + (CLI_LOJA.dominio || CLI_LOJA.slug);
-  var link = document.getElementById('cliLinkPortal');
-  if (CLI_LOJA.dominio) link.href = 'https://' + CLI_LOJA.dominio;
-  cliCarregarDash();
-  cliCarregarLeads();
-  cliCarregarApa();
-  cliCarregarMsgs();
-}
-
-function cliPg(pg_id) {
-  document.querySelectorAll('.pg').forEach(function(el) { el.classList.remove('ativo'); });
-  document.querySelectorAll('.sb-item').forEach(function(el) { el.classList.remove('ativo'); });
-  if (pg_id === 'dash')  { document.getElementById('cliPgDash').classList.add('ativo');  document.getElementById('cliTabDash').classList.add('ativo'); }
-  if (pg_id === 'leads') { document.getElementById('cliPgLeads').classList.add('ativo'); document.getElementById('cliTabLeads').classList.add('ativo'); }
-  if (pg_id === 'msgs')  { document.getElementById('cliPgMsgs').classList.add('ativo');  document.getElementById('cliTabMsgs').classList.add('ativo'); cliCarregarMsgs(); }
-  if (pg_id === 'apa')   { document.getElementById('cliPgApa').classList.add('ativo');   document.getElementById('cliTabApa').classList.add('ativo'); }
-}
-
-async function cliCarregarDash() {
-  var agora = new Date();
-  var ini30 = new Date(agora - 30*864e5).toISOString();
-  var r = await SB.from('portal_acessos').select('criado_em').eq('loja_id', CLI_LOJA.id).gte('criado_em', ini30);
-  var dados = r.data || [];
-  var mes   = agora.getMonth(), ano = agora.getFullYear();
-  var ini7  = new Date(agora - 7*864e5);
-  var cMes  = dados.filter(function(a) { var d = new Date(a.criado_em); return d.getMonth()===mes && d.getFullYear()===ano; }).length;
-  var c7    = dados.filter(function(a) { return new Date(a.criado_em) >= ini7; }).length;
-  var c30   = dados.length;
-  var mesAnt = mes===0?11:mes-1, anoAnt = mes===0?ano-1:ano;
-  var iniMA = new Date(anoAnt, mesAnt, 1).toISOString();
-  var fimMA = new Date(ano, mes, 1).toISOString();
-  var ra = await SB.from('portal_acessos').select('id', {count:'exact',head:true}).eq('loja_id', CLI_LOJA.id).gte('criado_em', iniMA).lt('criado_em', fimMA);
-  document.getElementById('cliMes').textContent  = cMes;
-  document.getElementById('cli7d').textContent   = c7;
-  document.getElementById('cli30d').textContent  = c30;
-  document.getElementById('cliAnt').textContent  = ra.count || 0;
-  cliRenderChart(dados);
-  cliCarregarOnline();
-}
-
-function cliRenderChart(dados) {
-  var dias = {};
-  var hoje = new Date(); hoje.setHours(0,0,0,0);
-  for (var i = 29; i >= 0; i--) {
-    var d = new Date(hoje - i*864e5);
-    var k = d.toLocaleDateString('pt-BR', {day:'2-digit',month:'2-digit'});
-    dias[k] = 0;
-  }
-  dados.forEach(function(a) {
-    var d = new Date(a.criado_em); d.setHours(0,0,0,0);
-    var k = d.toLocaleDateString('pt-BR', {day:'2-digit',month:'2-digit'});
-    if (k in dias) dias[k]++;
-  });
-  if (CLI_CHART) { CLI_CHART.destroy(); CLI_CHART = null; }
-  CLI_CHART = new Chart(document.getElementById('cliChart'), {
-    type: 'bar',
-    data: { labels: Object.keys(dias), datasets: [{ data: Object.values(dias), backgroundColor:'rgba(14,165,233,.3)', borderColor:'rgba(14,165,233,.8)', borderWidth:1.5, borderRadius:4 }] },
-    options: { responsive:true, maintainAspectRatio:false, animation:false, plugins:{legend:{display:false}}, scales:{ x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#64748b',font:{size:10},maxRotation:0,maxTicksLimit:10}}, y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#64748b',font:{size:10}},beginAtZero:true} } }
-  });
-}
-
-async function cliCarregarOnline() {
-  var ini15 = new Date(Date.now() - 15*60000).toISOString();
-  var r = await SB.from('portal_acessos').select('mac,dispositivo,criado_em').eq('loja_id', CLI_LOJA.id).gte('criado_em', ini15).order('criado_em', {ascending:false});
-  CLI_ONLINE = r.data || [];
-  document.getElementById('cliOnlineCount').textContent = CLI_ONLINE.length;
-}
-
-function cliVerOnline() {
-  var modal = document.getElementById('modalOnline');
-  var body  = document.getElementById('modalOnlineBody');
-  document.getElementById('modalOnlineTitulo').textContent = CLI_LOJA.nome + ' — online agora (' + CLI_ONLINE.length + ')';
-  if (!CLI_ONLINE.length) {
-    body.innerHTML = '<div style="color:#64748b;text-align:center;padding:20px">Ninguém online no momento.</div>';
   } else {
-    body.innerHTML = CLI_ONLINE.map(function(a) {
-      return '<div class="online-item">' +
-        '<span><div class="online-mac">' + esc(a.mac||'—') + '</div><div class="online-dev">' + esc(a.dispositivo||'—') + '</div></span>' +
-        '<span class="online-time">' + new Date(a.criado_em).toLocaleTimeString('pt-BR', {hour:'2-digit',minute:'2-digit'}) + '</span>' +
-      '</div>';
-    }).join('');
+    toast('Loja salva ✓');
   }
-  modal.classList.add('open');
+
+  statusLoja.textContent='';
+  const {data:ls}=await sb.from('portal_lojas').select('*').order('nome');
+  lojas=ls||[]; renderLojasAdmin();
+  seletorLoja.innerHTML=lojas.map(l=>`<option value="${l.id}">${esc(l.nome)}</option>`).join('');
+  if(lojaAtual){ const at=lojas.find(l=>l.id===lojaAtual.id); if(at){ lojaAtual=at; montarAparencia(); } }
+  fecharEditor();
 }
 
-async function cliCarregarLeads() {
-  var r = await SB.from('portal_leads').select('dados,criado_em').eq('loja_id', CLI_LOJA.id).order('criado_em',{ascending:false}).limit(500);
-  CLI_LEADS = r.data || [];
-  var tbody = document.getElementById('cliLeadsBody');
-  document.getElementById('cliLeadsTitulo').textContent = 'Leads coletados (' + CLI_LEADS.length + ')';
-  if (!CLI_LEADS.length) {
-    tbody.innerHTML = '<tr><td colspan="6" class="tbl-empty">Nenhum lead ainda.</td></tr>';
-    return;
-  }
-  tbody.innerHTML = CLI_LEADS.map(function(l) {
-    var d = l.dados || {};
-    return '<tr>' +
-      '<td>' + esc(d.nome||'—') + '</td>' +
-      '<td>' + esc(d.telefone||d.phone||d.celular||'—') + '</td>' +
-      '<td>' + esc(d.email||'—') + '</td>' +
-      '<td>' + esc(d.aniversario||d.data_nascimento||'—') + '</td>' +
-      '<td>' + esc(d.bairro||'—') + '</td>' +
-      '<td>' + fmtData(l.criado_em) + '</td>' +
-    '</tr>';
-  }).join('');
+/* ---------------- Util ---------------- */
+function irAba(nome){
+  document.querySelectorAll('.navItem').forEach(b=>b.classList.toggle('on',b.dataset.aba===nome));
+  document.querySelectorAll('.aba').forEach(a=>a.classList.toggle('ativa',a.id==='aba-'+nome));
+  tituloAba.textContent = titulos[nome]||nome;
 }
+function toast(t,ruim){ const el=document.getElementById('toast'); el.textContent=t;
+  el.className='toast'+(ruim?' ruim':''); el.style.display='block';
+  clearTimeout(el._t); el._t=setTimeout(()=>el.style.display='none',3000); }
+loginSenha.addEventListener('keydown',e=>{ if(e.key==='Enter') entrar(); });
+modalBg.addEventListener('click',e=>{ if(e.target===modalBg) fecharEditor(); });
 
-function cliDownloadCSV() {
-  if (!CLI_LEADS.length) { toast('Nenhum lead para baixar.', 'err'); return; }
-  var cols = ['Data/Hora','Nome','Telefone','E-mail','Aniversário','Bairro'];
-  var linhas = [cols.join(',')];
-  CLI_LEADS.forEach(function(l) {
-    var d = l.dados || {};
-    var row = [
-      new Date(l.criado_em).toLocaleString('pt-BR'),
-      d.nome||'', d.telefone||d.phone||d.celular||'', d.email||'',
-      d.aniversario||d.data_nascimento||'', d.bairro||''
-    ].map(function(v) { return '"' + String(v).replace(/"/g,'""') + '"'; });
-    linhas.push(row.join(','));
-  });
-  var blob = new Blob(['\uFEFF' + linhas.join('\n')], {type:'text/csv;charset=utf-8'});
-  var url  = URL.createObjectURL(blob);
-  var a    = document.createElement('a'); a.href = url; a.download = 'leads_' + CLI_LOJA.slug + '.csv'; a.click();
-  URL.revokeObjectURL(url);
-  toast('CSV baixado!');
-}
-
-function cliDownloadVCF() {
-  if (!CLI_LEADS.length) { toast('Nenhum lead para baixar.', 'err'); return; }
-  var vcf = CLI_LEADS.map(function(l) {
-    var d = l.dados || {};
-    var nome = d.nome || 'Cliente';
-    var tel  = d.telefone||d.phone||d.celular||'';
-    var mail = d.email||'';
-    var parts = nome.split(' ');
-    var v = 'BEGIN:VCARD\nVERSION:3.0\nFN:' + nome + '\nN:' + parts.slice(1).join(' ') + ';' + parts[0] + ';;;\n';
-    if (tel)  v += 'TEL;TYPE=CELL:' + tel + '\n';
-    if (mail) v += 'EMAIL:' + mail + '\n';
-    v += 'END:VCARD';
-    return v;
-  }).join('\n');
-  var blob = new Blob([vcf], {type:'text/vcard'});
-  var url  = URL.createObjectURL(blob);
-  var a    = document.createElement('a'); a.href = url; a.download = 'leads_' + CLI_LOJA.slug + '.vcf'; a.click();
-  URL.revokeObjectURL(url);
-  toast('Contatos baixados!');
-}
-
-// ═══════════════════════════════════════════
-// CLIENTE — MENSAGENS (fila de disparo 1-a-1 via wa.me)
-// ═══════════════════════════════════════════
-
-// telefone -> número no formato do wa.me (adiciona 55 do Brasil se faltar)
-function waNumero(tel) {
-  var d = String(tel || '').replace(/\D/g, '');
-  if (d.length === 10 || d.length === 11) d = '55' + d;
-  return d;
-}
-function linkWa(tel, msg) {
-  return 'https://wa.me/' + waNumero(tel) + '?text=' + encodeURIComponent(msg);
-}
-
-async function cliCarregarMsgs() {
-  var lista = document.getElementById('cliMsgsLista');
-  lista.innerHTML = '<div class="msg-vazio">Carregando fila…</div>';
-  var r = await SB.from('portal_disparos_prontos').select('*').eq('loja_id', CLI_LOJA.id);
-  if (r.error) {
-    lista.innerHTML = '<div class="msg-vazio"><h3>Não consegui carregar</h3><p style="font-size:12px">' + esc(r.error.message) + '</p></div>';
-    document.getElementById('cliMsgsCount').textContent = '0';
-    return;
-  }
-  CLI_MSGS = r.data || [];
-  cliRenderMsgs();
-}
-
-function cliRenderMsgs() {
-  var lista = document.getElementById('cliMsgsLista');
-
-  // conta por categoria e atualiza os botões de filtro
-  var cont = {todas: CLI_MSGS.length, novo:0, recorrente:0, saudade:0, inativo:0, aniversario:0};
-  CLI_MSGS.forEach(function(m){ if (cont[m.categoria] != null) cont[m.categoria]++; });
-  document.getElementById('cliMsgsCount').textContent = CLI_MSGS.length;
-  var botoes = document.querySelectorAll('#cliMsgsFiltros .msg-filtro');
-  botoes.forEach(function(b){
-    var cat = b.getAttribute('data-cat');
-    var n = cont[cat] || 0;
-    var bEl = b.querySelector('b'); if (bEl) bEl.textContent = n;
-    b.classList.toggle('vazio', cat !== 'todas' && n === 0);
-    b.classList.toggle('ativo', cat === CLI_MSGS_FILTRO);
-  });
-
-  // aplica o filtro selecionado
-  var itens = (CLI_MSGS_FILTRO === 'todas')
-    ? CLI_MSGS
-    : CLI_MSGS.filter(function(m){ return m.categoria === CLI_MSGS_FILTRO; });
-
-  if (!CLI_MSGS.length) {
-    lista.innerHTML = '<div class="msg-vazio">' +
-      '<div class="ico">✓</div>' +
-      '<h3>Fila vazia</h3>' +
-      '<p style="font-size:12px">Nada para enviar agora. Quando um cliente mudar de categoria, aparece aqui.</p>' +
-      '</div>';
-    return;
-  }
-  if (!itens.length) {
-    lista.innerHTML = '<div class="msg-vazio">' +
-      '<h3>Nada nesta categoria</h3>' +
-      '<p style="font-size:12px">Escolha outra categoria acima para ver as mensagens pendentes.</p>' +
-      '</div>';
-    return;
-  }
-  var badge = {novo:'mb-novo', recorrente:'mb-recorrente', saudade:'mb-saudade', inativo:'mb-inativo', aniversario:'mb-aniversario'};
-  lista.innerHTML = itens.map(function(m) {
-    var primeiro = String(m.pessoa_nome || '').split(' ')[0] || 'Cliente';
-    var cls = badge[m.categoria] || 'mb-novo';
-    return '<div class="msg-card" id="msgc-' + m.disparo_id + '">' +
-      '<div class="msg-top">' +
-        '<div class="msg-nome">' + esc(primeiro) + '</div>' +
-        '<span class="msg-badge ' + cls + '">' + esc(m.categoria_rotulo || m.categoria) + '</span>' +
-      '</div>' +
-      '<div class="msg-tel">' + esc(m.telefone || 'sem telefone') + '</div>' +
-      '<textarea class="msg-txt" id="msgt-' + m.disparo_id + '">' + esc(m.mensagem_final || '') + '</textarea>' +
-      '<div class="msg-acoes">' +
-        '<button class="btn-wa" onclick="cliAbrirWa(' + m.disparo_id + ',\'' + esc(m.telefone || '') + '\')">💬 Abrir WhatsApp</button>' +
-        '<button class="btn btn-ghost btn-sm" onclick="cliMsgEnviado(' + m.disparo_id + ')">✓ Enviado</button>' +
-        '<button class="btn btn-ghost btn-sm" onclick="cliMsgPular(' + m.disparo_id + ')">Pular</button>' +
-      '</div>' +
-    '</div>';
-  }).join('');
-}
-
-function cliAbrirWa(id, tel) {
-  var msg = document.getElementById('msgt-' + id).value;
-  window.open(linkWa(tel, msg), '_blank');
-}
-
-async function cliMsgEnviado(id) {
-  var r = await SB.from('portal_disparos').update({status:'enviado', enviado_em:new Date().toISOString()}).eq('id', id);
-  if (r.error) { toast('Erro: ' + r.error.message, 'err'); return; }
-  cliMsgSome(id); toast('Marcado como enviado');
-}
-
-async function cliMsgPular(id) {
-  var r = await SB.from('portal_disparos').update({status:'cancelado'}).eq('id', id);
-  if (r.error) { toast('Erro: ' + r.error.message, 'err'); return; }
-  cliMsgSome(id); toast('Removido da fila');
-}
-
-function cliMsgSome(id) {
-  var el = document.getElementById('msgc-' + id);
-  if (el) {
-    el.classList.add('saiu');
-    setTimeout(function() {
-      CLI_MSGS = CLI_MSGS.filter(function(m) { return m.disparo_id !== id; });
-      cliRenderMsgs();
-    }, 200);
-  }
-}
-
-function cliFiltrarMsgs(cat) {
-  CLI_MSGS_FILTRO = cat;
-  cliRenderMsgs();
-}
-
-// -- APARENCIA (simplificada: logo, cor primaria/secundaria, texto botao, mensagem, destino) --
-var APA_CORES = {cor:'#ff6a1a', cor2:'#ff6a1a'};
-
-function apaSetCor(campo, valor) {
-  if (!valor || valor.length < 4) return;
-  APA_CORES[campo] = valor;
-  var sw = document.getElementById('cor_'+campo), hx = document.getElementById('hex_'+campo), dt = document.getElementById('dot_'+campo);
-  if (sw) sw.value = valor;
-  if (hx) hx.value = valor;
-  if (dt) dt.style.background = valor;
-  apaUpdatePreview();
-}
-
-function apaHexInput(campo, val) {
-  if (/^#[0-9a-fA-F]{6}$/.test(val)) apaSetCor(campo, val);
-}
-
-// Só o botão reage às cores; textos (título/sub/hint) são padronizados pelo destino, igual ao portal real.
-function apaUpdatePreview() {
-  var btn = document.getElementById('apaBtnEl');
-  if (btn) btn.style.background = 'linear-gradient(135deg,' + APA_CORES.cor + ',' + APA_CORES.cor2 + ')';
-}
-
-function apaUpdateLogo(url) {
-  var img = document.getElementById('apaLogoImg');
-  var txt = document.getElementById('apaLogoTxt');
-  if (url && url.indexOf('http') === 0) {
-    img.src = url; img.style.display = 'block'; txt.style.display = 'none';
-  } else {
-    img.style.display = 'none'; txt.style.display = 'flex';
-  }
-}
-
-async function apaUploadLogo(file) {
-  if (!file) return;
-  var status = document.getElementById('apaUploadStatus');
-  var btn = document.getElementById('apaUploadBtn');
-  if (file.size > 2 * 1024 * 1024) {
-    status.textContent = 'Arquivo muito grande (máx. 2 MB).';
-    status.className = 'apa-upload-status err';
-    return;
-  }
-  var tiposOk = ['image/png','image/jpeg','image/svg+xml','image/webp'];
-  if (tiposOk.indexOf(file.type) === -1) {
-    status.textContent = 'Formato não suportado. Use PNG, JPG, SVG ou WEBP.';
-    status.className = 'apa-upload-status err';
-    return;
-  }
-  status.textContent = 'Enviando...';
-  status.className = 'apa-upload-status load';
-  btn.disabled = true;
-  var ext = (file.name.split('.').pop() || 'png').toLowerCase();
-  var caminho = CLI_LOJA.slug + '/logo_' + Date.now() + '.' + ext;
-  var up = await SB.storage.from('logos').upload(caminho, file, {upsert: true, cacheControl: '3600'});
-  btn.disabled = false;
-  if (up.error) {
-    status.textContent = 'Erro ao enviar: ' + up.error.message;
-    status.className = 'apa-upload-status err';
-    return;
-  }
-  var pub = SB.storage.from('logos').getPublicUrl(caminho);
-  var url = pub.data.publicUrl;
-  document.getElementById('apaLogo').value = url;
-  apaUpdateLogo(url);
-  status.textContent = '✓ Imagem enviada';
-  status.className = 'apa-upload-status ok';
-}
-
-// Atualiza os textos do preview conforme o destino escolhido — espelhando views.js
-function apaTextosPorDestino(dest) {
-  var btnTxt = document.getElementById('apaBtnTxt');
-  var subEl  = document.getElementById('apaSubEl');
-  var hintEl = document.getElementById('apaHintEl');
-  if (dest === 'whatsapp') {
-    btnTxt.textContent = '💬 Entrar no grupo e conectar';
-    subEl.textContent  = 'Toque no botão abaixo para entrar no nosso grupo e conectar à internet.';
-    hintEl.textContent = 'Você vai entrar no nosso grupo de WhatsApp com a internet já liberada.';
-  } else if (dest === 'formulario') {
-    btnTxt.textContent = '✅ Cadastrar e conectar';
-    subEl.textContent  = 'Preencha o cadastro abaixo para conectar à internet.';
-    hintEl.textContent = 'Seus dados vão só para a loja. Ao cadastrar, a internet libera na hora.';
-  } else if (dest === 'nenhum') {
-    btnTxt.textContent = '🔓 Conectar à internet';
-    subEl.textContent  = 'Toque no botão abaixo para conectar à internet.';
-    hintEl.textContent = 'A internet será liberada na hora.';
-  } else {
-    var ig = (document.getElementById('apaInsta').value || '').trim();
-    btnTxt.textContent = '📸 Seguir no Instagram e conectar';
-    subEl.textContent  = 'Toque no botão abaixo para seguir a gente e conectar à internet.';
-    hintEl.textContent = 'Você será direcionado ao nosso Instagram' + (ig ? ' @' + ig.replace(/^@/,'') : '') + ' com a internet já liberada.';
-  }
-}
-
-function cliDestTab(dest) {
-  document.getElementById('apaDestino').value = dest;
-  ['Insta','Wpp','Form','Nenhum'].forEach(function(d) {
-    document.getElementById('cliDtab'+d).classList.remove('ativo');
-    document.getElementById('cliDc'+d).classList.remove('ativo');
-  });
-  var map = {instagram:'Insta', whatsapp:'Wpp', formulario:'Form', nenhum:'Nenhum'};
-  if (map[dest]) {
-    document.getElementById('cliDtab'+map[dest]).classList.add('ativo');
-    document.getElementById('cliDc'+map[dest]).classList.add('ativo');
-  }
-  apaTextosPorDestino(dest);
-}
-
-function cliCarregarApa() {
-  var l = CLI_LOJA;
-  APA_CORES = {
-    cor:  l.cor  || '#ff6a1a',
-    cor2: l.cor2 || l.cor || '#ff6a1a'
-  };
-  apaSetCor('cor', APA_CORES.cor);
-  apaSetCor('cor2', APA_CORES.cor2);
-  document.getElementById('apaLogo').value  = l.logo_url || '';
-  document.getElementById('apaInsta').value = l.instagram || '';
-  document.getElementById('apaWpp').value   = l.whatsapp_link || '';
-  var dest = l.destino_tipo || (l.instagram ? 'instagram' : 'nenhum');
-  apaUpdateLogo(l.logo_url || '');
-  cliDestTab(dest);
-  apaUpdatePreview();
-  // logo do preview atualiza também ao digitar a logo, e o hint do IG ao digitar o @
-  var apaInsta = document.getElementById('apaInsta');
-  if (apaInsta) apaInsta.addEventListener('input', function(){ if (document.getElementById('apaDestino').value === 'instagram') apaTextosPorDestino('instagram'); });
-}
-
-async function cliSalvarApa() {
-  var dados = {
-    logo_url:     document.getElementById('apaLogo').value.trim()  || null,
-    cor:          APA_CORES.cor,
-    cor2:         APA_CORES.cor2,
-    destino_tipo: document.getElementById('apaDestino').value,
-    instagram:    document.getElementById('apaInsta').value.trim() || null,
-    whatsapp_link:document.getElementById('apaWpp').value.trim()   || null
-  };
-  var r = await SB.from('portal_lojas').update(dados).eq('id', CLI_LOJA.id);
-  if (r.error) { toast('Erro: ' + r.error.message, 'err'); return; }
-  Object.assign(CLI_LOJA, dados);
-  toast('Aparência salva!');
-}
+iniciar();
 </script>
 </body>
 </html>
