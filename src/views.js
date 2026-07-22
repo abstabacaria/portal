@@ -119,6 +119,25 @@ function layout({ title, body, marca }) {
   .pby{text-align:center;margin-top:18px;padding-top:14px;border-top:1px solid var(--line);display:flex;align-items:center;justify-content:center;gap:7px}
   .pby span{font-size:10px;color:var(--muted);opacity:.7;letter-spacing:.5px}
   .logo-nome{font-size:26px;font-weight:900;background:linear-gradient(135deg,${t.cor},${t.cor2});-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;padding:8px 0}
+  .modalPol{position:fixed;inset:0;background:rgba(6,8,14,.82);z-index:120;display:none;
+    align-items:flex-end;justify-content:center;padding:0}
+  .modalPol.on{display:flex}
+  .modalPol-in{background:${t.card};width:100%;max-width:460px;max-height:88vh;
+    border-radius:20px 20px 0 0;display:flex;flex-direction:column;
+    border:1px solid var(--line);border-bottom:0;animation:sobe .22s ease}
+  @keyframes sobe{from{transform:translateY(24px);opacity:.6}to{transform:none;opacity:1}}
+  .modalPol-cab{display:flex;align-items:center;padding:16px 18px 12px;border-bottom:1px solid var(--line)}
+  .modalPol-cab b{font-size:15px}
+  .modalPol-x{margin-left:auto;background:transparent;border:0;color:var(--muted);
+    font-size:26px;line-height:1;width:auto;padding:0 4px;margin:0;box-shadow:none;cursor:pointer}
+  .modalPol-txt{overflow-y:auto;-webkit-overflow-scrolling:touch;padding:4px 18px 8px;font-size:13px;line-height:1.6}
+  .modalPol-txt h2{font-size:13.5px;margin:16px 0 6px;color:var(--brand-2)}
+  .modalPol-txt p,.modalPol-txt li{margin:0 0 8px;color:var(--muted)}
+  .modalPol-txt ul{padding-left:18px;margin:0 0 8px}
+  .modalPol-txt b{color:var(--text)}
+  .modalPol-txt a{color:var(--brand-2)}
+  .modalPol-ok{margin:8px 18px 18px;width:calc(100% - 36px)}
+  @media(min-width:520px){ .modalPol{align-items:center} .modalPol-in{border-radius:20px;border-bottom:1px solid var(--line)} }
   .vcard{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;text-decoration:none;
      margin-top:10px;padding:14px;border-radius:13px;font-weight:700;font-size:14px;
      color:var(--text);background:${t.campoBg};border:1px solid var(--line)}
@@ -155,6 +174,37 @@ function lerCampos(fc) {
     }));
   }
   return [];
+}
+
+
+// Texto da política — usado na página completa E no modal do portal.
+function politicaCorpo() {
+  return `
+<h2>1. Quais dados coletamos</h2>
+<ul>
+<li><b>Informados por você:</b> nome, WhatsApp e, conforme o estabelecimento, aniversário, e-mail ou outros campos do formulário.</li>
+<li><b>Técnicos da conexão:</b> endereço MAC do aparelho, endereço IP, tipo de dispositivo e sistema operacional, data e hora do acesso.</li>
+</ul>
+<h2>2. Para que usamos</h2>
+<ul>
+<li>Liberar seu acesso à internet no estabelecimento;</li>
+<li>Cumprir a guarda de registros de conexão do Marco Civil da Internet (Lei 12.965/2014);</li>
+<li>Permitir que o estabelecimento visitado envie comunicações e ofertas pelo WhatsApp e direcione ofertas em redes sociais, <b>somente quando você marca a caixa de consentimento</b>;</li>
+<li>Reconhecer seu aparelho em visitas seguintes, para você não precisar preencher o cadastro de novo;</li>
+<li>Gerar estatísticas de visitação (horários e frequência) para o estabelecimento.</li>
+</ul>
+<h2>3. Base legal (LGPD)</h2>
+<p>Consentimento (art. 7º, I da Lei 13.709/2018) para marketing; cumprimento de obrigação legal (art. 7º, II) para os registros de conexão; e legítimo interesse (art. 7º, IX) para estatísticas de uso.</p>
+<h2>4. Com quem compartilhamos</h2>
+<p>Seus dados ficam visíveis apenas para o estabelecimento onde você se conectou e para o ConectaY, como operador. Não vendemos seus dados. Quando o estabelecimento usa plataformas de anúncio, o envio é criptografado, sem expor seu número.</p>
+<h2>5. Por quanto tempo guardamos</h2>
+<p>Registros de conexão: no mínimo 6 meses, conforme o Marco Civil. Dados de cadastro: enquanto durar o relacionamento com o estabelecimento ou até você pedir a exclusão.</p>
+<h2>6. Seus direitos</h2>
+<p>Você pode confirmar, acessar, corrigir, excluir seus dados ou revogar o consentimento a qualquer momento — basta responder "sair" a qualquer mensagem ou usar o contato abaixo.</p>
+<h2>7. Segurança</h2>
+<p>Dados armazenados em nuvem com criptografia em trânsito (HTTPS) e acesso por perfil: cada estabelecimento vê apenas os próprios clientes.</p>
+<h2>8. Contato</h2>
+<p>Encarregado de dados (DPO): <a href="mailto:raynoruan@icloud.com">raynoruan@icloud.com</a></p>`;
 }
 
 function renderPortal({ ap, instagram, autoCode, error, marca }) {
@@ -207,7 +257,7 @@ function renderPortal({ ap, instagram, autoCode, error, marca }) {
       ${ehForm ? `<div class="form-titulo">${escapeAttr(formTitulo)}</div>${camposHtml}
       <label class="optin">
         <input type="checkbox" name="lead_optin" value="sim" required>
-        <span>Aceito receber novidades e ofertas no WhatsApp e nas redes sociais, e concordo com a <a href="${escapeAttr(PRIVACIDADE_URL)}" target="_blank" rel="noopener">Política de Privacidade</a>.</span>
+        <span>Aceito receber novidades e ofertas no WhatsApp e nas redes sociais, e concordo com a <a href="#" onclick="return abrirPolitica(event)">Política de Privacidade</a>.</span>
       </label>` : ''}
       <button type="submit" class="igbtn" id="btn">
         <span class="spin" aria-hidden="true"></span>
@@ -216,10 +266,19 @@ function renderPortal({ ap, instagram, autoCode, error, marca }) {
     </form>
     <div class="hint" id="hint">${hintTxt}</div>
 
-    <div class="foot">Ao conectar você concorda com nossos <a href="${escapeAttr(PRIVACIDADE_URL)}" target="_blank" rel="noopener">termos e política de privacidade</a>.</div>
+    <div class="foot">Ao conectar você concorda com nossos <a href="#" onclick="return abrirPolitica(event)">termos e política de privacidade</a>.</div>
     <div class="pby">
       <span>Wi-Fi por</span>
       <img src="${LOGO_CONECTAY}" alt="ConectaY" style="height:36px;object-fit:contain;opacity:.9">
+    </div>
+
+    <div class="modalPol" id="modalPol" aria-hidden="true" role="dialog" aria-label="Política de Privacidade">
+      <div class="modalPol-in">
+        <div class="modalPol-cab"><b>Política de Privacidade</b>
+          <button type="button" class="modalPol-x" onclick="fecharPolitica()" aria-label="Fechar">&times;</button></div>
+        <div class="modalPol-txt">${politicaCorpo()}</div>
+        <button type="button" class="modalPol-ok" onclick="fecharPolitica()">Entendi</button>
+      </div>
     </div>
 
     <div class="load" id="load" aria-hidden="true">
@@ -250,7 +309,20 @@ function renderPortal({ ap, instagram, autoCode, error, marca }) {
         ld.classList.remove('on');
       }
       window.addEventListener('pageshow',function(ev){ if(ev.persisted)liberar(); });
+      var mp=document.getElementById('modalPol');
+      mp.addEventListener('click',function(e){ if(e.target===this) fecharPolitica(); });
+      document.addEventListener('keydown',function(e){ if(e.key==='Escape') fecharPolitica(); });
     })();
+    function abrirPolitica(e){
+      if(e){ e.preventDefault(); e.stopPropagation(); }
+      var m=document.getElementById('modalPol');
+      m.classList.add('on'); m.setAttribute('aria-hidden','false');
+      return false;
+    }
+    function fecharPolitica(){
+      var m=document.getElementById('modalPol');
+      m.classList.remove('on'); m.setAttribute('aria-hidden','true');
+    }
     </script>`;
   return layout({ title: escapeAttr(nome) + ' — Wi-Fi', body, marca });
 }
