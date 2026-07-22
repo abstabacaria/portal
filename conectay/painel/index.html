@@ -10,7 +10,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <style>
 :root{
-  --azul:#0ea5e9; --ciano:#22d3ee; --navy:#070b16; s--vidro:rgba(16,24,39,.72); --vidro2:rgba(13,21,36,.9);
+  --azul:#0ea5e9; --ciano:#22d3ee; --navy:#070b16; --vidro:rgba(16,24,39,.72); --vidro2:rgba(13,21,36,.9);
   --borda:#1e293b; --bordaHi:#2b3b55; --texto:#e2e8f0; --mudo:#8b9bb4; --fraco:#5b6b84;
   --ok:#34d399; --alerta:#fbbf24; --erro:#f87171; --grad:linear-gradient(135deg,#0ea5e9,#22d3ee);
 }
@@ -360,7 +360,7 @@ tr:last-child td{border-bottom:0}
    CONFIG
 ========================================================= */
 const SUPABASE_URL = 'https://iekxuehdrxsimqtfejxm.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlla3h1ZWhkcnhzaW1xdGZlanhtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1MDk0NzAsImV4cCI6MjA5MTA4NTQ3MH0.61zaRoTBK2XorXgAcGXcsN8yOY0MTRS4bIJ_X4vPjyA';
+const SUPABASE_ANON_KEY = 'COLE_AQUI_SUA_ANON_KEY';
 const EDGE_CRIAR_USUARIO = SUPABASE_URL + '/functions/v1/smart-responder';
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -815,13 +815,16 @@ async function salvarAparencia(){
     vcard_nome:f.vcard_nome.trim()||null,
     cor_fundo:f.cor_fundo, cor_fundo2:f.cor_fundo2, cor_card:f.cor_card,
     rotacao_ativa:f.rotacao_ativa, recadastro_meses:f.recadastro_meses,
-    rotacao_destinos:f.rotacao_ativa?['formulario',...f.rotacao_destinos]:lojaAtual.rotacao_destinos };
+    rotacao_destinos:f.rotacao_ativa?['formulario',...f.rotacao_destinos]
+      :((lojaAtual.rotacao_destinos||[]).length?lojaAtual.rotacao_destinos:['formulario','instagram','whatsapp']) };
   if(upd.rotacao_ativa && !f.rotacao_destinos.length)
     return toast('Escolha ao menos um pedido pro rodízio',true);
   if(upd.vcard_ativo && (upd.vcard_telefone||'').length<10)
     return toast('Informe o WhatsApp da loja com DDD pro cartão de contato',true);
   if(upd.destino_tipo==='whatsapp' && !upd.whatsapp_link) return toast('Informe o link do grupo do WhatsApp',true);
   if(upd.destino_tipo==='google_review' && !upd.google_review_url) return toast('Informe o link de avaliação do Google',true);
+  ['rotacao_destinos','rotacao_ativa','recadastro_meses','vcard_ativo',
+   'cor','cor2','cor_fundo','cor_card'].forEach(k=>{ if(upd[k]==null) delete upd[k]; });
   const {error}=await sb.from('portal_lojas').update(upd).eq('id',lojaAtual.id);
   if(error) return toast('Erro ao salvar: '+error.message,true);
   Object.assign(lojaAtual,upd); toast('Aparência salva ✓');
@@ -1078,12 +1081,17 @@ async function salvarLoja(){
     vcard_ativo:f.vcard_ativo, vcard_telefone:f.vcard_telefone||null, vcard_nome:f.vcard_nome.trim()||null,
     cor_fundo:f.cor_fundo, cor_fundo2:f.cor_fundo2, cor_card:f.cor_card,
     rotacao_ativa:f.rotacao_ativa, recadastro_meses:f.recadastro_meses,
-    rotacao_destinos:f.rotacao_ativa?['formulario',...f.rotacao_destinos]:(edit.rotacao_destinos||null),
+    rotacao_destinos:f.rotacao_ativa?['formulario',...f.rotacao_destinos]
+      :((edit.rotacao_destinos||[]).length?edit.rotacao_destinos:['formulario','instagram','whatsapp']),
     codigo_wifi:lj_codigo.value.trim()||null, ap_secret:lj_secret.value.trim()||null,
     valor_mensal:lj_valor.value?Number(lj_valor.value):null,
     dia_vencimento:lj_diavenc.value?Number(lj_diavenc.value):null,
     plano:lj_plano.value.trim()||null, status_pagamento:lj_statusPg.value||null,
     obs:lj_obs.value.trim()||null };
+
+  // colunas NOT NULL: se vier vazio, não envia (o banco usa o padrão)
+  ['rotacao_destinos','rotacao_ativa','recadastro_meses','vcard_ativo',
+   'cor','cor2','cor_fundo','cor_card'].forEach(k=>{ if(dados[k]==null) delete dados[k]; });
 
   statusLoja.textContent='Salvando...';
   let lojaId=edit.id, erro=null;
