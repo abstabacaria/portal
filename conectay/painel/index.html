@@ -247,6 +247,9 @@ tr:last-child td{border-bottom:0}
       Conecta<b>Y</b>
     </div>
     <div class="rotulo">Menu</div>
+    <button class="navItem" data-aba="geral" id="navGeral" style="display:none" onclick="irAba('geral')">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12h4l3 8 4-16 3 8h4"/></svg>
+      Visão geral <span style="font-size:.62rem;color:var(--fraco)">admin</span></button>
     <button class="navItem on" data-aba="dashboard" onclick="irAba('dashboard')">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>Dashboard</button>
     <button class="navItem" data-aba="leads" onclick="irAba('leads')">
@@ -274,6 +277,15 @@ tr:last-child td{border-bottom:0}
         <span id="nomeLojaFixo" style="color:var(--mudo);font-size:.86rem"></span>
       </div>
     </div>
+
+    <section class="aba" id="aba-geral">
+      <div class="kpis" id="kpisGeral"></div>
+      <div class="graficos" style="margin-bottom:16px">
+        <div class="card gCard g-8"><h3>Conexões de todas as lojas — 14 dias</h3><canvas id="chGeral"></canvas></div>
+        <div class="card gCard g-4"><h3>Participação por loja (30d)</h3><canvas id="chLojas"></canvas></div>
+      </div>
+      <div id="tabelaGeral"></div>
+    </section>
 
     <section class="aba ativa" id="aba-dashboard">
       <div class="kpis" id="kpis"></div>
@@ -367,7 +379,7 @@ const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let eu=null, lojas=[], lojaAtual=null, pessoas=[], disparos=[], catFiltro='';
 let edit=null;           // loja em edição no modal
 const charts={};
-const titulos={dashboard:'Dashboard',leads:'Leads',mensagens:'Mensagens',aparencia:'Aparência',lojas:'Lojas'};
+const titulos={geral:'Visão geral',dashboard:'Dashboard',leads:'Leads',mensagens:'Mensagens',aparencia:'Aparência',lojas:'Lojas'};
 const PRESETS=[['#0ea5e9','#22d3ee'],['#ff6a1a','#8a3000'],['#70008f','#c026d3'],['#16a34a','#4ade80'],
                ['#e11d48','#fb7185'],['#f59e0b','#fbbf24'],['#1e293b','#475569'],['#7c3aed','#a78bfa']];
 const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -400,6 +412,7 @@ async function iniciar(){
   lojas = ls || [];
   if (eu.papel==='admin'){
     navLojas.style.display='flex';
+    navGeral.style.display='flex';
     seletorLoja.style.display='inline-block';
     seletorLoja.innerHTML = lojas.map(l=>`<option value="${l.id}">${esc(l.nome)}</option>`).join('');
     lojaAtual = lojas[0] || null;
@@ -415,8 +428,51 @@ function trocarLoja(){
   carregarTudo();
 }
 async function carregarTudo(){
-  await Promise.all([carregarDashboard(), carregarLeads(), carregarDisparos()]);
+  const tarefas=[carregarDashboard(), carregarLeads(), carregarDisparos()];
+  if(eu.papel==='admin') tarefas.push(carregarVisaoGeral());
+  await Promise.all(tarefas);
   montarAparencia();
+}
+
+/* ---------------- Visão geral (admin) ---------------- */
+const brl = v => 'R$ '+Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+async function carregarVisaoGeral(){
+  const { data:g, error } = await sb.rpc('conectay_visao_geral');
+  if(error){ console.error(error);
+    kpisGeral.innerHTML='<div class="card vazio">Rode o SQL <b>visao_geral.sql</b> para ativar esta aba.</div>'; return; }
+  kpisGeral.innerHTML=[
+    [ICO.mes,'Faturamento mensal',brl(g.faturamento),`${g.lojas_ativas} de ${g.lojas_total} lojas ativas`],
+    [ICO.base,'A receber',brl(g.a_receber), g.a_receber>0?'há pagamentos pendentes':'tudo em dia ✅'],
+    [ICO.hoje,'Conexões hoje',(g.conexoes_hoje||0).toLocaleString('pt-BR'),`${(g.conexoes_7d||0).toLocaleString('pt-BR')} nos últimos 7 dias`],
+    [ICO.unicos,'Conexões (30 dias)',(g.conexoes_30d||0).toLocaleString('pt-BR'),'todas as lojas'],
+    [ICO.novos,'Novos leads (30d)',(g.leads_30d||0).toLocaleString('pt-BR'),`${(g.leads_total||0).toLocaleString('pt-BR')} na base total`],
+    [ICO.rec,'Mensagens pendentes',(g.msgs_pendentes||0).toLocaleString('pt-BR'),'aguardando envio']
+  ].map(([ic,l,v,sub])=>`<div class="card kpi"><div class="ic">${ic}</div>
+    <div class="v" style="font-size:1.45rem">${v}</div><div class="l">${l}</div>
+    <div style="color:var(--fraco);font-size:.68rem;margin-top:5px">${sub}</div></div>`).join('');
+
+  desenhar('chGeral','line',{labels:(g.por_dia||[]).map(x=>x.dia.slice(8)+'/'+x.dia.slice(5,7)),
+    datasets:[{data:(g.por_dia||[]).map(x=>x.n),borderColor:'#0ea5e9',borderWidth:2.5,
+      backgroundColor:(()=>{const c=chGeral.getContext('2d'),gr=c.createLinearGradient(0,0,0,220);
+        gr.addColorStop(0,'rgba(14,165,233,.28)');gr.addColorStop(1,'rgba(14,165,233,0)');return gr})(),
+      fill:true,tension:.4,pointRadius:0,pointHoverRadius:5,pointBackgroundColor:'#22d3ee'}]});
+  const rk=(g.ranking||[]).filter(x=>x.conexoes>0);
+  desenhar('chLojas','doughnut',{labels:rk.map(x=>x.nome),
+    datasets:[{data:rk.map(x=>x.conexoes),
+      backgroundColor:['#0ea5e9','#22d3ee','#818cf8','#6ee7b7','#fcd34d','#fda4af','#a78bfa'],
+      borderWidth:0,hoverOffset:6}]});
+
+  tabelaGeral.innerHTML=`<div class="tWrap"><table><thead><tr><th>Loja</th><th>Conexões 30d</th><th>Leads</th>
+    <th>Destino</th><th>Plano</th><th>Valor</th><th>Venc.</th><th>Pagamento</th><th>Status</th></tr></thead><tbody>
+    ${(g.ranking||[]).map(l=>`<tr>
+      <td><b>${esc(l.nome)}</b><br><small style="color:var(--fraco)">${esc(l.slug)}</small></td>
+      <td>${(l.conexoes||0).toLocaleString('pt-BR')}</td><td>${(l.leads||0).toLocaleString('pt-BR')}</td>
+      <td>${({instagram:'📸',whatsapp:'💬',formulario:'📝',google_review:'⭐'})[l.destino]||'—'} ${l.destino||''}</td>
+      <td>${esc(l.plano)||'—'}</td><td>${l.valor?brl(l.valor):'—'}</td>
+      <td>${l.dia_venc?('dia '+l.dia_venc):'—'}</td>
+      <td>${l.status_pg?`<span class="badge ${l.status_pg==='em dia'?'b-ativo':l.status_pg==='atrasado'?'b-bloqueado':'b-saudade'}">${esc(l.status_pg)}</span>`:'—'}</td>
+      <td><span class="badge ${l.ativo?'b-ativo':'b-bloqueado'}">${l.ativo?'ativa':'desligada'}</span></td>
+    </tr>`).join('')}</tbody></table></div>`;
 }
 
 /* ---------------- Dashboard ---------------- */
