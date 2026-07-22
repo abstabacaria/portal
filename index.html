@@ -4,6 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>ConectaY · Painel</title>
+<link rel="icon" type="image/png" href="https://i.postimg.cc/BQjJGBKf/logo-conectay-transparent.png">
+<link rel="apple-touch-icon" href="https://i.postimg.cc/BQjJGBKf/logo-conectay-transparent.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
 <script src="config.js"></script>
@@ -33,7 +35,8 @@ small.dica{color:var(--fraco);font-size:.7rem;display:block;margin-top:4px}
 #telaLogin{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
 .cardLogin{width:100%;max-width:390px;background:var(--vidro);backdrop-filter:blur(14px);
   border:1px solid var(--borda);border-radius:22px;padding:38px 30px;box-shadow:0 24px 70px rgba(0,0,0,.55)}
-.hex{width:62px;height:62px;margin:0 auto 16px;display:block}
+.hex{width:74px;height:74px;margin:0 auto 14px;display:block;object-fit:contain;
+  filter:drop-shadow(0 6px 18px rgba(14,165,233,.35))}
 .cardLogin h1{text-align:center;font-size:1.45rem;margin-bottom:4px}
 .cardLogin .sub{text-align:center;color:var(--mudo);font-size:.84rem;margin-bottom:18px}
 .btnP{width:100%;margin-top:18px;padding:13px;border:0;border-radius:12px;font-weight:700;color:#fff;font-size:.95rem;
@@ -219,13 +222,7 @@ tr:last-child td{border-bottom:0}
 <!-- ============ LOGIN ============ -->
 <div id="telaLogin">
   <div class="cardLogin">
-    <svg class="hex" viewBox="0 0 64 64" fill="none">
-      <path d="M32 4 56 18v28L32 60 8 46V18L32 4Z" stroke="url(#g1)" stroke-width="3" fill="#0b1220"/>
-      <path d="M20 34c6.6-6.6 17.4-6.6 24 0" stroke="#22d3ee" stroke-width="3" stroke-linecap="round"/>
-      <path d="M25 40c3.9-3.9 10.1-3.9 14 0" stroke="#0ea5e9" stroke-width="3" stroke-linecap="round"/>
-      <circle cx="32" cy="46" r="2.6" fill="#22d3ee"/>
-      <defs><linearGradient id="g1" x1="8" y1="4" x2="56" y2="60"><stop stop-color="#0ea5e9"/><stop offset="1" stop-color="#22d3ee"/></linearGradient></defs>
-    </svg>
+    <img class="hex" src="https://i.postimg.cc/BQjJGBKf/logo-conectay-transparent.png" alt="ConectaY">
     <h1 class="marca">Conecta<span style="color:var(--azul)">Y</span></h1>
     <p class="sub">Painel de Wi-Fi Marketing</p>
     <label>E-mail</label><input id="loginEmail" type="email" autocomplete="username" placeholder="voce@email.com">
@@ -240,11 +237,7 @@ tr:last-child td{border-bottom:0}
 <div class="shell">
   <aside>
     <div class="marca">
-      <svg width="26" height="26" viewBox="0 0 64 64" fill="none">
-        <path d="M32 4 56 18v28L32 60 8 46V18L32 4Z" stroke="#0ea5e9" stroke-width="4" fill="#0b1220"/>
-        <path d="M20 34c6.6-6.6 17.4-6.6 24 0" stroke="#22d3ee" stroke-width="4" stroke-linecap="round"/>
-        <circle cx="32" cy="43" r="3" fill="#22d3ee"/>
-      </svg>
+      <img src="https://i.postimg.cc/BQjJGBKf/logo-conectay-transparent.png" alt="" style="width:26px;height:26px;object-fit:contain">
       Conecta<b>Y</b>
     </div>
     <div class="rotulo">Menu</div>
