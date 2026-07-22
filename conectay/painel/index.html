@@ -298,7 +298,8 @@ tr:last-child td{border-bottom:0}
           <option value="bloqueado">Bloqueado</option></select></div>
         <div class="acao"><label>&nbsp;</label>
           <button class="btnG" onclick="exportarCSV()">⬇ CSV</button>
-          <button class="btnG btnFb" onclick="exportarFbAds()">⬇ Facebook Ads</button></div>
+          <button class="btnG btnFb" onclick="exportarFbAds()">⬇ Meta Ads</button>
+          <button class="btnG" onclick="exportarVcf()">📇 Agenda (.vcf)</button></div>
       </div>
       <div id="tabelaLeads"></div>
     </section>
@@ -359,7 +360,7 @@ tr:last-child td{border-bottom:0}
    CONFIG
 ========================================================= */
 const SUPABASE_URL = 'https://iekxuehdrxsimqtfejxm.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlla3h1ZWhkcnhzaW1xdGZlanhtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1MDk0NzAsImV4cCI6MjA5MTA4NTQ3MH0.61zaRoTBK2XorXgAcGXcsN8yOY0MTRS4bIJ_X4vPjyA';
+const SUPABASE_ANON_KEY = 'COLE_AQUI_SUA_ANON_KEY';
 const EDGE_CRIAR_USUARIO = SUPABASE_URL + '/functions/v1/smart-responder';
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -508,21 +509,52 @@ async function editarPessoa(id){
   if(error) return toast('Erro: '+error.message,true);
   Object.assign(p,novo); renderLeads(); toast('Lead atualizado');
 }
-function baixar(nome,txt){ const b=new Blob(['\ufeff'+txt],{type:'text/csv;charset=utf-8'});
+function baixar(nome,txt,tipo){ const b=new Blob(['\ufeff'+txt],{type:(tipo||'text/csv')+';charset=utf-8'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=nome; a.click(); }
+
+// devolve a lista JÁ FILTRADA pela tela (busca, categoria, status)
+function pessoasFiltradas(){
+  const q=(fBusca.value||'').toLowerCase(), cat=fCat.value, st=fStatus.value;
+  return pessoas.filter(p=>(!q||(p.nome||'').toLowerCase().includes(q)||(p.telefone||'').includes(q))
+    &&(!cat||p.categoria===cat)&&(!st||p.status===st));
+}
+function sufixoArquivo(){
+  const p=[lojaAtual.slug];
+  if(fCat.value) p.push(fCat.value);
+  if(fStatus.value) p.push(fStatus.value);
+  return p.join('_')+'_'+new Date().toISOString().slice(0,10);
+}
 function exportarCSV(){
+  const lista=pessoasFiltradas();
+  if(!lista.length) return toast('Nenhum lead nos filtros atuais',true);
   const L=[['nome','telefone','aniversario','primeira_visita','ultima_visita','visitas','categoria','status','tags','obs']];
-  pessoas.forEach(p=>L.push([p.nome||'',p.telefone,p.aniversario||'',p.primeira_visita||'',p.ultima_visita||'',
+  lista.forEach(p=>L.push([p.nome||'',p.telefone,p.aniversario||'',p.primeira_visita||'',p.ultima_visita||'',
     p.total_visitas,p.categoria,p.status||'ativo',(p.tags||[]).join('|'),(p.observacoes||'').replace(/\n/g,' ')]));
-  baixar(`leads_${lojaAtual.slug}_${new Date().toISOString().slice(0,10)}.csv`,
-    L.map(l=>l.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(';')).join('\n'));
-  toast('CSV exportado');
+  baixar(`leads_${sufixoArquivo()}.csv`, L.map(l=>l.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(';')).join('\n'));
+  toast(`CSV exportado (${lista.length} leads)`);
 }
 function exportarFbAds(){
+  const lista=pessoasFiltradas().filter(p=>p.status!=='bloqueado');
+  if(!lista.length) return toast('Nenhum lead nos filtros atuais',true);
   const L=[['phone','fn']];
-  pessoas.filter(p=>p.status!=='bloqueado').forEach(p=>L.push([`+55${p.telefone}`,(p.nome||'').split(' ')[0].toLowerCase()]));
-  baixar(`audiencia_fbads_${lojaAtual.slug}.csv`, L.map(l=>l.join(',')).join('\n'));
-  toast('Audiência exportada — suba em Públicos personalizados');
+  lista.forEach(p=>L.push([`+55${p.telefone}`,(p.nome||'').split(' ')[0].toLowerCase()]));
+  baixar(`meta_ads_${sufixoArquivo()}.csv`, L.map(l=>l.join(',')).join('\n'));
+  toast(`Audiência com ${lista.length} contatos — suba em Públicos personalizados`);
+}
+function exportarVcf(){
+  const lista=pessoasFiltradas().filter(p=>p.telefone && p.status!=='bloqueado');
+  if(!lista.length) return toast('Nenhum lead nos filtros atuais',true);
+  const marca=(lojaAtual.nome||'').slice(0,18);
+  const vcf=lista.map(p=>{
+    const nome=((p.nome||'Cliente').replace(/[\r\n;]/g,' ').trim())+' · '+marca;
+    const l=['BEGIN:VCARD','VERSION:3.0',`N:;${nome};;;`,`FN:${nome}`,
+             `TEL;TYPE=CELL:+55${p.telefone}`,`NOTE:${p.categoria} · ${p.total_visitas} visita(s) · ConectaY`];
+    if(p.aniversario && /^\d{4}-\d{2}-\d{2}$/.test(p.aniversario)) l.push(`BDAY:${p.aniversario}`);
+    l.push('END:VCARD');
+    return l.join('\r\n');
+  }).join('\r\n');
+  baixar(`agenda_${sufixoArquivo()}.vcf`, vcf, 'text/vcard');
+  toast(`${lista.length} contatos no .vcf — abra o arquivo no celular pra importar`);
 }
 
 /* ---------------- Mensagens ---------------- */
@@ -598,6 +630,7 @@ function preview(l){
     <div class="tit">${esc(l.form_titulo|| 'Wi-Fi grátis · '+(l.nome||'Sua Loja'))}</div>
     <div class="sub">${sub}</div>${campos}${optin}
     <div class="btn" style="background:linear-gradient(135deg,${esc(c1)},${esc(c2)})">${esc(rot)}</div>
+    ${l.vcard_ativo?'<div class="btn" style="background:#0b1220;border:1px solid #1e293b;color:#e2e8f0;margin-top:6px">📇 Salvar nosso contato</div>':''}
     <div class="rod">Powered by ConectaY</div></div>`;
 }
 
@@ -657,8 +690,24 @@ function montarAparencia(){
       <label style="margin-top:12px">Campos do formulário</label>
       <div class="campos" id="ap_campos"></div>
       <button class="btnG" style="margin-top:8px" onclick="addCampo('ap')">➕ Adicionar campo</button>
-      <small class="dica">Quanto menos campos, mais gente preenche. Peça só o essencial.</small></div>`;
+      <small class="dica">Quanto menos campos, mais gente preenche. Peça só o essencial.</small></div>
+
+    <div class="secao">📇 Cartão de contato</div>
+    <div class="full">
+      <label style="display:flex;align-items:center;gap:9px;cursor:pointer">
+        <input type="checkbox" id="ap_vcardAtivo" style="width:18px;height:18px;accent-color:var(--azul)" onchange="pvAp()">
+        <span style="color:var(--texto);font-size:.86rem">Oferecer "Salvar nosso contato" após conectar</span>
+      </label>
+      <small class="dica">O cliente salva seu número na agenda dele. Isso libera <b>lista de transmissão</b> no WhatsApp
+      (só entrega pra quem tem seu número salvo) e faz seus status aparecerem pra ele.</small></div>
+    <div id="ap_wrapVcard">
+      <label>WhatsApp da loja</label><input id="ap_vcardTel" placeholder="(21) 99999-9999"></div>
+    <div id="ap_wrapVcard2">
+      <label>Nome que aparece na agenda</label><input id="ap_vcardNome" placeholder="Absolem Tabacaria"></div>`;
   ap_destino.value = l.destino_tipo || 'instagram';
+  ap_vcardAtivo.checked = !!l.vcard_ativo;
+  ap_vcardTel.value = l.vcard_telefone || '';
+  ap_vcardNome.value = l.vcard_nome || l.nome || '';
   renderPresets('ap_presets','ap_cor','ap_cor2',pvAp);
   renderCampos('ap', lerCampos(l.form_campos));
   pvAp();
@@ -671,13 +720,18 @@ function pvAp(){
   ap_wrapWpp.style.display    = l.destino_tipo==='whatsapp'?'block':'none';
   ap_wrapGoogle.style.display = l.destino_tipo==='google_review'?'block':'none';
   ap_wrapForm.style.display   = l.destino_tipo==='formulario'?'block':'none';
+  const vc = ap_vcardAtivo.checked;
+  ap_wrapVcard.style.display = vc?'block':'none';
+  ap_wrapVcard2.style.display = vc?'block':'none';
   pvAparencia.innerHTML = preview(l);
 }
 function lerFormAparencia(){
   return { nome:ap_nome.value, logo_url:ap_logo.value, cor:ap_cor.value, cor2:ap_cor2.value,
     destino_tipo:ap_destino.value, instagram:ap_insta.value.replace('@',''),
     whatsapp_link:ap_wpp.value, google_review_url:ap_google.value,
-    form_titulo:ap_formTitulo.value, botao_txt:ap_botao.value, form_campos:colherCampos('ap') };
+    form_titulo:ap_formTitulo.value, botao_txt:ap_botao.value, form_campos:colherCampos('ap'),
+    vcard_ativo:ap_vcardAtivo.checked, vcard_telefone:ap_vcardTel.value.replace(/\D/g,''),
+    vcard_nome:ap_vcardNome.value };
 }
 async function salvarAparencia(){
   const f=lerFormAparencia();
@@ -685,7 +739,11 @@ async function salvarAparencia(){
     destino_tipo:f.destino_tipo, instagram:f.instagram.trim()||null,
     whatsapp_link:f.whatsapp_link.trim()||null, google_review_url:f.google_review_url.trim()||null,
     form_titulo:f.form_titulo.trim()||null, botao_txt:f.botao_txt.trim()||null,
-    form_campos:f.destino_tipo==='formulario'?f.form_campos:lojaAtual.form_campos };
+    form_campos:f.destino_tipo==='formulario'?f.form_campos:lojaAtual.form_campos,
+    vcard_ativo:f.vcard_ativo, vcard_telefone:f.vcard_telefone||null,
+    vcard_nome:f.vcard_nome.trim()||null };
+  if(upd.vcard_ativo && (upd.vcard_telefone||'').length<10)
+    return toast('Informe o WhatsApp da loja com DDD pro cartão de contato',true);
   if(upd.destino_tipo==='whatsapp' && !upd.whatsapp_link) return toast('Informe o link do grupo do WhatsApp',true);
   if(upd.destino_tipo==='google_review' && !upd.google_review_url) return toast('Informe o link de avaliação do Google',true);
   const {error}=await sb.from('portal_lojas').update(upd).eq('id',lojaAtual.id);
@@ -806,6 +864,15 @@ function abrirEditor(id){
     <div><label>Cor secundária</label><input type="color" id="lj_cor2" value="${l.cor2||l.cor||'#22d3ee'}" style="height:44px;padding:4px" oninput="pvLj()"></div>
     <div class="full"><label>Paletas prontas</label><div class="presets" id="lj_presets"></div></div>
 
+    <div class="secao">📇 Cartão de contato</div>
+    <div class="full">
+      <label style="display:flex;align-items:center;gap:9px;cursor:pointer">
+        <input type="checkbox" id="lj_vcardAtivo" style="width:18px;height:18px;accent-color:var(--azul)" onchange="pvLj()">
+        <span style="color:var(--texto);font-size:.86rem">Oferecer "Salvar nosso contato" após conectar</span></label>
+      <small class="dica">Libera lista de transmissão no WhatsApp e faz os status da loja aparecerem pro cliente.</small></div>
+    <div id="lj_wrapVcard"><label>WhatsApp da loja</label><input id="lj_vcardTel" placeholder="(21) 99999-9999"></div>
+    <div id="lj_wrapVcard2"><label>Nome na agenda</label><input id="lj_vcardNome" placeholder="Nome da loja"></div>
+
     <div class="secao">📶 Wi-Fi / roteador</div>
     <div><label>Código do Wi-Fi <small>(libera a internet)</small></label><input id="lj_codigo" value="${esc(l.codigo_wifi)}" placeholder="ex: FULANO2026"></div>
     <div><label>Segredo do AP <small>(mesma senha no roteador)</small></label><input id="lj_secret" value="${esc(l.ap_secret)}" placeholder="senha forte"></div>
@@ -822,6 +889,9 @@ function abrirEditor(id){
 
   lj_destino.value = l.destino_tipo || 'instagram';
   lj_statusPg.value = l.status_pagamento || '';
+  lj_vcardAtivo.checked = !!l.vcard_ativo;
+  lj_vcardTel.value = l.vcard_telefone || '';
+  lj_vcardNome.value = l.vcard_nome || l.nome || '';
   renderPresets('lj_presets','lj_cor','lj_cor2',pvLj);
   renderCampos('lj', lerCampos(l.form_campos));
   sufixoDominio(); pvLj();
@@ -833,7 +903,9 @@ function lerFormLoja(){
   return { nome:lj_nome.value, logo_url:lj_logo.value, cor:lj_cor.value, cor2:lj_cor2.value,
     destino_tipo:lj_destino.value, instagram:lj_insta.value.replace('@',''),
     whatsapp_link:lj_wpp.value, google_review_url:lj_google.value,
-    form_titulo:lj_formTitulo.value, botao_txt:lj_botao.value, form_campos:colherCampos('lj') };
+    form_titulo:lj_formTitulo.value, botao_txt:lj_botao.value, form_campos:colherCampos('lj'),
+    vcard_ativo:lj_vcardAtivo.checked, vcard_telefone:lj_vcardTel.value.replace(/\D/g,''),
+    vcard_nome:lj_vcardNome.value };
 }
 function pvLj(){
   const l=lerFormLoja();
@@ -843,6 +915,8 @@ function pvLj(){
   lj_wrapWpp.style.display    = l.destino_tipo==='whatsapp'?'block':'none';
   lj_wrapGoogle.style.display = l.destino_tipo==='google_review'?'block':'none';
   lj_wrapForm.style.display   = l.destino_tipo==='formulario'?'block':'none';
+  lj_wrapVcard.style.display  = lj_vcardAtivo.checked?'block':'none';
+  lj_wrapVcard2.style.display = lj_vcardAtivo.checked?'block':'none';
   pvLoja.innerHTML = preview(l);
 }
 
@@ -853,6 +927,7 @@ async function salvarLoja(){
   let dominio=lj_dominio.value.trim().toLowerCase();
   if(dominio && !dominio.includes('.')) dominio+='.conectay.com.br';
   if(f.destino_tipo==='whatsapp' && !f.whatsapp_link.trim()) return toast('Informe o link do grupo',true);
+  if(f.vcard_ativo && (f.vcard_telefone||'').length<10) return toast('Informe o WhatsApp da loja com DDD pro cartão de contato',true);
   if(f.destino_tipo==='google_review' && !f.google_review_url.trim()) return toast('Informe o link de avaliação',true);
 
   const emailAcesso=lj_emailAcesso.value.trim(), senhaAcesso=lj_senhaAcesso.value.trim();
@@ -868,6 +943,7 @@ async function salvarLoja(){
     form_titulo:f.form_titulo.trim()||null, botao_txt:f.botao_txt.trim()||null,
     form_campos:f.destino_tipo==='formulario'?f.form_campos:(edit.form_campos||null),
     logo_url:f.logo_url||null, cor:f.cor, cor2:f.cor2,
+    vcard_ativo:f.vcard_ativo, vcard_telefone:f.vcard_telefone||null, vcard_nome:f.vcard_nome.trim()||null,
     codigo_wifi:lj_codigo.value.trim()||null, ap_secret:lj_secret.value.trim()||null,
     valor_mensal:lj_valor.value?Number(lj_valor.value):null,
     dia_vencimento:lj_diavenc.value?Number(lj_diavenc.value):null,
