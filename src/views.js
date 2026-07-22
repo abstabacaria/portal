@@ -5,6 +5,7 @@
 // deixa o portal ilegível.
 
 const LOGO = '/static/logo.png';
+const LOGO_CONECTAY = 'https://i.postimg.cc/BQjJGBKf/logo-conectay-transparent.png';
 const PRIVACIDADE_URL = 'https://privacidade.conectay.com.br';
 
 function escapeAttr(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
@@ -47,6 +48,7 @@ function layout({ title, body, marca }) {
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>${title}</title>
+<link rel="icon" type="image/png" href="${marca && marca.logo && !String(marca.logo).endsWith('/static/logo.png') ? marca.logo : 'https://i.postimg.cc/BQjJGBKf/logo-conectay-transparent.png'}">
 <style>
   :root{
     --brand:${t.cor}; --brand-2:${t.cor2}; --ink:${t.fundo}; --ink-2:${t.card};
@@ -217,7 +219,7 @@ function renderPortal({ ap, instagram, autoCode, error, marca }) {
     <div class="foot">Ao conectar você concorda com nossos <a href="${escapeAttr(PRIVACIDADE_URL)}" target="_blank" rel="noopener">termos e política de privacidade</a>.</div>
     <div class="pby">
       <span>Wi-Fi por</span>
-      <img src="https://i.postimg.cc/BQjJGBKf/logo-conectay-transparent.png" alt="ConectaY" style="height:36px;object-fit:contain;opacity:.9">
+      <img src="${LOGO_CONECTAY}" alt="ConectaY" style="height:36px;object-fit:contain;opacity:.9">
     </div>
 
     <div class="load" id="load" aria-hidden="true">
@@ -278,7 +280,7 @@ function renderPronto({ marca, destinoUrl, rotulo }) {
     <a class="vcard" href="/contato.vcf" download>📇 Salvar o contato da ${escapeAttr(nome)}</a>
     <a class="igbtn" style="text-decoration:none;margin-top:14px" href="${escapeAttr(destinoUrl)}">${escapeAttr(rotulo)}</a>
     <div class="pby"><span>Wi-Fi por</span>
-      <img src="https://i.postimg.cc/BQjJGBKf/logo-conectay-transparent.png" alt="ConectaY" style="height:36px;object-fit:contain;opacity:.9"></div>
+      <img src="${LOGO_CONECTAY}" alt="ConectaY" style="height:36px;object-fit:contain;opacity:.9"></div>
     <script>setTimeout(function(){ location.href=${JSON.stringify(destinoUrl)}; }, 12000);</script>`;
   return layout({ title: `${escapeAttr(nome)} — Conectado`, body, marca });
 }
@@ -289,6 +291,7 @@ function renderPrivacidade() {
 <html lang="pt-BR"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Política de Privacidade · ConectaY</title>
+<link rel="icon" type="image/png" href="https://i.postimg.cc/BQjJGBKf/logo-conectay-transparent.png">
 <style>
  :root{--azul:#0ea5e9;--ciano:#22d3ee;--navy:#0a0f1e;--borda:#1e293b;--texto:#e2e8f0;--mudo:#94a3b8}
  *{box-sizing:border-box;margin:0;padding:0}
@@ -300,6 +303,7 @@ function renderPrivacidade() {
  p,li{font-size:.93rem;margin-bottom:10px} ul{padding-left:22px} a{color:var(--ciano)}
  footer{margin-top:40px;padding-top:18px;border-top:1px solid var(--borda);color:var(--mudo);font-size:.8rem}
 </style></head><body><div class="wrap">
+<img src="https://i.postimg.cc/BQjJGBKf/logo-conectay-transparent.png" alt="ConectaY" style="width:64px;height:64px;object-fit:contain;margin-bottom:18px">
 <h1>Política de Privacidade</h1>
 <div class="data">ConectaY · última atualização: julho de 2026</div>
 <p>Esta política explica como o <b>ConectaY</b> trata os dados pessoais coletados quando você se conecta ao Wi-Fi de um estabelecimento parceiro através do nosso portal.</p>
