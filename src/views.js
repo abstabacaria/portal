@@ -141,6 +141,84 @@ function base({ titulo, corpo, loja = {} }) {
 <body><div class="card">${corpo}</div></body></html>`;
 }
 
+
+// ---- Política de privacidade (privacidade.conectay.com.br e /privacidade) ----
+function telaPrivacidade() {
+  return `<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Política de Privacidade · ConectaY</title>
+<meta name="robots" content="index,follow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@700&family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<style>
+  :root{--azul:#0ea5e9;--ciano:#22d3ee;--navy:#0a0f1e;--borda:#1e293b;--texto:#e2e8f0;--mudo:#94a3b8}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--navy);color:var(--texto);font-family:'Inter',system-ui,sans-serif;line-height:1.7}
+  .wrap{max-width:760px;margin:0 auto;padding:40px 22px 70px}
+  .marca{display:flex;align-items:center;gap:9px;font-family:'Sora';font-weight:700;margin-bottom:26px}
+  .marca b{color:var(--azul)}
+  h1{font-family:'Sora';font-size:1.7rem;margin-bottom:6px}
+  .data{color:var(--mudo);font-size:.83rem;margin-bottom:30px}
+  h2{font-family:'Sora';font-size:1.05rem;margin:28px 0 10px;color:var(--ciano)}
+  p,li{font-size:.93rem;margin-bottom:10px}
+  ul{padding-left:22px}
+  a{color:var(--ciano)}
+  footer{margin-top:40px;padding-top:18px;border-top:1px solid var(--borda);color:var(--mudo);font-size:.8rem}
+</style>
+</head>
+<body><div class="wrap">
+  <div class="marca">
+    <svg width="24" height="24" viewBox="0 0 64 64" fill="none">
+      <path d="M32 4 56 18v28L32 60 8 46V18L32 4Z" stroke="#0ea5e9" stroke-width="4" fill="#0b1220"/>
+      <path d="M20 34c6.6-6.6 17.4-6.6 24 0" stroke="#22d3ee" stroke-width="4" stroke-linecap="round"/>
+      <circle cx="32" cy="43" r="3" fill="#22d3ee"/>
+    </svg>Conecta<b>Y</b>
+  </div>
+  <h1>Política de Privacidade</h1>
+  <div class="data">Última atualização: julho de 2026</div>
+
+  <p>Esta política explica como o <b>ConectaY</b> trata os dados pessoais coletados quando você se conecta ao Wi-Fi de um estabelecimento parceiro através do nosso portal.</p>
+
+  <h2>1. Quais dados coletamos</h2>
+  <ul>
+    <li><b>Informados por você:</b> nome, número de WhatsApp e, opcionalmente, data de aniversário e outros campos que o estabelecimento solicitar.</li>
+    <li><b>Técnicos da conexão:</b> endereço MAC do aparelho, endereço IP, tipo de dispositivo e sistema operacional, data e hora do acesso.</li>
+  </ul>
+
+  <h2>2. Para que usamos</h2>
+  <ul>
+    <li>Liberar seu acesso à internet no estabelecimento;</li>
+    <li>Cumprir a guarda de registros de conexão prevista no Marco Civil da Internet (Lei 12.965/2014);</li>
+    <li>Permitir que o estabelecimento visitado envie comunicações e ofertas pelo WhatsApp e direcione ofertas em redes sociais, <b>somente quando você marca a caixa de consentimento</b> no portal;</li>
+    <li>Reconhecer seu aparelho em visitas seguintes, para que você não precise preencher o cadastro novamente;</li>
+    <li>Gerar estatísticas de visitação (horários, frequência) para o estabelecimento.</li>
+  </ul>
+
+  <h2>3. Base legal (LGPD)</h2>
+  <p>Tratamos seus dados com base no <b>consentimento</b> (art. 7º, I da Lei 13.709/2018) para comunicações de marketing, no <b>cumprimento de obrigação legal</b> (art. 7º, II) para os registros de conexão, e no <b>legítimo interesse</b> (art. 7º, IX) para estatísticas de uso do Wi-Fi.</p>
+
+  <h2>4. Com quem compartilhamos</h2>
+  <p>Seus dados de cadastro ficam visíveis apenas para o estabelecimento onde você se conectou e para o ConectaY, como operador da plataforma. Não vendemos seus dados. Quando o estabelecimento usa plataformas de anúncio (como Meta Ads) para alcançar seus clientes, o envio é feito de forma criptografada, sem expor seu número.</p>
+
+  <h2>5. Por quanto tempo guardamos</h2>
+  <p>Registros de conexão são mantidos pelo período mínimo de 6 meses exigido pelo Marco Civil. Dados de cadastro são mantidos enquanto durar o relacionamento com o estabelecimento ou até você solicitar a exclusão.</p>
+
+  <h2>6. Seus direitos</h2>
+  <p>Você pode, a qualquer momento: confirmar se tratamos seus dados, acessá-los, corrigi-los, solicitar a exclusão ou <b>revogar o consentimento</b> — basta responder "sair" a qualquer mensagem ou usar o contato abaixo.</p>
+
+  <h2>7. Segurança</h2>
+  <p>Os dados são armazenados em infraestrutura na nuvem com criptografia em trânsito (HTTPS) e controle de acesso por perfil: cada estabelecimento acessa apenas os dados dos próprios clientes.</p>
+
+  <h2>8. Contato</h2>
+  <p>Encarregado de dados (DPO): <a href="mailto:raynoruan@icloud.com">raynoruan@icloud.com</a></p>
+
+  <footer>ConectaY · Rio de Janeiro/RJ · <a href="https://conectay.com.br">conectay.com.br</a></footer>
+</div></body></html>`;
+}
+
 // ---- Tela do formulário ----
 function telaFormulario(loja, { erro = '', mac = '', continueUrl = '' } = {}) {
   const logo = loja.logo_url ? `<img class="logo" src="${esc(loja.logo_url)}" alt="${esc(loja.nome)}">` : '';
@@ -162,7 +240,7 @@ function telaFormulario(loja, { erro = '', mac = '', continueUrl = '' } = {}) {
         <div class="optin">
           <input type="checkbox" name="optin" value="1" required>
           <span>Aceito receber novidades e promoções da ${esc(loja.nome)} no WhatsApp e concordo com a
-          <a href="https://conectay.com.br/privacidade" target="_blank">Política de Privacidade</a>.</span>
+          <a href="https://privacidade.conectay.com.br" target="_blank">Política de Privacidade</a>.</span>
         </div>
         <button type="submit">${esc(loja.botao_txt || 'Conectar ao Wi-Fi')}</button>
       </form>
@@ -242,4 +320,4 @@ function telaErro(msg) {
   });
 }
 
-module.exports = { telaFormulario, telaBotao, telaSucesso, telaErro, urlDestino, lerCampos, montarVcard };
+module.exports = { telaFormulario, telaBotao, telaSucesso, telaErro, urlDestino, lerCampos, montarVcard, telaPrivacidade };

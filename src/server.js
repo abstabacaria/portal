@@ -36,10 +36,15 @@ async function lojaDoRequest(req) {
   return resolverLoja(c.host, (req.query.loja || '').toString() || null);
 }
 
+// ---------- Política de privacidade ----------
+// Responde em privacidade.conectay.com.br e em /privacidade de qualquer host
+app.get('/privacidade', (req, res) => res.send(views.telaPrivacidade()));
+
 // ---------- Portal ----------
 app.get('/', async (req, res) => {
   try {
     const c = ctx(req);
+    if (/^privacidade\./i.test(c.host)) return res.send(views.telaPrivacidade());
     const loja = await lojaDoRequest(req);
     if (!loja) return res.status(404).send(views.telaErro('Portal não encontrado para este endereço.'));
     // portal inteligente: reconhece o aparelho e escolhe a tela
