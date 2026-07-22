@@ -98,6 +98,7 @@ aside .rodape .papel{font-size:.68rem;color:var(--fraco)}
   padding:10px 15px;font-size:.82rem;font-weight:500}
 .btnG:hover{border-color:var(--azul);color:var(--texto)}
 .btnFb{background:rgba(24,95,165,.2);border-color:#185fa5;color:#85b7eb}
+.btnG4{background:rgba(52,168,83,.15);border-color:#34a853;color:#6bbf7f}
 .tWrap{overflow-x:auto;border-radius:16px;border:1px solid var(--borda)}
 table{width:100%;border-collapse:collapse;background:var(--vidro)}
 th,td{padding:12px 15px;text-align:left;font-size:.84rem;border-bottom:1px solid var(--borda);white-space:nowrap}
@@ -293,6 +294,7 @@ tr:last-child td{border-bottom:0}
         <div class="acao"><label>&nbsp;</label>
           <button class="btnG" onclick="exportarCSV()">⬇ CSV</button>
           <button class="btnG btnFb" onclick="exportarFbAds()">⬇ Meta Ads</button>
+          <button class="btnG btnG4" onclick="exportarGoogleAds()">⬇ Google Ads</button>
           <button class="btnG" onclick="exportarVcf()">📇 Agenda (.vcf)</button></div>
       </div>
       <div id="tabelaLeads"></div>
@@ -561,6 +563,20 @@ function exportarFbAds(){
   lista.forEach(p=>L.push([`+55${p.telefone}`,(p.nome||'').split(' ')[0].toLowerCase()]));
   baixar(`meta_ads_${sufixoArquivo()}.csv`, L.map(l=>l.join(',')).join('\n'));
   toast(`Audiência com ${lista.length} contatos — suba em Públicos personalizados`);
+}
+function exportarGoogleAds(){
+  const lista=pessoasFiltradas().filter(p=>p.telefone && p.status!=='bloqueado');
+  if(!lista.length) return toast('Nenhum lead nos filtros atuais',true);
+  // Customer Match: cabeçalhos EM INGLÊS, telefone em E.164, país fora do hash.
+  // Enviamos texto puro — o Google faz o hash SHA256 no navegador ao subir.
+  const L=[['Phone','First Name','Country']];
+  lista.forEach(p=>{
+    const primeiro=(p.nome||'').trim().split(/\s+/)[0]||'';
+    L.push([`+55${p.telefone}`, primeiro, 'BR']);
+  });
+  baixar(`google_ads_${sufixoArquivo()}.csv`,
+    L.map(l=>l.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n'));
+  toast(`${lista.length} contatos — suba em Público-alvo › Lista de clientes`);
 }
 function exportarVcf(){
   const lista=pessoasFiltradas().filter(p=>p.telefone && p.status!=='bloqueado');
