@@ -372,7 +372,7 @@ tr:last-child td{border-bottom:0}
    CONFIG
 ========================================================= */
 const SUPABASE_URL = 'https://iekxuehdrxsimqtfejxm.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlla3h1ZWhkcnhzaW1xdGZlanhtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1MDk0NzAsImV4cCI6MjA5MTA4NTQ3MH0.61zaRoTBK2XorXgAcGXcsN8yOY0MTRS4bIJ_X4vPjyA';
+const SUPABASE_ANON_KEY = 'COLE_AQUI_SUA_ANON_KEY';
 const EDGE_CRIAR_USUARIO = SUPABASE_URL + '/functions/v1/smart-responder';
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -748,6 +748,34 @@ function montarAparencia(){
       <button class="btnG" style="margin-top:8px" onclick="addCampo('ap')">➕ Adicionar campo</button>
       <small class="dica">Quanto menos campos, mais gente preenche. Peça só o essencial.</small></div>
 
+
+    <div class="secao">🧠 Portal inteligente</div>
+    <div class="full">
+      <label style="display:flex;align-items:center;gap:9px;cursor:pointer">
+        <input type="checkbox" id="ap_rotAtiva" style="width:18px;height:18px;accent-color:var(--azul)" onchange="pvAp()">
+        <span style="color:var(--texto);font-size:.86rem">Reconhecer clientes que já vieram</span></label>
+      <small class="dica">O portal identifica o aparelho. Quem <b>já se cadastrou não preenche o formulário de novo</b>
+      e, a cada visita, recebe um pedido diferente da lista abaixo.</small></div>
+    <div class="full" id="ap_wrapRot">
+      <label>Rodízio de pedidos (na ordem)</label>
+      <div style="display:flex;flex-direction:column;gap:7px">
+        <label style="display:flex;align-items:center;gap:8px;margin:0;color:var(--texto);font-size:.83rem">
+          <input type="checkbox" class="ap_rotD" value="instagram" style="width:16px;height:16px;accent-color:var(--azul)">📸 Seguir no Instagram</label>
+        <label style="display:flex;align-items:center;gap:8px;margin:0;color:var(--texto);font-size:.83rem">
+          <input type="checkbox" class="ap_rotD" value="whatsapp" style="width:16px;height:16px;accent-color:var(--azul)">💬 Entrar no grupo do WhatsApp</label>
+        <label style="display:flex;align-items:center;gap:8px;margin:0;color:var(--texto);font-size:.83rem">
+          <input type="checkbox" class="ap_rotD" value="google_review" style="width:16px;height:16px;accent-color:var(--azul)">⭐ Avaliar no Google</label>
+        <label style="display:flex;align-items:center;gap:8px;margin:0;color:var(--texto);font-size:.83rem">
+          <input type="checkbox" class="ap_rotD" value="site" style="width:16px;height:16px;accent-color:var(--azul)">🌐 Visitar o site</label>
+      </div>
+      <small class="dica">Só entram no rodízio os que estiverem preenchidos acima (link do grupo, Instagram etc.).</small>
+      <label style="margin-top:12px">Pedir o cadastro de novo a cada</label>
+      <select id="ap_recad">
+        <option value="0">Nunca (cadastra uma vez só)</option>
+        <option value="6">6 meses</option><option value="12">12 meses</option>
+      </select>
+      <small class="dica">Útil pra manter a base atualizada sem incomodar quem vem sempre.</small></div>
+
     <div class="secao">📇 Cartão de contato</div>
     <div class="full">
       <label style="display:flex;align-items:center;gap:9px;cursor:pointer">
@@ -761,6 +789,10 @@ function montarAparencia(){
     <div id="ap_wrapVcard2">
       <label>Nome que aparece na agenda</label><input id="ap_vcardNome" placeholder="Absolem Tabacaria"></div>`;
   ap_destino.value = l.destino_tipo || 'instagram';
+  ap_rotAtiva.checked = !!l.rotacao_ativa;
+  ap_recad.value = String(l.recadastro_meses||0);
+  (function(){ const sel=l.rotacao_destinos||['instagram','whatsapp'];
+    document.querySelectorAll('.ap_rotD').forEach(c=>c.checked=sel.includes(c.value)); })();
   ap_vcardAtivo.checked = !!l.vcard_ativo;
   ap_vcardTel.value = l.vcard_telefone || '';
   ap_vcardNome.value = l.vcard_nome || l.nome || '';
@@ -776,6 +808,7 @@ function pvAp(){
   ap_wrapWpp.style.display    = l.destino_tipo==='whatsapp'?'block':'none';
   ap_wrapGoogle.style.display = l.destino_tipo==='google_review'?'block':'none';
   ap_wrapForm.style.display   = l.destino_tipo==='formulario'?'block':'none';
+  ap_wrapRot.style.display = ap_rotAtiva.checked?'block':'none';
   const vc = ap_vcardAtivo.checked;
   ap_wrapVcard.style.display = vc?'block':'none';
   ap_wrapVcard2.style.display = vc?'block':'none';
@@ -787,7 +820,9 @@ function lerFormAparencia(){
     whatsapp_link:ap_wpp.value, google_review_url:ap_google.value,
     form_titulo:ap_formTitulo.value, botao_txt:ap_botao.value, form_campos:colherCampos('ap'),
     vcard_ativo:ap_vcardAtivo.checked, vcard_telefone:ap_vcardTel.value.replace(/\D/g,''),
-    vcard_nome:ap_vcardNome.value };
+    vcard_nome:ap_vcardNome.value,
+    rotacao_ativa:ap_rotAtiva.checked, recadastro_meses:Number(ap_recad.value||0),
+    rotacao_destinos:[...document.querySelectorAll('.ap_rotD')].filter(c=>c.checked).map(c=>c.value) };
 }
 async function salvarAparencia(){
   const f=lerFormAparencia();
@@ -797,7 +832,11 @@ async function salvarAparencia(){
     form_titulo:f.form_titulo.trim()||null, botao_txt:f.botao_txt.trim()||null,
     form_campos:f.destino_tipo==='formulario'?f.form_campos:lojaAtual.form_campos,
     vcard_ativo:f.vcard_ativo, vcard_telefone:f.vcard_telefone||null,
-    vcard_nome:f.vcard_nome.trim()||null };
+    vcard_nome:f.vcard_nome.trim()||null,
+    rotacao_ativa:f.rotacao_ativa, recadastro_meses:f.recadastro_meses,
+    rotacao_destinos:f.rotacao_ativa?['formulario',...f.rotacao_destinos]:lojaAtual.rotacao_destinos };
+  if(upd.rotacao_ativa && !f.rotacao_destinos.length)
+    return toast('Escolha ao menos um pedido pro rodízio',true);
   if(upd.vcard_ativo && (upd.vcard_telefone||'').length<10)
     return toast('Informe o WhatsApp da loja com DDD pro cartão de contato',true);
   if(upd.destino_tipo==='whatsapp' && !upd.whatsapp_link) return toast('Informe o link do grupo do WhatsApp',true);
@@ -920,6 +959,34 @@ function abrirEditor(id){
     <div><label>Cor secundária</label><input type="color" id="lj_cor2" value="${l.cor2||l.cor||'#22d3ee'}" style="height:44px;padding:4px" oninput="pvLj()"></div>
     <div class="full"><label>Paletas prontas</label><div class="presets" id="lj_presets"></div></div>
 
+
+    <div class="secao">🧠 Portal inteligente</div>
+    <div class="full">
+      <label style="display:flex;align-items:center;gap:9px;cursor:pointer">
+        <input type="checkbox" id="lj_rotAtiva" style="width:18px;height:18px;accent-color:var(--azul)" onchange="pvLj()">
+        <span style="color:var(--texto);font-size:.86rem">Reconhecer clientes que já vieram</span></label>
+      <small class="dica">O portal identifica o aparelho. Quem <b>já se cadastrou não preenche o formulário de novo</b>
+      e, a cada visita, recebe um pedido diferente da lista abaixo.</small></div>
+    <div class="full" id="lj_wrapRot">
+      <label>Rodízio de pedidos (na ordem)</label>
+      <div style="display:flex;flex-direction:column;gap:7px">
+        <label style="display:flex;align-items:center;gap:8px;margin:0;color:var(--texto);font-size:.83rem">
+          <input type="checkbox" class="lj_rotD" value="instagram" style="width:16px;height:16px;accent-color:var(--azul)">📸 Seguir no Instagram</label>
+        <label style="display:flex;align-items:center;gap:8px;margin:0;color:var(--texto);font-size:.83rem">
+          <input type="checkbox" class="lj_rotD" value="whatsapp" style="width:16px;height:16px;accent-color:var(--azul)">💬 Entrar no grupo do WhatsApp</label>
+        <label style="display:flex;align-items:center;gap:8px;margin:0;color:var(--texto);font-size:.83rem">
+          <input type="checkbox" class="lj_rotD" value="google_review" style="width:16px;height:16px;accent-color:var(--azul)">⭐ Avaliar no Google</label>
+        <label style="display:flex;align-items:center;gap:8px;margin:0;color:var(--texto);font-size:.83rem">
+          <input type="checkbox" class="lj_rotD" value="site" style="width:16px;height:16px;accent-color:var(--azul)">🌐 Visitar o site</label>
+      </div>
+      <small class="dica">Só entram no rodízio os que estiverem preenchidos acima (link do grupo, Instagram etc.).</small>
+      <label style="margin-top:12px">Pedir o cadastro de novo a cada</label>
+      <select id="lj_recad">
+        <option value="0">Nunca (cadastra uma vez só)</option>
+        <option value="6">6 meses</option><option value="12">12 meses</option>
+      </select>
+      <small class="dica">Útil pra manter a base atualizada sem incomodar quem vem sempre.</small></div>
+
     <div class="secao">📇 Cartão de contato</div>
     <div class="full">
       <label style="display:flex;align-items:center;gap:9px;cursor:pointer">
@@ -945,6 +1012,10 @@ function abrirEditor(id){
 
   lj_destino.value = l.destino_tipo || 'instagram';
   lj_statusPg.value = l.status_pagamento || '';
+  lj_rotAtiva.checked = !!l.rotacao_ativa;
+  lj_recad.value = String(l.recadastro_meses||0);
+  (function(){ const sel=l.rotacao_destinos||['instagram','whatsapp'];
+    document.querySelectorAll('.lj_rotD').forEach(c=>c.checked=sel.includes(c.value)); })();
   lj_vcardAtivo.checked = !!l.vcard_ativo;
   lj_vcardTel.value = l.vcard_telefone || '';
   lj_vcardNome.value = l.vcard_nome || l.nome || '';
@@ -961,7 +1032,9 @@ function lerFormLoja(){
     whatsapp_link:lj_wpp.value, google_review_url:lj_google.value,
     form_titulo:lj_formTitulo.value, botao_txt:lj_botao.value, form_campos:colherCampos('lj'),
     vcard_ativo:lj_vcardAtivo.checked, vcard_telefone:lj_vcardTel.value.replace(/\D/g,''),
-    vcard_nome:lj_vcardNome.value };
+    vcard_nome:lj_vcardNome.value,
+    rotacao_ativa:lj_rotAtiva.checked, recadastro_meses:Number(lj_recad.value||0),
+    rotacao_destinos:[...document.querySelectorAll('.lj_rotD')].filter(c=>c.checked).map(c=>c.value) };
 }
 function pvLj(){
   const l=lerFormLoja();
@@ -971,6 +1044,7 @@ function pvLj(){
   lj_wrapWpp.style.display    = l.destino_tipo==='whatsapp'?'block':'none';
   lj_wrapGoogle.style.display = l.destino_tipo==='google_review'?'block':'none';
   lj_wrapForm.style.display   = l.destino_tipo==='formulario'?'block':'none';
+  lj_wrapRot.style.display    = lj_rotAtiva.checked?'block':'none';
   lj_wrapVcard.style.display  = lj_vcardAtivo.checked?'block':'none';
   lj_wrapVcard2.style.display = lj_vcardAtivo.checked?'block':'none';
   pvLoja.innerHTML = preview(l);
@@ -1000,6 +1074,8 @@ async function salvarLoja(){
     form_campos:f.destino_tipo==='formulario'?f.form_campos:(edit.form_campos||null),
     logo_url:f.logo_url||null, cor:f.cor, cor2:f.cor2,
     vcard_ativo:f.vcard_ativo, vcard_telefone:f.vcard_telefone||null, vcard_nome:f.vcard_nome.trim()||null,
+    rotacao_ativa:f.rotacao_ativa, recadastro_meses:f.recadastro_meses,
+    rotacao_destinos:f.rotacao_ativa?['formulario',...f.rotacao_destinos]:(edit.rotacao_destinos||null),
     codigo_wifi:lj_codigo.value.trim()||null, ap_secret:lj_secret.value.trim()||null,
     valor_mensal:lj_valor.value?Number(lj_valor.value):null,
     dia_vencimento:lj_diavenc.value?Number(lj_diavenc.value):null,
