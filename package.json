@@ -1,7 +1,7 @@
 {
-  "name": "absolem-captive-portal",
-  "version": "1.0.0",
-  "description": "Autenticador de Captive Portal Externo (Intelbras Zeus OS / AP 360) para a Absolem Tabacaria - liberação via código validado no Supabase (REST/service key)",
+  "name": "conectay-portal",
+  "version": "2.1.0",
+  "description": "ConectaY — Captive Portal Externo (Intelbras Zeus OS / AP 360) multi-loja",
   "main": "src/server.js",
   "type": "commonjs",
   "scripts": {
@@ -9,7 +9,7 @@
     "dev": "node --watch src/server.js"
   },
   "dependencies": {
-    "express": "^4.19.2",
-    "dotenv": "^16.4.5"
+    "dotenv": "^16.4.5",
+    "express": "^4.19.2"
   }
 }
