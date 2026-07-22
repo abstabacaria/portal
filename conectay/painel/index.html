@@ -10,7 +10,7 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <style>
 :root{
-  --azul:#0ea5e9; --ciano:#22d3ee; --navy:#070b16; --vidro:rgba(16,24,39,.72); --vidro2:rgba(13,21,36,.9);
+  --azul:#0ea5e9; --ciano:#22d3ee; --navy:#070b16; s--vidro:rgba(16,24,39,.72); --vidro2:rgba(13,21,36,.9);
   --borda:#1e293b; --bordaHi:#2b3b55; --texto:#e2e8f0; --mudo:#8b9bb4; --fraco:#5b6b84;
   --ok:#34d399; --alerta:#fbbf24; --erro:#f87171; --grad:linear-gradient(135deg,#0ea5e9,#22d3ee);
 }
@@ -360,7 +360,7 @@ tr:last-child td{border-bottom:0}
    CONFIG
 ========================================================= */
 const SUPABASE_URL = 'https://iekxuehdrxsimqtfejxm.supabase.co';
-const SUPABASE_ANON_KEY = 'COLE_AQUI_SUA_ANON_KEY';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlla3h1ZWhkcnhzaW1xdGZlanhtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1MDk0NzAsImV4cCI6MjA5MTA4NTQ3MH0.61zaRoTBK2XorXgAcGXcsN8yOY0MTRS4bIJ_X4vPjyA';
 const EDGE_CRIAR_USUARIO = SUPABASE_URL + '/functions/v1/smart-responder';
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
