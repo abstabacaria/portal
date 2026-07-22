@@ -1,135 +1,204 @@
 // ============================================================
-// CONECTAY — lojas.js
-// Resolve a loja pelo domínio/slug e grava acessos e leads
-// no Supabase via PostgREST (service_role — ignora RLS).
+//  MULTI-MARCA — resolve a loja pelo domínio e valida o código.
+//  Cada portal (wifi.lojaX.com.br) aponta pro MESMO servidor;
+//  aqui a gente descobre QUAL loja é, pela tabela portal_lojas.
 // ============================================================
+const SUPABASE_URL = (process.env.SUPABASE_URL || '').replace(/\/$/, '');
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY || '';
 
-const SUPABASE_URL = process.env.SUPABASE_URL || 'https://iekxuehdrxsimqtfejxm.supabase.co';
-const SERVICE_KEY  = process.env.SUPABASE_SERVICE_KEY; // service_role nas Variables do Railway
-
-const HEADERS = {
-  'apikey': SERVICE_KEY,
-  'Authorization': `Bearer ${SERVICE_KEY}`,
-  'Content-Type': 'application/json'
+const H = {
+  apikey: SERVICE_KEY,
+  Authorization: `Bearer ${SERVICE_KEY}`,
+  'Content-Type': 'application/json',
 };
 
-const cache = new Map(); // dominio -> { loja, ts }
-const CACHE_MS = 60_000;
+// cache curto: evita bater no banco a cada request (o portal é muito acessado)
+const CACHE = new Map();
+const TTL = 60 * 1000; // 60s
 
-async function rest(path, opts = {}) {
-  const r = await fetch(`${SUPABASE_URL}/rest/v1/${path}`, { headers: HEADERS, ...opts });
-  if (!r.ok) {
-    const body = await r.text().catch(() => '');
-    throw new Error(`PostgREST ${r.status}: ${body}`);
-  }
-  return r.status === 204 ? null : r.json();
+function norm(host) {
+  return String(host || '')
+    .toLowerCase()
+    .replace(/:\d+$/, '')      // tira porta
+    .replace(/^www\./, '')
+    .trim();
 }
 
-// ---- Resolve loja pelo Host (absolem.conectay.com.br) ou ?loja=slug ----
-async function resolverLoja(host, slug) {
-  const chave = (slug || host || '').toLowerCase().replace(/:\d+$/, '');
-  if (!chave) return null;
+// Busca a loja pelo domínio. Retorna null se não achar ou estiver inativa.
+async function lojaPorDominio(host) {
+  const dominio = norm(host);
+  if (!dominio) return null;
 
-  const hit = cache.get(chave);
-  if (hit && Date.now() - hit.ts < CACHE_MS) return hit.loja;
+  const cached = CACHE.get(dominio);
+  if (cached && Date.now() - cached.t < TTL) return cached.v;
 
-  let rows = [];
-  if (slug) {
-    rows = await rest(`portal_lojas?slug=eq.${encodeURIComponent(slug)}&ativo=eq.true&limit=1`);
-  } else {
-    rows = await rest(`portal_lojas?dominio=eq.${encodeURIComponent(chave)}&ativo=eq.true&limit=1`);
-    // fallback: subdomínio *.conectay.com.br -> slug
-    if (!rows.length && chave.endsWith('.conectay.com.br')) {
-      const sub = chave.replace('.conectay.com.br', '');
-      rows = await rest(`portal_lojas?slug=eq.${encodeURIComponent(sub)}&ativo=eq.true&limit=1`);
+  let loja = null;
+  try {
+    const url = `${SUPABASE_URL}/rest/v1/portal_lojas?dominio=eq.${encodeURIComponent(dominio)}&select=*&limit=1`;
+    const r = await fetch(url, { headers: H });
+    if (r.ok) {
+      const rows = await r.json();
+      loja = Array.isArray(rows) && rows[0] ? rows[0] : null;
     }
+  } catch (e) {
+    console.warn('[lojas] erro ao buscar', dominio, e.message);
   }
-  const loja = rows[0] || null;
-  if (loja) cache.set(chave, { loja, ts: Date.now() });
+
+  CACHE.set(dominio, { t: Date.now(), v: loja });
   return loja;
 }
 
-// ---- Detecção simples de dispositivo/SO pelo user-agent ----
-function parseUA(ua = '') {
-  const s = ua.toLowerCase();
+// Busca a loja pelo SLUG (identificador) — usado pra testar via ?loja=xxx,
+// sem precisar de domínio configurado.
+async function lojaPorSlug(slug) {
+  slug = String(slug || '').toLowerCase().trim();
+  if (!slug) return null;
+  const chave = '__slug__' + slug;
+  const cached = CACHE.get(chave);
+  if (cached && Date.now() - cached.t < TTL) return cached.v;
+  let loja = null;
+  try {
+    const url = `${SUPABASE_URL}/rest/v1/portal_lojas?slug=eq.${encodeURIComponent(slug)}&select=*&limit=1`;
+    const r = await fetch(url, { headers: H });
+    if (r.ok) {
+      const rows = await r.json();
+      loja = Array.isArray(rows) && rows[0] ? rows[0] : null;
+    }
+  } catch (e) {
+    console.warn('[lojas] erro ao buscar slug', slug, e.message);
+  }
+  CACHE.set(chave, { t: Date.now(), v: loja });
+  return loja;
+}
+
+// Valida o código digitado contra o código daquela loja.
+// granted=false com motivo claro. Nunca deixa o código de uma loja liberar outra.
+function validarCodigoDaLoja(loja, code) {
+  if (!loja) return { granted: false, reason: 'Loja não encontrada' };
+  if (loja.ativo === false) return { granted: false, reason: 'Portal desativado' };
+  const esperado = String(loja.codigo_wifi || '').trim();
+  if (!esperado) return { granted: false, reason: 'Loja sem código configurado' };
+  const digitado = String(code || '').trim();
+  if (!digitado) return { granted: false, reason: 'Digite o código' };
+  if (digitado.toUpperCase() !== esperado.toUpperCase()) {
+    return { granted: false, reason: 'Código inválido' };
+  }
+  return { granted: true, reason: 'ok' };
+}
+
+// ---- Detecção de dispositivo/SO pelo user-agent (alimenta o dashboard) ----
+function lerUA(ua = '') {
+  const s = String(ua).toLowerCase();
   let so = 'outro';
   if (s.includes('android')) so = 'Android';
   else if (s.includes('iphone') || s.includes('ipad') || s.includes('ios')) so = 'iOS';
   else if (s.includes('windows')) so = 'Windows';
   else if (s.includes('mac os') || s.includes('macintosh')) so = 'macOS';
   else if (s.includes('linux')) so = 'Linux';
-
-  let dispositivo = 'desktop';
+  let dispositivo = 'computador';
   if (s.includes('ipad') || s.includes('tablet')) dispositivo = 'tablet';
-  else if (s.includes('mobile') || s.includes('android') || s.includes('iphone')) dispositivo = 'mobile';
-
+  else if (s.includes('mobile') || s.includes('android') || s.includes('iphone')) dispositivo = 'celular';
   return { so, dispositivo };
 }
 
-// ---- Grava visita ----
-async function registrarAcesso(lojaId, { mac, ip, userAgent }) {
-  const { so, dispositivo } = parseUA(userAgent);
+// Registra o acesso marcado por loja (não derruba o fluxo se falhar).
+// Aceita a assinatura antiga (loja, mac, dispositivo) e a nova com user-agent.
+async function registrarAcesso(loja, mac, dispositivo, userAgent, ip) {
+  if (!loja) return;
   try {
-    await rest('portal_acessos', {
+    const ua = lerUA(userAgent);
+    await fetch(`${SUPABASE_URL}/rest/v1/portal_acessos`, {
       method: 'POST',
-      headers: { ...HEADERS, Prefer: 'return=minimal' },
+      headers: { ...H, Prefer: 'return=minimal' },
       body: JSON.stringify({
-        loja_id: lojaId,
+        loja_id: loja.id,
+        slug: loja.slug,
         mac: mac || null,
+        dispositivo: dispositivo || ua.dispositivo || null,
+        so: userAgent ? ua.so : null,
+        user_agent: userAgent ? String(userAgent).slice(0, 500) : null,
         ip: ip || null,
-        user_agent: (userAgent || '').slice(0, 500),
-        so, dispositivo
-      })
+      }),
     });
   } catch (e) {
-    console.error('registrarAcesso:', e.message);
+    /* silencioso de propósito */
   }
 }
 
-// ---- Grava lead (o trigger no banco consolida em portal_pessoas) ----
-async function registrarLead(lojaId, { nome, telefone, aniversario, extras, mac, userAgent, optin, optinTexto }) {
-  const dados = Object.assign({}, extras || {});
-  if (nome) dados.nome = nome;
-  if (telefone) dados.telefone = telefone;
-  if (aniversario) dados.aniversario = aniversario; // AAAA-MM-DD
-  await rest('portal_leads', {
-    method: 'POST',
-    headers: { ...HEADERS, Prefer: 'return=minimal' },
-    body: JSON.stringify({
-      loja_id: lojaId,
-      nome: nome || null,
-      telefone,
-      mac: mac || null,
-      user_agent: (userAgent || '').slice(0, 500),
-      dados,
-      optin: !!optin,
-      optin_data: optin ? new Date().toISOString() : null,
-      optin_texto: optin ? (optinTexto || '') : null
-    })
-  });
+// grava um lead coletado pelo formulário (isolado por loja)
+// Além do JSONB `dados` (histórico), preenche as colunas planas usadas
+// pelo CRM (portal_pessoas) — nome, telefone e o consentimento.
+async function registrarLead(loja, dados, mac, userAgent) {
+  if (!loja) return;
+  try {
+    const registro = Object.assign({}, dados || {});
+    const optin = !!registro.optin;
+    // Consentimento LGPD: se a pessoa marcou o aceite, guarda a PROVA
+    // (que aceitou, quando aceitou e o texto exato que foi mostrado).
+    if (optin) {
+      registro.optin = true;
+      registro.optin_data = new Date().toISOString();
+      registro.optin_texto = 'Aceito receber novidades e ofertas no WhatsApp e concordo com a Política de Privacidade.';
+    }
+    const telefone = String(
+      registro.telefone || registro.whatsapp || registro.celular || ''
+    ).replace(/\D/g, '') || null;
+
+    await fetch(`${SUPABASE_URL}/rest/v1/portal_leads`, {
+      method: 'POST',
+      headers: { ...H, Prefer: 'return=minimal' },
+      body: JSON.stringify({
+        loja_id: loja.id,
+        slug: loja.slug,
+        dados: registro,
+        mac: mac || null,
+        nome: registro.nome || null,
+        telefone,
+        user_agent: userAgent ? String(userAgent).slice(0, 500) : null,
+        optin,
+        optin_data: optin ? new Date().toISOString() : null,
+        optin_texto: optin ? registro.optin_texto : null,
+      }),
+    });
+    return telefone;
+  } catch (e) { /* silencioso */ }
 }
 
-// ---- Portal inteligente: decide a tela pelo histórico do aparelho ----
-async function visitaDispositivo(lojaId, mac) {
-  if (!mac) return null;
+// ---- PORTAL INTELIGENTE ----------------------------------------------
+// Reconhece o aparelho pelo MAC e diz qual tela mostrar.
+// Se a função ainda não existir no banco, devolve null e o motor
+// segue com o comportamento normal da loja (nada quebra).
+async function visitaDispositivo(loja, mac) {
+  if (!loja || !mac) return null;
   try {
     const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/conectay_dispositivo_visita`, {
-      method: 'POST', headers: HEADERS,
-      body: JSON.stringify({ p_loja: lojaId, p_mac: mac })
+      method: 'POST', headers: H,
+      body: JSON.stringify({ p_loja: loja.id, p_mac: mac }),
     });
-    if (!r.ok) return null;               // função ainda não instalada
+    if (!r.ok) return null;
     return await r.json();
-  } catch (e) { console.error('visitaDispositivo:', e.message); return null; }
+  } catch (e) { return null; }
 }
 
-async function marcarCadastrado(lojaId, mac, telefone) {
-  if (!mac) return;
+// Marca o aparelho como já cadastrado (depois do formulário enviado).
+async function marcarCadastrado(loja, mac, telefone) {
+  if (!loja || !mac) return;
   try {
     await fetch(`${SUPABASE_URL}/rest/v1/rpc/conectay_dispositivo_cadastrado`, {
-      method: 'POST', headers: HEADERS,
-      body: JSON.stringify({ p_loja: lojaId, p_mac: mac, p_telefone: telefone })
+      method: 'POST', headers: H,
+      body: JSON.stringify({ p_loja: loja.id, p_mac: mac, p_telefone: telefone || '' }),
     });
-  } catch (e) { console.error('marcarCadastrado:', e.message); }
+  } catch (e) { /* silencioso */ }
 }
 
-module.exports = { resolverLoja, registrarAcesso, registrarLead, visitaDispositivo, marcarCadastrado };
+// limpa o cache de um domínio (útil quando você edita a loja no painel)
+function limparCache(host) {
+  if (host) CACHE.delete(norm(host));
+  else CACHE.clear();
+}
+
+module.exports = {
+  lojaPorDominio, lojaPorSlug, validarCodigoDaLoja,
+  registrarAcesso, registrarLead, limparCache,
+  visitaDispositivo, marcarCadastrado, lerUA,
+};
