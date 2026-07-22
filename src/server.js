@@ -1,307 +1,175 @@
-require('dotenv').config();
+// ============================================================
+// CONECTAY — server.js (Railway, porta 8080)
+// Rotas:
+//   GET  /          portal da loja (resolvida pelo Host ou ?loja=slug)
+//   POST /lead      grava lead (modo formulario) -> sucesso -> destino
+//   POST /conectar  modo instagram: registra acesso -> sucesso -> destino
+//   GET  /auth      fluxo do AP (?code=&mac=&s=AP_SECRET)
+//   GET  /ig        redireciona pro Instagram da loja certa
+//   GET  /health    status + últimos logs
+// ============================================================
+
 const express = require('express');
-const crypto = require('crypto');
-const path = require('path');
-const { validateCode, logAccess, getMetrics } = require('./db');
-const { lojaPorDominio, lojaPorSlug, validarCodigoDaLoja, registrarAcesso, registrarLead } = require('./lojas');
-const { renderPortal, renderResult } = require('./views');
+const { resolverLoja, registrarAcesso, registrarLead, visitaDispositivo, marcarCadastrado } = require('./lojas');
+const { validateCode, validateApSecret, accessLog, getLog, AUTO_CODE } = require('./db');
+const views = require('./views');
 
 const app = express();
-app.use(express.urlencoded({ extended: false }));
+app.use(express.urlencoded({ extended: true }));
+app.use(express.json());
+app.set('trust proxy', true);
 
-// Parser de cookie leve (evita dependência extra).
-app.use((req, _res, next) => {
-  req.cookies = {};
-  const raw = req.headers.cookie;
-  if (raw) for (const part of raw.split(';')) {
-    const i = part.indexOf('=');
-    if (i > -1) req.cookies[part.slice(0, i).trim()] = decodeURIComponent(part.slice(i + 1).trim());
-  }
-  next();
-});
-app.use('/static', express.static(path.join(__dirname, '..', 'public')));
+const PORT = process.env.PORT || 8080;
 
-const {
-  PORT = 8080,
-  AP_SECRET = '',
-  SESSION_TIMEOUT = '10800',
-  IDLE_TIMEOUT = '900',
-  DOWNLOAD_KBPS = '0',
-  UPLOAD_KBPS = '0',
-  INSTAGRAM_URL = 'https://instagram.com/absolem',
-  REDIRECT_AFTER = '',
-  AUTO_CODE = 'ABSOLEM',
-  METRICS_KEY = '',
-} = process.env;
-
-// Extrai o @handle do Instagram e monta o link do APP (deep link) + fallback web.
-const IG_HANDLE = (INSTAGRAM_URL || '')
-  .replace(/^https?:\/\/(www\.)?instagram\.com\//i, '')
-  .replace(/[\/?#].*$/, '')
-  .replace(/^@/, '') || 'abstabacaria';
-const IG_APP_LINK = 'instagram://user?username=' + IG_HANDLE;
-const IG_WEB_LINK = 'https://instagram.com/' + IG_HANDLE;
-
-/* -------------------------------------------------------------------------
-   PROTOCOLO INTELBRAS ZEUS OS — Captive Portal Externo (modo "Externo")
-   1) O AP redireciona o cliente para cá (GET) com os parâmetros do device.
-   2) Mostramos a página (seguir Instagram + digitar código).
-   3) Ao aprovar, montamos a URL de liberação (redirect_uri do AP) com o
-      token HMAC-SHA256 e mandamos o navegador do cliente para lá.
-   Referência: "Especificações do Captive Portal Externo v2.0".
-   ------------------------------------------------------------------------- */
-
-// Parâmetros que o AP envia e que precisamos carregar adiante.
-function extractApParams(src) {
+function ctx(req) {
   return {
-    continue: src.continue || REDIRECT_AFTER || '',
-    ip: src.ip || '',
-    ap_mac: src.ap_mac || '',
-    mac: src.mac || '',
-    radio: src.radio || '',
-    ssid: src.ssid || '',
-    ts: src.ts || '',
-    redirect_uri: src.redirect_uri || '',
-    user_hash: src.user_hash || '',
-    loja: src.loja || '',
+    host: req.headers['x-forwarded-host'] || req.headers.host || '',
+    ip: req.ip,
+    userAgent: req.headers['user-agent'] || '',
+    mac: (req.query.mac || req.body?.mac || '').toString().slice(0, 32),
+    continueUrl: (req.query.continue || req.body?.continue || '').toString().slice(0, 500)
   };
 }
 
-// Monta a URL de liberação de volta para o AP, com token de segurança.
-function buildReleaseUrl(p) {
-  const ts = p.ts || String(Math.floor(Date.now() / 1000));
-  const userContext = `${p.user_hash}|${ts}`;
-  const token = AP_SECRET
-    ? crypto.createHmac('sha256', AP_SECRET).update(userContext).digest('hex')
-    : '';
-
-  const params = new URLSearchParams();
-  if (p.continue) params.set('continue', p.continue);
-  params.set('ts', ts);
-  if (token) params.set('token', token);
-  params.set('user_hash', p.user_hash);
-  params.set('session_timeout', SESSION_TIMEOUT);
-  params.set('idle_timeout', IDLE_TIMEOUT);
-  params.set('download_kbps', DOWNLOAD_KBPS);
-  params.set('upload_kbps', UPLOAD_KBPS);
-
-  return `${p.redirect_uri}?${params.toString()}`;
+async function lojaDoRequest(req) {
+  const c = ctx(req);
+  return resolverLoja(c.host, (req.query.loja || '').toString() || null);
 }
 
-// Acha a loja: primeiro por ?loja=slug (teste sem domínio), senão pelo domínio.
-// O slug, quando usado, precisa "grudar" nos próximos passos — por isso ele
-// também entra no cookie e nos campos ocultos do form.
-async function acharLoja(req) {
-  const slug = (req.query && req.query.loja) || (req.body && req.body.loja) || '';
-  if (slug) {
-    const l = await lojaPorSlug(slug);
-    if (l) return l;
-  }
-  return await lojaPorDominio(req.headers.host);
-}
-
-// Constrói a "marca" a partir da loja achada pelo domínio.
-// Se não achar (ex: domínio novo ainda não cadastrado), usa o padrão da Absolem
-// pra nunca deixar o cliente na mão.
-function marcaDaLoja(loja, host) {
-  if (loja) {
-    const ig = String(loja.instagram || '').replace(/^@/, '');
-    return {
-      nome: loja.nome || 'Wi-Fi',
-      instagram: ig ? 'https://instagram.com/' + ig : INSTAGRAM_URL,
-      igHandle: ig || IG_HANDLE,
-      cor: loja.cor || '#ff6a1a',
-      cor2: loja.cor2 || loja.cor || '#ff6a1a',
-      logo: loja.logo_url || '/static/logo.png',
-      mensagem: loja.mensagem || '',
-      autoCode: loja.codigo_wifi || AUTO_CODE,   // liberação automática: nunca deixa vazio
-      apSecret: loja.ap_secret || AP_SECRET,
-      destinoTipo: loja.destino_tipo || 'instagram',
-      whatsappLink: loja.whatsapp_link || '',
-      formCampos: loja.form_campos || null,
-      formTitulo: loja.form_titulo || '',
-      ativo: loja.ativo !== false,
-      achou: true,
-    };
-  }
-  return {
-    nome: 'Absolem Tabacaria', instagram: INSTAGRAM_URL, igHandle: IG_HANDLE,
-    cor: '#ff6a1a', logo: '/static/logo.png', mensagem: '', autoCode: AUTO_CODE,
-    apSecret: AP_SECRET, ativo: true, achou: false,
-  };
-}
-
-// Página inicial — o AP redireciona o cliente para cá (GET).
+// ---------- Portal ----------
 app.get('/', async (req, res) => {
-  const p = extractApParams(req.query);
-  let loja = null;
-  try { loja = await acharLoja(req); } catch (e) { console.error('[get] acharLoja:', e.message); }
-  const marca = marcaDaLoja(loja, req.headers.host);
-  if (req.query && req.query.loja) p.loja = req.query.loja;  // carrega o slug adiante
-
-  // loja cadastrada mas DESLIGADA no painel: portal fora do ar
-  if (marca.achou && !marca.ativo) {
-    return res.send(renderResult({
-      ok: false,
-      title: marca.nome,
-      msg: 'O Wi-Fi deste local está temporariamente indisponível. Tente novamente mais tarde.',
-    }));
-  }
-
-  res.setHeader('Set-Cookie',
-    `apx=${encodeURIComponent(JSON.stringify(p))}; HttpOnly; Path=/; Max-Age=600; SameSite=Lax`);
-  res.send(renderPortal({ ap: p, instagram: marca.instagram, autoCode: marca.autoCode, error: null, marca }));
-});
-
-// Envio do formulário (código digitado).
-app.post('/auth', async (req, res) => {
   try {
-    let ap;
-    try { ap = JSON.parse(req.cookies.apx || '{}'); } catch { ap = {}; }
-    ap = extractApParams({ ...ap, ...req.body }); // body pode reenviar campos ocultos
-
-    let loja = null;
-    try { loja = await lojaPorDominio(req.headers.host); } catch (e) { console.error('[auth] lojaPorDominio:', e.message); }
-    const marca = marcaDaLoja(loja, req.headers.host);
-    const code = String(req.body.code || '').trim().toUpperCase();
-    const base = { code, client_mac: ap.mac, ap_mac: ap.ap_mac, ssid: ap.ssid, user_hash: ap.user_hash };
-
-    if (!code) {
-      await logAccess({ ...base, result: 'denied', reason: 'Código vazio' });
-      return res.send(renderPortal({ ap, instagram: marca.instagram, autoCode: marca.autoCode, error: 'Digite o código para liberar o Wi-Fi.', marca }));
+    const c = ctx(req);
+    const loja = await lojaDoRequest(req);
+    if (!loja) return res.status(404).send(views.telaErro('Portal não encontrado para este endereço.'));
+    // portal inteligente: reconhece o aparelho e escolhe a tela
+    let destino = loja.destino_tipo, info = null;
+    if (loja.rotacao_ativa) {
+      info = await visitaDispositivo(loja.id, c.mac);
+      if (info && info.destino) destino = info.destino;
     }
+    accessLog('portal_view', { loja: loja.slug, mac: c.mac, destino,
+                               motivo: info && info.motivo, visitas: info && info.visitas });
 
-    if (!ap.redirect_uri) {
-      // Sem redirect_uri não há como liberar — provavelmente acesso fora do fluxo do AP.
-      await logAccess({ ...base, result: 'denied', reason: 'Sem redirect_uri (fora do AP)' });
-      return res.send(renderResult({
-        ok: false,
-        title: 'Abra pelo Wi-Fi da loja',
-        msg: 'Esta página precisa ser aberta ao conectar na rede do Wi-Fi. Conecte-se e tente de novo.',
-        link: { href: '/ig', label: '📸 Ir pro Instagram assim mesmo' },
-      }));
-    }
-
-    // Validação do código (que vai ESCONDIDO no botão — liberação automática).
-    // - loja cadastrada com código próprio: valida contra ela.
-    // - senão: basta bater com o AUTO_CODE do ambiente. NÃO depende de banco,
-    //   então o portal nunca cai por causa do Supabase.
-    let outcome;
-    if (marca.achou && String(loja.codigo_wifi || '').trim()) {
-      outcome = validarCodigoDaLoja(loja, code);
-    } else {
-      const esperado = String(AUTO_CODE || '').trim().toUpperCase();
-      outcome = (esperado && code === esperado)
-        ? { granted: true, reason: 'ok' }
-        : { granted: false, reason: 'Código inválido' };
-    }
-
-    if (!outcome.granted) {
-      await logAccess({ ...base, result: 'denied', reason: outcome.reason });
-      return res.send(renderPortal({ ap, instagram: marca.instagram, autoCode: marca.autoCode, error: `${outcome.reason}.`, marca }));
-    }
-
-    // registra o acesso (não espera, não derruba se falhar)
-    try { registrarAcesso(loja, ap.mac, /mobile|android|iphone/i.test(req.headers['user-agent']||'') ? 'celular' : 'computador'); } catch (e) {}
-
-  // modo formulário: coleta os campos lead_* e salva como lead da loja
-  if (req.body.go === 'form') {
-    const dados = {};
-    for (const k in req.body) {
-      if (k.startsWith('lead_') && req.body[k]) dados[k.slice(5)] = String(req.body[k]).slice(0, 200);
-    }
-    if (Object.keys(dados).length) { try { registrarLead(loja, dados, ap.mac); } catch (e) {} }
-  }
-
-    // Liberado! Registra e manda o navegador de volta ao AP para soltar a internet.
-    await logAccess({ ...base, result: 'granted', reason: outcome.reason });
-    // Se veio do Instagram OU do formulário-com-Instagram, após liberar a internet
-    // o AP manda o cliente pro Instagram da loja (cadastro + seguir no mesmo passo).
-    const temInstaLoja = loja && loja.instagram;
-    if (req.body.go === 'instagram' || (req.body.go === 'form' && temInstaLoja)) {
-      // Manda pro /ig do próprio portal, que abre o APP do Instagram (evita o "restrito" do navegador).
-      ap.continue = 'https://' + (req.headers.host || 'wifi.absolemtabacaria.com') + '/ig';
-    }
-    const releaseUrl = buildReleaseUrl(ap);
-    // NÃO apagamos o cookie do AP aqui: se a pessoa voltar e tocar de novo,
-    // sem ele o portal não sabe o redirect_uri e cai na tela de erro.
-    return res.redirect(302, releaseUrl);
-  } catch (err) {
-    // Rede de segurança: NADA pode fazer o portal responder 'failed to respond'.
-    console.error('[auth] erro inesperado:', err && err.message);
-    try {
-      let ap2 = {}; try { ap2 = JSON.parse(req.cookies.apx || '{}'); } catch {}
-      ap2 = extractApParams({ ...ap2, ...req.body });
-      if (ap2.redirect_uri) {
-        if (req.body.go === 'instagram') ap2.continue = 'https://' + (req.headers.host || 'wifi.absolemtabacaria.com') + '/ig';
-        return res.redirect(302, buildReleaseUrl(ap2));  // libera assim mesmo
-      }
-    } catch {}
-    return res.redirect(302, '/ig');
+    const lojaTela = Object.assign({}, loja, { destino_tipo: destino });
+    const tela = (destino === 'formulario')
+      ? views.telaFormulario(lojaTela, { mac: c.mac, continueUrl: c.continueUrl })
+      : views.telaBotao(lojaTela, { mac: c.mac, continueUrl: c.continueUrl,
+          voltou: !!(info && info.conhecido) });
+    res.send(tela);
+  } catch (e) {
+    console.error(e);
+    res.status(500).send(views.telaErro('Erro interno. Tente novamente.'));
   }
 });
 
-// Saúde do serviço (útil pra monitorar na VPS).
-app.get('/health', (req, res) => res.json({ ok: true, ts: Date.now() }));
+// ---------- Lead (modo formulário) ----------
+app.post('/lead', async (req, res) => {
+  try {
+    const c = ctx(req);
+    const loja = await lojaDoRequest(req);
+    if (!loja) return res.status(404).send(views.telaErro('Portal não encontrado.'));
 
-// Página que abre o APP do Instagram (deep link), com fallback pro navegador.
-// Resolve a loja pelo domínio pra abrir o Instagram DELA (não o global).
+    const telefone = String(req.body.telefone || '').replace(/\D/g, '');
+    if (telefone.length < 10) {
+      return res.send(views.telaFormulario(loja, { erro: 'Informe um WhatsApp válido com DDD.', mac: c.mac, continueUrl: c.continueUrl }));
+    }
+    if (!req.body.optin) {
+      return res.send(views.telaFormulario(loja, { erro: 'É preciso aceitar a política de privacidade para conectar.', mac: c.mac, continueUrl: c.continueUrl }));
+    }
+
+    const extras = {};
+    for (const cp of views.lerCampos(loja.form_campos)) {
+      if (['nome','telefone'].includes(cp.campo)) continue;
+      const v = req.body[cp.campo];
+      if (v) extras[cp.campo] = String(v).slice(0, 200);
+    }
+    await registrarLead(loja.id, {
+      nome: String(req.body.nome || '').slice(0, 120),
+      telefone,
+      aniversario: /^\d{4}-\d{2}-\d{2}$/.test(req.body.aniversario || '') ? req.body.aniversario : null,
+      extras,
+      mac: c.mac,
+      userAgent: c.userAgent,
+      optin: true,
+      optinTexto: `Aceito receber novidades da ${loja.nome} no WhatsApp + Política de Privacidade (conectay.com.br/privacidade)`
+    });
+    await registrarAcesso(loja.id, { mac: c.mac, ip: c.ip, userAgent: c.userAgent });
+    await marcarCadastrado(loja.id, c.mac, telefone);
+    accessLog('lead', { loja: loja.slug, telefone: telefone.slice(-4) });
+    res.send(views.telaSucesso(loja));
+  } catch (e) {
+    console.error(e);
+    res.status(500).send(views.telaErro('Não foi possível concluir o cadastro. Tente de novo.'));
+  }
+});
+
+// ---------- Conectar (modo instagram) ----------
+app.post('/conectar', async (req, res) => {
+  try {
+    const c = ctx(req);
+    const loja = await lojaDoRequest(req);
+    if (!loja) return res.status(404).send(views.telaErro('Portal não encontrado.'));
+    await registrarAcesso(loja.id, { mac: c.mac, ip: c.ip, userAgent: c.userAgent });
+    let destino = loja.destino_tipo;
+    if (loja.rotacao_ativa) {
+      const info = await visitaDispositivo(loja.id, c.mac);
+      if (info && info.destino && info.destino !== 'formulario') destino = info.destino;
+    }
+    accessLog('conectar', { loja: loja.slug, mac: c.mac, destino });
+    res.send(views.telaSucesso(Object.assign({}, loja, { destino_tipo: destino })));
+  } catch (e) {
+    console.error(e);
+    res.status(500).send(views.telaErro('Erro ao conectar. Tente de novo.'));
+  }
+});
+
+// ---------- Fluxo do AP (liberação por código) ----------
+app.get('/auth', async (req, res) => {
+  const c = ctx(req);
+  if (!validateApSecret(String(req.query.s || ''))) {
+    accessLog('auth_negado', { motivo: 'secret', ip: c.ip });
+    return res.status(403).json({ ok: false, erro: 'não autorizado' });
+  }
+  const ok = validateCode(String(req.query.code || AUTO_CODE));
+  if (ok) {
+    const loja = await lojaDoRequest(req).catch(() => null);
+    if (loja) await registrarAcesso(loja.id, { mac: c.mac, ip: c.ip, userAgent: c.userAgent });
+    accessLog('auth_ok', { mac: c.mac });
+    return res.json({ ok: true });
+  }
+  accessLog('auth_negado', { motivo: 'code', mac: c.mac });
+  res.status(401).json({ ok: false });
+});
+
+// ---------- Cartão de contato (.vcf) ----------
+app.get('/contato.vcf', async (req, res) => {
+  try {
+    const loja = await lojaDoRequest(req);
+    if (!loja || !loja.vcard_ativo || !loja.vcard_telefone) {
+      return res.status(404).send('Contato não disponível.');
+    }
+    const nome = (loja.vcard_nome || loja.nome || 'contato').replace(/[^\w\s-]/g, '').trim();
+    res.setHeader('Content-Type', 'text/vcard; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${nome}.vcf"`);
+    accessLog('vcard', { loja: loja.slug });
+    res.send(views.montarVcard(loja));
+  } catch (e) {
+    console.error(e);
+    res.status(500).send('Erro ao gerar contato.');
+  }
+});
+
+// ---------- Instagram da loja certa ----------
 app.get('/ig', async (req, res) => {
-  let appLink = IG_APP_LINK, webLink = IG_WEB_LINK;
-  try {
-    const loja = await lojaPorDominio(req.headers.host);
-    if (loja && loja.instagram) {
-      const h = String(loja.instagram)
-        .replace(/^https?:\/\/(www\.)?instagram\.com\//i, '')
-        .replace(/[\/?#].*$/, '')
-        .replace(/^@/, '');
-      if (h) { appLink = 'instagram://user?username=' + h; webLink = 'https://instagram.com/' + h; }
-    }
-  } catch (e) { /* se falhar, usa o global */ }
-  res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  res.send(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Abrindo o Instagram…</title>
-<style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0d0d0f;color:#fff;font-family:system-ui,-apple-system,sans-serif;text-align:center;padding:24px}
-.box{max-width:340px}h1{font-size:20px;margin:0 0 10px}p{color:#aaa;font-size:14px;line-height:1.5;margin:0}
-a{display:inline-block;margin-top:20px;background:linear-gradient(135deg,#ff6a1a,#e1306c);color:#fff;text-decoration:none;padding:15px 26px;border-radius:999px;font-weight:800;font-size:15px}</style></head>
-<body><div class="box">
-<h1>📸 Abrindo o Instagram…</h1>
-<p>Estamos te levando pro nosso Instagram. Se não abrir sozinho, toque no botão abaixo.</p>
-<a href="${appLink}">Abrir Instagram</a>
-</div>
-<script>
-(function(){
-  var app=${JSON.stringify(appLink)}, web=${JSON.stringify(webLink)};
-  var t=setTimeout(function(){ window.location.href=web; }, 1400);
-  function cancel(){ clearTimeout(t); }
-  window.addEventListener('pagehide', cancel);
-  window.addEventListener('blur', cancel);
-  document.addEventListener('visibilitychange', function(){ if(document.hidden) cancel(); });
-  window.location.href = app;
-})();
-</script></body></html>`);
+  const loja = await lojaDoRequest(req).catch(() => null);
+  const user = (loja?.instagram || 'conectaywifi').replace('@', '');
+  res.redirect(`https://instagram.com/${user}`);
 });
 
-// API de métricas — protegida por METRICS_KEY, com CORS liberado para o widget.
-app.get('/api/metrics', async (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Cache-Control', 'no-store');
-
-  const key = req.query.key || req.headers['x-metrics-key'] || '';
-  if (!METRICS_KEY || key !== METRICS_KEY) {
-    return res.status(401).json({ error: 'Chave inválida' });
-  }
-  try {
-    const data = await getMetrics();
-    return res.json(data);
-  } catch (err) {
-    console.error('[metrics] Erro:', err.message);
-    return res.status(500).json({ error: 'Falha ao obter métricas' });
-  }
+// ---------- Health ----------
+app.get('/health', (req, res) => {
+  res.json({ ok: true, servico: 'conectay-portal', versao: '2.0.0', log: getLog() });
 });
 
-app.listen(PORT, () => {
-  console.log(`[absolem] Autenticador ouvindo na porta ${PORT}`);
-  if (!AP_SECRET) console.warn('[absolem] AVISO: AP_SECRET vazio — configure a mesma senha no AP para segurança.');
-});
+app.listen(PORT, () => console.log(`ConectaY portal na porta ${PORT}`));
