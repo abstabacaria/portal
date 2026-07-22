@@ -360,7 +360,7 @@ tr:last-child td{border-bottom:0}
    CONFIG
 ========================================================= */
 const SUPABASE_URL = 'https://iekxuehdrxsimqtfejxm.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlla3h1ZWhkcnhzaW1xdGZlanhtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1MDk0NzAsImV4cCI6MjA5MTA4NTQ3MH0.61zaRoTBK2XorXgAcGXcsN8yOY0MTRS4bIJ_X4vPjyA';
+const SUPABASE_ANON_KEY = 'COLE_AQUI_SUA_ANON_KEY';
 const EDGE_CRIAR_USUARIO = SUPABASE_URL + '/functions/v1/smart-responder';
 
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
@@ -368,6 +368,26 @@ let eu=null, lojas=[], lojaAtual=null, pessoas=[], disparos=[], catFiltro='';
 let edit=null;           // loja em edição no modal
 const charts={};
 const titulos={dashboard:'Dashboard',leads:'Leads',mensagens:'Mensagens',aparencia:'Aparência',lojas:'Lojas'};
+const TEMAS=[
+  {n:'Escuro',      f:'#0a0f1e', f2:'#12213f', c:'#101827'},
+  {n:'Meia-noite',  f:'#000000', f2:'#171717', c:'#111111'},
+  {n:'Claro',       f:'#f1f5f9', f2:'#e2e8f0', c:'#ffffff'},
+  {n:'Areia',       f:'#fff7ed', f2:'#ffedd5', c:'#ffffff'},
+  {n:'Verde',       f:'#052e1f', f2:'#064e3b', c:'#07352a'},
+  {n:'Vinho',       f:'#1c0812', f2:'#3b0d1f', c:'#25101a'},
+  {n:'Roxo',        f:'#12071f', f2:'#2e1065', c:'#1b0d2b'},
+  {n:'Grafite',     f:'#18181b', f2:'#27272a', c:'#212124'}
+];
+function lum(hex){ const h=String(hex||'#000').replace('#','');
+  const v=h.length===3?h.split('').map(c=>c+c).join(''):h;
+  const n=parseInt(v.slice(0,6)||'000000',16), r=(n>>16)&255, g=(n>>8)&255, b=n&255;
+  const f=c=>{c/=255;return c<=.03928?c/12.92:Math.pow((c+.055)/1.055,2.4)};
+  return .2126*f(r)+.7152*f(g)+.0722*f(b); }
+function paletaPv(l){ const card=l.cor_card||'#101827', fundo=l.cor_fundo||'#0a0f1e', claro=lum(card)>.45;
+  return { c1:l.cor||'#0ea5e9', c2:l.cor2||l.cor||'#22d3ee', fundo, fundo2:l.cor_fundo2||fundo, card,
+    texto:claro?'#0f172a':'#e2e8f0', mudo:claro?'#475569':'#94a3b8',
+    borda:claro?'rgba(15,23,42,.14)':'#1e293b', input:claro?'rgba(255,255,255,.7)':'#0b1220' }; }
+
 const PRESETS=[['#0ea5e9','#22d3ee'],['#ff6a1a','#8a3000'],['#70008f','#c026d3'],['#16a34a','#4ade80'],
                ['#e11d48','#fb7185'],['#f59e0b','#fbbf24'],['#1e293b','#475569'],['#7c3aed','#a78bfa']];
 const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -612,7 +632,7 @@ function lerCampos(fc){
    PREVIEW DO PORTAL (ao vivo)
 ========================================================= */
 function preview(l){
-  const c1=l.cor||'#0ea5e9', c2=l.cor2||c1, t=l.destino_tipo||'instagram';
+  const p=paletaPv(l), t=l.destino_tipo||'instagram';
   const logo=l.logo_url?`<img src="${esc(l.logo_url)}" alt="">`:'';
   const rot = t==='whatsapp'?'Entrar no grupo do WhatsApp'
             : t==='google_review'?'Avalie a gente no Google ⭐'
@@ -623,15 +643,20 @@ function preview(l){
             : t==='google_review'?'Deixe sua avaliação e navegue à vontade.'
             : 'Siga a gente no Instagram e navegue à vontade.';
   const campos = t==='formulario' ? lerCampos(l.form_campos).map(c=>
-     `<div class="campo"><b>${esc(c.label)}${c.obrigatorio?' *':''}</b>${
+     `<div class="campo" style="background:${p.input};border-color:${p.borda};color:${p.mudo}">
+        <b style="color:${p.mudo}">${esc(c.label)}${c.obrigatorio?' *':''}</b>${
         c.campo==='telefone'?'(21) 99999-9999':c.campo==='aniversario'?'dd/mm/aaaa':'...'}</div>`).join('') : '';
-  const optin = t==='formulario' ? `<div class="optin"><i></i><span>Aceito receber novidades da ${esc(l.nome||'loja')} no WhatsApp e a Política de Privacidade.</span></div>` : '';
-  return `<div class="pvCard">${logo}
-    <div class="tit">${esc(l.form_titulo|| 'Wi-Fi grátis · '+(l.nome||'Sua Loja'))}</div>
-    <div class="sub">${sub}</div>${campos}${optin}
-    <div class="btn" style="background:linear-gradient(135deg,${esc(c1)},${esc(c2)})">${esc(rot)}</div>
-    ${l.vcard_ativo?'<div class="btn" style="background:#0b1220;border:1px solid #1e293b;color:#e2e8f0;margin-top:6px">📇 Salvar nosso contato</div>':''}
-    <div class="rod">Powered by ConectaY</div></div>`;
+  const optin = t==='formulario'
+    ? `<div class="optin" style="color:${p.mudo}"><i style="background:${p.c1}"></i><span>Aceito receber novidades da ${esc(l.nome||'loja')} no WhatsApp e a Política de Privacidade.</span></div>`
+    : '';
+  return `<div style="background:${p.fundo===p.fundo2?p.fundo:`linear-gradient(160deg,${p.fundo},${p.fundo2})`};
+      border-radius:14px;padding:14px 10px">
+    <div class="pvCard" style="background:${p.card};border-color:${p.borda};color:${p.texto}">${logo}
+    <div class="tit" style="color:${p.texto}">${esc(l.form_titulo|| 'Wi-Fi grátis · '+(l.nome||'Sua Loja'))}</div>
+    <div class="sub" style="color:${p.mudo}">${sub}</div>${campos}${optin}
+    <div class="btn" style="background:linear-gradient(135deg,${esc(p.c1)},${esc(p.c2)})">${esc(rot)}</div>
+    ${l.vcard_ativo?`<div class="btn" style="background:${p.input};border:1px solid ${p.borda};color:${p.texto};margin-top:6px">📇 Salvar nosso contato</div>`:''}
+    <div class="rod" style="color:${p.mudo}">Powered by ConectaY</div></div></div>`;
 }
 
 /* =========================================================
@@ -671,7 +696,13 @@ function montarAparencia(){
       <small class="dica">Clique pra enviar PNG ou JPG (redimensiono automaticamente).</small></div>
     <div><label>Cor principal</label><input type="color" id="ap_cor" value="${l.cor||'#0ea5e9'}" style="height:44px;padding:4px" oninput="pvAp()"></div>
     <div><label>Cor secundária (gradiente)</label><input type="color" id="ap_cor2" value="${l.cor2||l.cor||'#22d3ee'}" style="height:44px;padding:4px" oninput="pvAp()"></div>
-    <div class="full"><label>Paletas prontas</label><div class="presets" id="ap_presets"></div></div>
+    <div class="full"><label>Paletas do botão</label><div class="presets" id="ap_presets"></div></div>
+    <div class="full"><label>Tema do portal</label><div class="presets" id="ap_temas"></div>
+      <small class="dica">Clique num tema pra aplicar fundo e cartão. A cor do texto se ajusta sozinha pro contraste.</small></div>
+    <div><label>Cor de fundo</label><input type="color" id="ap_fundo" style="height:44px;padding:4px" oninput="pvAp()"></div>
+    <div><label>Fundo — 2ª cor (degradê)</label><input type="color" id="ap_fundo2" style="height:44px;padding:4px" oninput="pvAp()"></div>
+    <div class="full"><label>Cor do cartão</label><input type="color" id="ap_card" style="height:44px;padding:4px" oninput="pvAp()"></div>
+
 
     <div class="secao">🎯 O que o cliente faz pra conectar</div>
     <div class="full"><label>Destino</label>
@@ -740,6 +771,10 @@ function montarAparencia(){
   ap_vcardAtivo.checked = !!l.vcard_ativo;
   ap_vcardTel.value = l.vcard_telefone || '';
   ap_vcardNome.value = l.vcard_nome || l.nome || '';
+  ap_fundo.value = l.cor_fundo || '#0a0f1e';
+  ap_fundo2.value = l.cor_fundo2 || l.cor_fundo || '#12213f';
+  ap_card.value = l.cor_card || '#101827';
+  renderTemas('ap_temas','ap',pvAp);
   renderPresets('ap_presets','ap_cor','ap_cor2',pvAp);
   renderCampos('ap', lerCampos(l.form_campos));
   pvAp();
@@ -765,6 +800,7 @@ function lerFormAparencia(){
     form_titulo:ap_formTitulo.value, botao_txt:ap_botao.value, form_campos:colherCampos('ap'),
     vcard_ativo:ap_vcardAtivo.checked, vcard_telefone:ap_vcardTel.value.replace(/\D/g,''),
     vcard_nome:ap_vcardNome.value,
+    cor_fundo:ap_fundo.value, cor_fundo2:ap_fundo2.value, cor_card:ap_card.value,
     rotacao_ativa:ap_rotAtiva.checked, recadastro_meses:Number(ap_recad.value||0),
     rotacao_destinos:[...document.querySelectorAll('.ap_rotD')].filter(c=>c.checked).map(c=>c.value) };
 }
@@ -777,6 +813,7 @@ async function salvarAparencia(){
     form_campos:f.destino_tipo==='formulario'?f.form_campos:lojaAtual.form_campos,
     vcard_ativo:f.vcard_ativo, vcard_telefone:f.vcard_telefone||null,
     vcard_nome:f.vcard_nome.trim()||null,
+    cor_fundo:f.cor_fundo, cor_fundo2:f.cor_fundo2, cor_card:f.cor_card,
     rotacao_ativa:f.rotacao_ativa, recadastro_meses:f.recadastro_meses,
     rotacao_destinos:f.rotacao_ativa?['formulario',...f.rotacao_destinos]:lojaAtual.rotacao_destinos };
   if(upd.rotacao_ativa && !f.rotacao_destinos.length)
@@ -795,6 +832,16 @@ function abrirPortalReal(){
 }
 
 /* ---- Presets e campos (compartilhado) ---- */
+function renderTemas(elId,pref,cb){
+  document.getElementById(elId).innerHTML = TEMAS.map(t=>
+    `<button title="${t.n}" style="background:linear-gradient(135deg,${t.f},${t.f2});border-color:${t.c}"
+      onclick="aplicarTema('${pref}','${t.f}','${t.f2}','${t.c}');${cb.name}()"></button>`).join('');
+}
+function aplicarTema(pref,f,f2,c){
+  document.getElementById(pref+'_fundo').value=f;
+  document.getElementById(pref+'_fundo2').value=f2;
+  document.getElementById(pref+'_card').value=c;
+}
 function renderPresets(elId,c1Id,c2Id,cb){
   document.getElementById(elId).innerHTML = PRESETS.map((p,i)=>
     `<button title="Paleta ${i+1}" style="background:linear-gradient(135deg,${p[0]},${p[1]})"
@@ -901,7 +948,13 @@ function abrirEditor(id){
       <input type="hidden" id="lj_logo" value="${esc(l.logo_url)}"></div>
     <div><label>Cor principal</label><input type="color" id="lj_cor" value="${l.cor||'#0ea5e9'}" style="height:44px;padding:4px" oninput="pvLj()"></div>
     <div><label>Cor secundária</label><input type="color" id="lj_cor2" value="${l.cor2||l.cor||'#22d3ee'}" style="height:44px;padding:4px" oninput="pvLj()"></div>
-    <div class="full"><label>Paletas prontas</label><div class="presets" id="lj_presets"></div></div>
+    <div class="full"><label>Paletas do botão</label><div class="presets" id="lj_presets"></div></div>
+    <div class="full"><label>Tema do portal</label><div class="presets" id="lj_temas"></div>
+      <small class="dica">Clique num tema pra aplicar fundo e cartão. A cor do texto se ajusta sozinha pro contraste.</small></div>
+    <div><label>Cor de fundo</label><input type="color" id="lj_fundo" style="height:44px;padding:4px" oninput="pvLj()"></div>
+    <div><label>Fundo — 2ª cor (degradê)</label><input type="color" id="lj_fundo2" style="height:44px;padding:4px" oninput="pvLj()"></div>
+    <div class="full"><label>Cor do cartão</label><input type="color" id="lj_card" style="height:44px;padding:4px" oninput="pvLj()"></div>
+
 
 
     <div class="secao">🧠 Portal inteligente</div>
@@ -963,6 +1016,10 @@ function abrirEditor(id){
   lj_vcardAtivo.checked = !!l.vcard_ativo;
   lj_vcardTel.value = l.vcard_telefone || '';
   lj_vcardNome.value = l.vcard_nome || l.nome || '';
+  lj_fundo.value = l.cor_fundo || '#0a0f1e';
+  lj_fundo2.value = l.cor_fundo2 || l.cor_fundo || '#12213f';
+  lj_card.value = l.cor_card || '#101827';
+  renderTemas('lj_temas','lj',pvLj);
   renderPresets('lj_presets','lj_cor','lj_cor2',pvLj);
   renderCampos('lj', lerCampos(l.form_campos));
   sufixoDominio(); pvLj();
@@ -977,6 +1034,7 @@ function lerFormLoja(){
     form_titulo:lj_formTitulo.value, botao_txt:lj_botao.value, form_campos:colherCampos('lj'),
     vcard_ativo:lj_vcardAtivo.checked, vcard_telefone:lj_vcardTel.value.replace(/\D/g,''),
     vcard_nome:lj_vcardNome.value,
+    cor_fundo:lj_fundo.value, cor_fundo2:lj_fundo2.value, cor_card:lj_card.value,
     rotacao_ativa:lj_rotAtiva.checked, recadastro_meses:Number(lj_recad.value||0),
     rotacao_destinos:[...document.querySelectorAll('.lj_rotD')].filter(c=>c.checked).map(c=>c.value) };
 }
@@ -1018,6 +1076,7 @@ async function salvarLoja(){
     form_campos:f.destino_tipo==='formulario'?f.form_campos:(edit.form_campos||null),
     logo_url:f.logo_url||null, cor:f.cor, cor2:f.cor2,
     vcard_ativo:f.vcard_ativo, vcard_telefone:f.vcard_telefone||null, vcard_nome:f.vcard_nome.trim()||null,
+    cor_fundo:f.cor_fundo, cor_fundo2:f.cor_fundo2, cor_card:f.cor_card,
     rotacao_ativa:f.rotacao_ativa, recadastro_meses:f.recadastro_meses,
     rotacao_destinos:f.rotacao_ativa?['formulario',...f.rotacao_destinos]:(edit.rotacao_destinos||null),
     codigo_wifi:lj_codigo.value.trim()||null, ap_secret:lj_secret.value.trim()||null,
