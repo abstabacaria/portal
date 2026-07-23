@@ -168,12 +168,12 @@ async function registrarLead(loja, dados, mac, userAgent) {
 // Reconhece o aparelho pelo MAC e diz qual tela mostrar.
 // Se a função ainda não existir no banco, devolve null e o motor
 // segue com o comportamento normal da loja (nada quebra).
-async function visitaDispositivo(loja, mac) {
-  if (!loja || !mac) return null;
+async function visitaDispositivo(loja, mac, cookie) {
+  if (!loja || (!mac && !cookie)) return null;
   try {
     const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/conectay_dispositivo_visita`, {
       method: 'POST', headers: H,
-      body: JSON.stringify({ p_loja: loja.id, p_mac: mac }),
+      body: JSON.stringify({ p_loja: loja.id, p_mac: mac || '', p_cookie: cookie || '' }),
     });
     if (!r.ok) return null;
     return await r.json();
@@ -181,12 +181,12 @@ async function visitaDispositivo(loja, mac) {
 }
 
 // Marca o aparelho como já cadastrado (depois do formulário enviado).
-async function marcarCadastrado(loja, mac, telefone) {
-  if (!loja || !mac) return;
+async function marcarCadastrado(loja, mac, telefone, cookie) {
+  if (!loja || (!mac && !cookie)) return;
   try {
     await fetch(`${SUPABASE_URL}/rest/v1/rpc/conectay_dispositivo_cadastrado`, {
       method: 'POST', headers: H,
-      body: JSON.stringify({ p_loja: loja.id, p_mac: mac, p_telefone: telefone || '' }),
+      body: JSON.stringify({ p_loja: loja.id, p_mac: mac || '', p_telefone: telefone || '', p_cookie: cookie || '' }),
     });
   } catch (e) { /* silencioso */ }
 }
