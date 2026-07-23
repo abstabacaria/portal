@@ -190,18 +190,30 @@ app.get('/', async (req, res) => {
     }));
   }
 
-  // PORTAL INTELIGENTE: reconhece o aparelho e escolhe o que pedir hoje.
+  // ID de dispositivo próprio (cookie de 1 ano) — sobrevive ao MAC aleatório.
+  // Se o cliente já tem, reusamos; senão, geramos um novo agora.
+  let cyid = req.cookies.cyid;
+  if (!cyid) cyid = crypto.randomBytes(16).toString('hex');
+
+  // PORTAL INTELIGENTE: reconhece o aparelho por COOKIE ou MAC.
   // Se a loja não usa rotação (ou a função não existe no banco), nada muda.
   if (loja.rotacao_ativa) {
-    const info = await visitaDispositivo(loja, p.mac);
+    const info = await visitaDispositivo(loja, p.mac, cyid);
     if (info && info.destino) {
       marca.destinoTipo = info.destino;
       marca.voltou = !!info.conhecido && info.destino !== 'formulario';
     }
   }
 
-  res.setHeader('Set-Cookie',
-    `apx=${encodeURIComponent(JSON.stringify(p))}; HttpOnly; Path=/; Max-Age=600; SameSite=Lax`);
+  // guarda o cyid na tela pra reenviar no POST /auth (a mini-janela do captive
+  // portal nem sempre devolve cookie no POST, então mandamos também num campo)
+  marca.cyid = cyid;
+
+  const umAno = 60 * 60 * 24 * 365;
+  res.setHeader('Set-Cookie', [
+    `apx=${encodeURIComponent(JSON.stringify(p))}; HttpOnly; Path=/; Max-Age=600; SameSite=Lax`,
+    `cyid=${cyid}; HttpOnly; Path=/; Max-Age=${umAno}; SameSite=Lax`,
+  ]);
   res.send(renderPortal({ ap: p, instagram: marca.instagram, autoCode: marca.autoCode, error: null, marca }));
 });
 
@@ -267,8 +279,9 @@ app.post('/auth', async (req, res) => {
         try {
           telefoneLead = await registrarLead(loja, dados, ap.mac, req.headers['user-agent'] || '');
         } catch (e) {}
-        // marca o aparelho como cadastrado (portal inteligente)
-        try { marcarCadastrado(loja, ap.mac, telefoneLead); } catch (e) {}
+        // marca o aparelho como cadastrado (portal inteligente) — cookie OU mac
+        const cyid = req.cookies.cyid || req.body.cyid || null;
+        try { marcarCadastrado(loja, ap.mac, telefoneLead, cyid); } catch (e) {}
       }
     }
 
