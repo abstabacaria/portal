@@ -301,7 +301,7 @@ function renderPortal({ ap, instagram, autoCode, error, marca }) {
         b.disabled=true;
         b.querySelector('.lbl').textContent='Conectando…';
         ld.classList.add('on');
-        setTimeout(function(){ if(ls)ls.textContent=${JSON.stringify(ehWpp?'Quase lá… o grupo abre em seguida.':ehGoogle?'Quase lá… a avaliação abre em seguida.':'Quase lá… o Instagram abre em seguida.')}; },2500);
+        setTimeout(function(){ if(ls)ls.textContent=${JSON.stringify('Quase lá… seu destino abre em seguida.')}; },2500);
         setTimeout(function(){ if(ls)ls.innerHTML='Tá demorando mais que o normal. Se não abrir, <b>toque no botão de novo</b>.'; liberar(); },9000);
       });
       function liberar(){
@@ -342,19 +342,61 @@ function renderResult({ ok, title, msg, link, marca }) {
 }
 
 // Tela pós-liberação: oferece salvar o contato e segue pro destino.
+// ATUALIZADO: no Android, destino Instagram abre o APP via intent:// —
+// tentativa automática + botão como garantia (o mini-navegador do captive
+// pode bloquear navegação automática pra apps externos).
 function renderPronto({ marca, destinoUrl, rotulo }) {
   marca = marca || {};
   const logo = marca.logo || LOGO;
   const nome = marca.nome || 'Wi-Fi';
+
+  // Detecta destino Instagram e monta as variantes de link
+  const igMatch = String(destinoUrl || '').match(/instagram\.com\/([A-Za-z0-9._]+)/i);
+  const igHandle = igMatch ? igMatch[1] : null;
+  const igIntent = igHandle
+    ? `intent://instagram.com/_u/${igHandle}#Intent;package=com.instagram.android;scheme=https;S.browser_fallback_url=${encodeURIComponent(destinoUrl)};end`
+    : null;
+  const igApp = igHandle ? `instagram://user?username=${igHandle}` : null;
+
   const body = `
     <div class="logo">${(logo && !logo.endsWith('/static/logo.png')) ? `<img src="${escapeAttr(logo)}" alt="${escapeAttr(nome)}">` : `<div class="logo-nome">${escapeAttr(nome)}</div>`}</div>
     <h1>✅ Internet liberada!</h1>
     <p class="sub">Aproveite. Salve nosso contato pra receber as novidades em primeira mão.</p>
     <a class="vcard" href="/contato.vcf" download>📇 Salvar o contato da ${escapeAttr(nome)}</a>
-    <a class="igbtn" style="text-decoration:none;margin-top:14px" href="${escapeAttr(destinoUrl)}">${escapeAttr(rotulo)}</a>
+    <a class="igbtn" id="btnDest" style="text-decoration:none;margin-top:14px" href="${escapeAttr(destinoUrl)}">${escapeAttr(rotulo)}</a>
+    <div class="hint" id="hintDest"></div>
     <div class="pby"><span>Wi-Fi por</span>
       <img src="${LOGO_CONECTAY}" alt="ConectaY" style="height:36px;object-fit:contain;opacity:.9"></div>
-    <script>setTimeout(function(){ location.href=${JSON.stringify(destinoUrl)}; }, 12000);</script>`;
+    <script>
+    (function(){
+      var destino   = ${JSON.stringify(destinoUrl)};
+      var igIntent  = ${JSON.stringify(igIntent)};
+      var igApp     = ${JSON.stringify(igApp)};
+      var isAndroid = /Android/i.test(navigator.userAgent || '');
+      var isIOS     = /iPhone|iPad|iPod/i.test(navigator.userAgent || '');
+      var btn  = document.getElementById('btnDest');
+      var hint = document.getElementById('hintDest');
+
+      if (isAndroid && igIntent) {
+        // ANDROID + INSTAGRAM: intent:// abre o app de verdade.
+        btn.setAttribute('href', igIntent);
+        hint.innerHTML = 'Se o Instagram não abrir sozinho, <b>toque no botão acima</b> 👆';
+        // Tentativa automática (2s — dá tempo da pessoa ver que conectou).
+        setTimeout(function(){ try { window.location.href = igIntent; } catch(e){} }, 2000);
+        // Sem fallback web automático: abrir o site do IG no mini-navegador
+        // do captive só atrapalha; o botão resolve os casos bloqueados.
+      } else if (isIOS && igApp) {
+        // iOS + INSTAGRAM: tenta o app, cai pro site se não tiver instalado.
+        setTimeout(function(){
+          window.location.href = igApp;
+          setTimeout(function(){ window.location.href = destino; }, 1500);
+        }, 2000);
+      } else {
+        // Demais destinos (WhatsApp, Google Review, desktop): comportamento original.
+        setTimeout(function(){ window.location.href = destino; }, 12000);
+      }
+    })();
+    </script>`;
   return layout({ title: `${escapeAttr(nome)} — Conectado`, body, marca });
 }
 
