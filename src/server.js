@@ -73,9 +73,9 @@ function extractApParams(src) {
 }
 
 // Monta a URL de liberação de volta para o AP, com token de segurança.
-// sessionTimeout (segundos) vem da LOJA quando configurado no painel;
-// senão usa o padrão global do ambiente.
-function buildReleaseUrl(p, sessionTimeout) {
+// Sessão e limites de banda vêm da LOJA quando configurados no painel;
+// senão usam os padrões globais do ambiente.
+function buildReleaseUrl(p, loja) {
   const ts = p.ts || String(Math.floor(Date.now() / 1000));
   const userContext = `${p.user_hash}|${ts}`;
   const token = AP_SECRET
@@ -87,11 +87,13 @@ function buildReleaseUrl(p, sessionTimeout) {
   params.set('ts', ts);
   if (token) params.set('token', token);
   params.set('user_hash', p.user_hash);
-  const st = parseInt(sessionTimeout, 10);
+  const st = parseInt(loja && loja.session_timeout, 10);
   params.set('session_timeout', (st && st > 0) ? String(st) : SESSION_TIMEOUT);
   params.set('idle_timeout', IDLE_TIMEOUT);
-  params.set('download_kbps', DOWNLOAD_KBPS);
-  params.set('upload_kbps', UPLOAD_KBPS);
+  const dl = parseInt(loja && loja.download_kbps, 10);
+  const ul = parseInt(loja && loja.upload_kbps, 10);
+  params.set('download_kbps', (!isNaN(dl) && dl >= 0) ? String(dl) : DOWNLOAD_KBPS);
+  params.set('upload_kbps', (!isNaN(ul) && ul >= 0) ? String(ul) : UPLOAD_KBPS);
 
   return `${p.redirect_uri}?${params.toString()}`;
 }
@@ -322,7 +324,7 @@ app.post('/auth', async (req, res) => {
       ap.continue = urlFinal;
     }
 
-    const releaseUrl = buildReleaseUrl(ap, loja && loja.session_timeout);
+    const releaseUrl = buildReleaseUrl(ap, loja);
     // NÃO apagamos o cookie do AP aqui: se a pessoa voltar e tocar de novo,
     // sem ele o portal não sabe o redirect_uri e cai na tela de erro.
     return res.redirect(302, releaseUrl);
@@ -370,7 +372,7 @@ app.get('/contato.vcf', async (req, res) => {
 });
 
 // Saúde do serviço (útil pra monitorar na VPS).
-app.get('/health', (req, res) => res.json({ ok: true, servico: 'conectay-portal', versao: '2.2.0', ts: Date.now() }));
+app.get('/health', (req, res) => res.json({ ok: true, servico: 'conectay-portal', versao: '2.3.0', ts: Date.now() }));
 
 // Página que abre o APP do Instagram, com estratégia POR PLATAFORMA:
 //   ANDROID → intent:// (único esquema que o navegador do captive aceita;
