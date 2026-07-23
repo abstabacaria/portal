@@ -350,12 +350,16 @@ app.get('/contato.vcf', async (req, res) => {
 });
 
 // Saúde do serviço (útil pra monitorar na VPS).
-app.get('/health', (req, res) => res.json({ ok: true, servico: 'conectay-portal', versao: '2.1.0', ts: Date.now() }));
+app.get('/health', (req, res) => res.json({ ok: true, servico: 'conectay-portal', versao: '2.1.1', ts: Date.now() }));
 
-// Página que abre o APP do Instagram (deep link), com fallback pro navegador.
+// Página que abre o APP do Instagram, com estratégia POR PLATAFORMA:
+//   ANDROID → intent:// (único esquema que o navegador do captive aceita;
+//             instagram:// é bloqueado no Android, por isso não abria).
+//   iOS     → instagram:// (funciona) com fallback pro site.
+//   Outros  → site direto.
 // Resolve a loja pelo domínio pra abrir o Instagram DELA (não o global).
 app.get('/ig', async (req, res) => {
-  let appLink = IG_APP_LINK, webLink = IG_WEB_LINK;
+  let handle = IG_HANDLE;
   try {
     const loja = await lojaPorDominio(req.headers.host);
     if (loja && loja.instagram) {
@@ -363,9 +367,16 @@ app.get('/ig', async (req, res) => {
         .replace(/^https?:\/\/(www\.)?instagram\.com\//i, '')
         .replace(/[\/?#].*$/, '')
         .replace(/^@/, '');
-      if (h) { appLink = 'instagram://user?username=' + h; webLink = 'https://instagram.com/' + h; }
+      if (h) handle = h;
     }
   } catch (e) { /* se falhar, usa o global */ }
+
+  const webLink    = 'https://instagram.com/' + handle;
+  const appLink    = 'instagram://user?username=' + handle;
+  const intentLink = 'intent://instagram.com/_u/' + handle
+    + '#Intent;package=com.instagram.android;scheme=https;S.browser_fallback_url='
+    + encodeURIComponent(webLink) + ';end';
+
   res.setHeader('Content-Type', 'text/html; charset=utf-8');
   res.send(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
@@ -376,17 +387,33 @@ a{display:inline-block;margin-top:20px;background:linear-gradient(135deg,#ff6a1a
 <body><div class="box">
 <h1>📸 Abrindo o Instagram…</h1>
 <p>Estamos te levando pro nosso Instagram. Se não abrir sozinho, toque no botão abaixo.</p>
-<a href="${appLink}">Abrir Instagram</a>
+<a href="${appLink}" id="btnIg">Abrir Instagram</a>
 </div>
 <script>
 (function(){
-  var app=${JSON.stringify(appLink)}, web=${JSON.stringify(webLink)};
-  var t=setTimeout(function(){ window.location.href=web; }, 1400);
-  function cancel(){ clearTimeout(t); }
-  window.addEventListener('pagehide', cancel);
-  window.addEventListener('blur', cancel);
-  document.addEventListener('visibilitychange', function(){ if(document.hidden) cancel(); });
-  window.location.href = app;
+  var app=${JSON.stringify(appLink)}, web=${JSON.stringify(webLink)}, intent=${JSON.stringify(intentLink)};
+  var isAndroid=/Android/i.test(navigator.userAgent||'');
+  var btn=document.getElementById('btnIg');
+
+  if(isAndroid){
+    // Android: intent:// é o único que abre o APP a partir daqui.
+    btn.setAttribute('href', intent);
+    var t=setTimeout(function(){ window.location.href=web; }, 3000);
+    function cancel(){ clearTimeout(t); }
+    window.addEventListener('pagehide', cancel);
+    window.addEventListener('blur', cancel);
+    document.addEventListener('visibilitychange', function(){ if(document.hidden) cancel(); });
+    // tentativa automática
+    window.location.href = intent;
+  } else {
+    // iOS e demais: comportamento que já funcionava.
+    var t2=setTimeout(function(){ window.location.href=web; }, 1400);
+    function cancel2(){ clearTimeout(t2); }
+    window.addEventListener('pagehide', cancel2);
+    window.addEventListener('blur', cancel2);
+    document.addEventListener('visibilitychange', function(){ if(document.hidden) cancel2(); });
+    window.location.href = app;
+  }
 })();
 </script></body></html>`);
 });
