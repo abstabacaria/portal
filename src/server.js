@@ -6,6 +6,7 @@ const { validateCode, logAccess, getMetrics } = require('./db');
 const {
   lojaPorDominio, lojaPorSlug, validarCodigoDaLoja,
   registrarAcesso, registrarLead, visitaDispositivo, marcarCadastrado,
+  estaBloqueado,
 } = require('./lojas');
 const { renderPortal, renderResult, renderPronto, renderPrivacidade, montarVcard } = require('./views');
 
@@ -72,7 +73,9 @@ function extractApParams(src) {
 }
 
 // Monta a URL de liberação de volta para o AP, com token de segurança.
-function buildReleaseUrl(p) {
+// sessionTimeout (segundos) vem da LOJA quando configurado no painel;
+// senão usa o padrão global do ambiente.
+function buildReleaseUrl(p, sessionTimeout) {
   const ts = p.ts || String(Math.floor(Date.now() / 1000));
   const userContext = `${p.user_hash}|${ts}`;
   const token = AP_SECRET
@@ -84,7 +87,8 @@ function buildReleaseUrl(p) {
   params.set('ts', ts);
   if (token) params.set('token', token);
   params.set('user_hash', p.user_hash);
-  params.set('session_timeout', SESSION_TIMEOUT);
+  const st = parseInt(sessionTimeout, 10);
+  params.set('session_timeout', (st && st > 0) ? String(st) : SESSION_TIMEOUT);
   params.set('idle_timeout', IDLE_TIMEOUT);
   params.set('download_kbps', DOWNLOAD_KBPS);
   params.set('upload_kbps', UPLOAD_KBPS);
@@ -247,6 +251,22 @@ app.post('/auth', async (req, res) => {
       }));
     }
 
+    // BLOQUEIO: se o MAC, o cookie do aparelho ou o telefone informado
+    // estiverem na lista de bloqueio da loja, nega educadamente.
+    // (Sessões já ativas no AP não são derrubadas — o efeito pega na
+    // próxima autenticação, no máximo em <session_timeout>.)
+    const cyidBloq = req.cookies.cyid || req.body.cyid || '';
+    const telBloq = String(req.body.lead_telefone || req.body.lead_whatsapp || req.body.lead_celular || '').replace(/\D/g, '');
+    const bloq = await estaBloqueado(loja, { mac: ap.mac, cyid: cyidBloq, telefone: telBloq });
+    if (bloq) {
+      await logAccess({ ...base, result: 'denied', reason: 'Bloqueado' + (bloq.motivo ? ': ' + bloq.motivo : '') });
+      return res.send(renderResult({
+        ok: false, marca,
+        title: 'Acesso indisponível',
+        msg: 'O acesso ao Wi-Fi não está disponível para este dispositivo. Em caso de dúvida, fale com o estabelecimento.',
+      }));
+    }
+
     // Validação do código (que vai ESCONDIDO no botão — liberação automática).
     let outcome;
     if (marca.achou && String(loja.codigo_wifi || '').trim()) {
@@ -302,7 +322,7 @@ app.post('/auth', async (req, res) => {
       ap.continue = urlFinal;
     }
 
-    const releaseUrl = buildReleaseUrl(ap);
+    const releaseUrl = buildReleaseUrl(ap, loja && loja.session_timeout);
     // NÃO apagamos o cookie do AP aqui: se a pessoa voltar e tocar de novo,
     // sem ele o portal não sabe o redirect_uri e cai na tela de erro.
     return res.redirect(302, releaseUrl);
@@ -350,7 +370,7 @@ app.get('/contato.vcf', async (req, res) => {
 });
 
 // Saúde do serviço (útil pra monitorar na VPS).
-app.get('/health', (req, res) => res.json({ ok: true, servico: 'conectay-portal', versao: '2.1.1', ts: Date.now() }));
+app.get('/health', (req, res) => res.json({ ok: true, servico: 'conectay-portal', versao: '2.2.0', ts: Date.now() }));
 
 // Página que abre o APP do Instagram, com estratégia POR PLATAFORMA:
 //   ANDROID → intent:// (único esquema que o navegador do captive aceita;
