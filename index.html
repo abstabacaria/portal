@@ -99,6 +99,8 @@ aside .rodape .papel{font-size:.68rem;color:var(--fraco)}
 .btnG:hover{border-color:var(--azul);color:var(--texto)}
 .btnFb{background:rgba(24,95,165,.2);border-color:#185fa5;color:#85b7eb}
 .btnG4{background:rgba(52,168,83,.15);border-color:#34a853;color:#6bbf7f}
+.btnPerigo{border-color:#7f1d1d;color:#fda4af}
+.btnPerigo:hover{border-color:var(--erro);color:var(--erro)}
 .tWrap{overflow-x:auto;border-radius:16px;border:1px solid var(--borda)}
 table{width:100%;border-collapse:collapse;background:var(--vidro)}
 th,td{padding:12px 15px;text-align:left;font-size:.84rem;border-bottom:1px solid var(--borda);white-space:nowrap}
@@ -244,6 +246,8 @@ tr:last-child td{border-bottom:0}
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>Dashboard</button>
     <button class="navItem" data-aba="leads" onclick="irAba('leads')">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.4"/><path d="M2.8 20c.8-3.5 3.3-5.4 6.2-5.4s5.4 1.9 6.2 5.4"/><circle cx="17.2" cy="9.5" r="2.6"/><path d="M15.5 14.5c2.6.2 4.7 1.8 5.6 4.6"/></svg>Leads</button>
+    <button class="navItem" data-aba="conectados" onclick="irAba('conectados');carregarConectados();carregarBloqueios()">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2.5 9a15 15 0 0 1 19 0M5.5 12.5a10 10 0 0 1 13 0M8.5 16a5.4 5.4 0 0 1 7 0"/><circle cx="12" cy="19.3" r="1.2" fill="currentColor"/></svg>Conectados</button>
     <button class="navItem" data-aba="mensagens" onclick="irAba('mensagens')">
       <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.3 8.9 8.9 0 0 1-3.7-.8L3 20l1.1-5.4a8 8 0 0 1-.9-3.7A8.4 8.4 0 0 1 11.7 2.6 8.4 8.4 0 0 1 21 11.5Z"/></svg>
       Mensagens <span class="pill" id="pillMsgs" style="display:none">0</span></button>
@@ -296,6 +300,19 @@ tr:last-child td{border-bottom:0}
           <button class="btnG" onclick="exportarVcf()">📇 Agenda (.vcf)</button></div>
       </div>
       <div id="tabelaLeads"></div>
+    </section>
+
+    <!-- CONECTADOS (todos os perfis) -->
+    <section class="aba" id="aba-conectados">
+      <div class="filtros">
+        <div style="flex:2;min-width:230px"><label>&nbsp;</label>
+          <span style="color:var(--mudo);font-size:.82rem" id="infoConectados">Aparelhos que passaram pelo portal dentro da janela da sessão.</span></div>
+        <div class="acao"><label>&nbsp;</label>
+          <button class="btnG" onclick="carregarConectados();carregarBloqueios()">🔄 Atualizar</button></div>
+      </div>
+      <div id="tabelaConectados"></div>
+      <h3 style="font-family:'Sora';font-size:.9rem;margin:26px 0 12px;color:var(--mudo)">🚫 Bloqueados</h3>
+      <div id="tabelaBloqueios"></div>
     </section>
 
     <section class="aba" id="aba-mensagens">
@@ -367,8 +384,9 @@ if (!SUPABASE_ANON_KEY || SUPABASE_ANON_KEY === 'COLE_AQUI_SUA_ANON_KEY') {
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY || 'sem-chave');
 let eu=null, lojas=[], lojaAtual=null, pessoas=[], disparos=[], catFiltro='';
 let edit=null;           // loja em edição no modal
+let bloqueios=[];
 const charts={};
-const titulos={dashboard:'Dashboard',leads:'Leads',mensagens:'Mensagens',aparencia:'Aparência',lojas:'Lojas'};
+const titulos={dashboard:'Dashboard',leads:'Leads',conectados:'Conectados',mensagens:'Mensagens',aparencia:'Aparência',lojas:'Lojas'};
 const TEMAS=[
   {n:'Escuro',      f:'#0a0f1e', f2:'#12213f', c:'#101827'},
   {n:'Meia-noite',  f:'#000000', f2:'#171717', c:'#111111'},
@@ -436,7 +454,7 @@ function trocarLoja(){
   carregarTudo();
 }
 async function carregarTudo(){
-  await Promise.all([carregarDashboard(), carregarLeads(), carregarDisparos()]);
+  await Promise.all([carregarDashboard(), carregarLeads(), carregarDisparos(), carregarConectados(), carregarBloqueios()]);
   montarAparencia();
 }
 
@@ -590,6 +608,83 @@ function exportarVcf(){
   }).join('\r\n');
   baixar(`agenda_${sufixoArquivo()}.vcf`, vcf, 'text/vcard');
   toast(`${lista.length} contatos no .vcf — abra o arquivo no celular pra importar`);
+}
+
+/* ---------------- Conectados & Bloqueios ---------------- */
+function fmtHora(iso){ if(!iso) return '—'; const d=new Date(iso);
+  return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}); }
+
+// aceita criado_em OU created_at, conforme o schema
+async function acessosRecentes(desde){
+  for(const col of ['criado_em','created_at']){
+    const {data,error}=await sb.from('portal_acessos').select('*').eq('loja_id',lojaAtual.id)
+      .gte(col,desde).order(col,{ascending:false}).limit(800);
+    if(!error) return {rows:data||[],col};
+  }
+  return {rows:[],col:null};
+}
+async function carregarConectados(){
+  if(!lojaAtual) return;
+  const seg = (lojaAtual.session_timeout>0) ? lojaAtual.session_timeout : 10800;
+  const rot = seg>=3600 ? (Math.round(seg/3600)+'h') : (Math.round(seg/60)+'min');
+  infoConectados.textContent = `Aparelhos que autenticaram nas últimas ${rot} (janela da sessão da loja). Lista aproximada: o aparelho pode já ter saído do local.`;
+  const desde = new Date(Date.now()-seg*1000).toISOString();
+  const {rows,col}=await acessosRecentes(desde);
+  // 1 linha por aparelho (MAC), a mais recente
+  const vistos=new Set(), lista=[];
+  for(const a of rows){ const k=a.mac||('__'+(a.id??Math.random())); if(vistos.has(k)) continue; vistos.add(k); lista.push(a); }
+  // cruza MAC → lead (nome/telefone) pra identificar quem é
+  const mapa={};
+  try{
+    const {data:lds}=await sb.from('portal_leads').select('mac,telefone,nome')
+      .eq('loja_id',lojaAtual.id).not('mac','is',null).limit(2000);
+    (lds||[]).forEach(x=>{ if(x.mac && !mapa[x.mac]) mapa[x.mac]={t:x.telefone,n:x.nome}; });
+  }catch(e){}
+  if(!lista.length){
+    tabelaConectados.innerHTML='<div class="card vazio"><span class="emj">📡</span>Nenhum aparelho autenticou na janela atual.</div>';
+    return;
+  }
+  tabelaConectados.innerHTML=`<div class="tWrap"><table><thead><tr>
+    <th>Quando</th><th>Cliente</th><th>Aparelho</th><th>MAC</th><th></th></tr></thead><tbody>
+  ${lista.map(a=>{ const li=mapa[a.mac]||{};
+    return `<tr><td>${fmtHora(col?a[col]:null)}</td>
+    <td>${li.n?('<b>'+esc(li.n)+'</b><br>'):''}${li.t?('<a target="_blank" href="https://wa.me/55'+li.t+'">'+fmtTel(li.t)+'</a>'):'<span style="color:var(--fraco)">não identificado</span>'}</td>
+    <td>${esc(a.dispositivo||'—')}${a.so?(' · '+esc(a.so)):''}</td>
+    <td style="font-family:monospace;font-size:.74rem">${esc(a.mac||'—')}</td>
+    <td><button class="btnG btnPerigo" style="padding:6px 10px"
+      onclick="bloquear('${esc(a.mac||'')}','${esc(li.t||'')}','${esc(String(li.n||'').replace(/'/g,''))}')">🚫 Bloquear</button></td></tr>`;}).join('')}
+  </tbody></table></div>`;
+}
+async function bloquear(mac,telefone,nome){
+  if(!mac && !telefone) return toast('Sem MAC nem telefone pra bloquear',true);
+  const alvo=nome||fmtTel(telefone)||mac;
+  if(!confirm(`Bloquear ${alvo}?\n\nO bloqueio vale a partir da PRÓXIMA autenticação — a conexão atual continua até a sessão expirar.`)) return;
+  const motivo=prompt('Motivo (opcional):','')||null;
+  const {error}=await sb.from('portal_bloqueios').insert({
+    loja_id:lojaAtual.id, mac:mac||null, telefone:telefone||null, motivo });
+  if(error) return toast('Erro: '+error.message+' (rodou a migração 002?)',true);
+  toast('Bloqueado ✓ — vale na próxima autenticação');
+  carregarBloqueios();
+}
+async function carregarBloqueios(){
+  if(!lojaAtual) return;
+  const {data,error}=await sb.from('portal_bloqueios').select('*')
+    .eq('loja_id',lojaAtual.id).eq('ativo',true).order('criado_em',{ascending:false}).limit(300);
+  if(error){ tabelaBloqueios.innerHTML='<div class="card vazio">Não consegui carregar os bloqueios (rodou a migração 002?).</div>'; return; }
+  bloqueios=data||[];
+  if(!bloqueios.length){ tabelaBloqueios.innerHTML='<div class="card vazio" style="padding:26px">Ninguém bloqueado. 👌</div>'; return; }
+  tabelaBloqueios.innerHTML=`<div class="tWrap"><table><thead><tr>
+    <th>Desde</th><th>MAC</th><th>Telefone</th><th>Motivo</th><th></th></tr></thead><tbody>
+  ${bloqueios.map(b=>`<tr><td>${fmtHora(b.criado_em)}</td>
+    <td style="font-family:monospace;font-size:.74rem">${esc(b.mac||'—')}</td>
+    <td>${b.telefone?fmtTel(b.telefone):'—'}</td><td>${esc(b.motivo||'—')}</td>
+    <td><button class="btnG" style="padding:6px 10px" onclick="desbloquear(${b.id})">✓ Desbloquear</button></td></tr>`).join('')}
+  </tbody></table></div>`;
+}
+async function desbloquear(id){
+  const {error}=await sb.from('portal_bloqueios').update({ativo:false}).eq('id',id);
+  if(error) return toast('Erro: '+error.message,true);
+  toast('Desbloqueado ✓'); carregarBloqueios();
 }
 
 /* ---------------- Mensagens ---------------- */
@@ -1014,6 +1109,37 @@ function abrirEditor(id){
     <div class="secao">📶 Wi-Fi / roteador</div>
     <div><label>Código do Wi-Fi <small>(libera a internet)</small></label><input id="lj_codigo" value="${esc(l.codigo_wifi)}" placeholder="ex: FULANO2026"></div>
     <div><label>Segredo do AP <small>(mesma senha no roteador)</small></label><input id="lj_secret" value="${esc(l.ap_secret)}" placeholder="senha forte"></div>
+    <div><label>Tempo de sessão</label>
+      <select id="lj_sessao">
+        <option value="">Padrão global (3h)</option>
+        <option value="1800">30 minutos</option>
+        <option value="3600">1 hora</option>
+        <option value="7200">2 horas</option>
+        <option value="10800">3 horas</option>
+        <option value="21600">6 horas</option>
+        <option value="43200">12 horas</option>
+      </select>
+      <small class="dica">Vale pra novas conexões. Sessão curta = bloqueio faz efeito mais rápido.</small></div>
+    <div><label>Velocidade por cliente (down / up)</label>
+      <div style="display:flex;gap:8px">
+        <select id="lj_down">
+          <option value="">Padrão</option>
+          <option value="0">Ilimitado</option>
+          <option value="2048">2 Mbps</option>
+          <option value="5120">5 Mbps</option>
+          <option value="10240">10 Mbps</option>
+          <option value="20480">20 Mbps</option>
+        </select>
+        <select id="lj_up">
+          <option value="">Padrão</option>
+          <option value="0">Ilimitado</option>
+          <option value="1024">1 Mbps</option>
+          <option value="2048">2 Mbps</option>
+          <option value="5120">5 Mbps</option>
+          <option value="10240">10 Mbps</option>
+        </select>
+      </div>
+      <small class="dica">Limite POR aparelho conectado. Vale pra novas conexões.</small></div>
 
     <div class="secao">💰 Cobrança <small style="color:var(--fraco);font-weight:400">(controle interno)</small></div>
     <div><label>Valor mensal (R$)</label><input id="lj_valor" type="number" step="0.01" value="${l.valor_mensal??''}"></div>
@@ -1037,11 +1163,23 @@ function abrirEditor(id){
   lj_fundo.value = l.cor_fundo || '#0a0f1e';
   lj_fundo2.value = l.cor_fundo2 || l.cor_fundo || '#12213f';
   lj_card.value = l.cor_card || '#101827';
+  setSel(lj_sessao, l.session_timeout);
+  setSel(lj_down, l.download_kbps);
+  setSel(lj_up, l.upload_kbps);
   renderTemas('lj_temas','lj',pvLj);
   renderPresets('lj_presets','lj_cor','lj_cor2',pvLj);
   renderCampos('lj', lerCampos(l.form_campos));
   sufixoDominio(); pvLj();
   modalBg.classList.add('on');
+}
+// seleciona o valor no <select>; se não existir na lista, cria a opção
+function setSel(el,val){
+  if(val==null||val===''){ el.value=''; return; }
+  const v=String(val);
+  if(![...el.options].some(o=>o.value===v)){
+    const o=document.createElement('option'); o.value=v; o.textContent=v; el.appendChild(o);
+  }
+  el.value=v;
 }
 function fecharEditor(){ modalBg.classList.remove('on'); edit=null; }
 function sufixoDominio(){ lj_sufixo.style.display = lj_dominio.value.includes('.') ? 'none':'inline-block'; }
@@ -1099,6 +1237,9 @@ async function salvarLoja(){
     rotacao_destinos:f.rotacao_ativa?['formulario',...f.rotacao_destinos]
       :((edit.rotacao_destinos||[]).length?edit.rotacao_destinos:['formulario','instagram','whatsapp']),
     codigo_wifi:lj_codigo.value.trim()||null, ap_secret:lj_secret.value.trim()||null,
+    session_timeout: lj_sessao.value===''?null:Number(lj_sessao.value),
+    download_kbps: lj_down.value===''?null:Number(lj_down.value),
+    upload_kbps: lj_up.value===''?null:Number(lj_up.value),
     valor_mensal:lj_valor.value?Number(lj_valor.value):null,
     dia_vencimento:lj_diavenc.value?Number(lj_diavenc.value):null,
     plano:lj_plano.value.trim()||null, status_pagamento:lj_statusPg.value||null,
