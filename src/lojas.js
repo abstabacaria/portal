@@ -86,6 +86,39 @@ function validarCodigoDaLoja(loja, code) {
   return { granted: true, reason: 'ok' };
 }
 
+// ---- BLOQUEIO POR LOJA -------------------------------------------------
+// Consulta portal_bloqueios: se o MAC, o cookie do aparelho (cyid) ou o
+// telefone estiverem bloqueados (ativo=true) naquela loja, devolve o
+// registro { id, motivo }. Senão, devolve null.
+// FAIL-OPEN de propósito: se o banco falhar, ninguém fica sem Wi-Fi.
+async function estaBloqueado(loja, { mac, telefone, cyid } = {}) {
+  if (!loja || !loja.id) return null;
+
+  const conds = [];
+  const m = String(mac || '').toLowerCase().trim();
+  const t = String(telefone || '').replace(/\D/g, '');
+  const c = String(cyid || '').trim();
+  if (m) conds.push(`mac.eq."${m}"`);
+  if (t) conds.push(`telefone.eq."${t}"`);
+  if (c) conds.push(`cyid.eq."${c}"`);
+  if (!conds.length) return null;
+
+  try {
+    const url = `${SUPABASE_URL}/rest/v1/portal_bloqueios`
+      + `?loja_id=eq.${encodeURIComponent(loja.id)}`
+      + `&ativo=eq.true`
+      + `&or=${encodeURIComponent('(' + conds.join(',') + ')')}`
+      + `&select=id,motivo&limit=1`;
+    const r = await fetch(url, { headers: H });
+    if (!r.ok) return null;
+    const rows = await r.json();
+    return Array.isArray(rows) && rows[0] ? rows[0] : null;
+  } catch (e) {
+    console.warn('[lojas] erro ao checar bloqueio:', e.message);
+    return null;
+  }
+}
+
 // ---- Detecção de dispositivo/SO pelo user-agent (alimenta o dashboard) ----
 function lerUA(ua = '') {
   const s = String(ua).toLowerCase();
@@ -201,4 +234,5 @@ module.exports = {
   lojaPorDominio, lojaPorSlug, validarCodigoDaLoja,
   registrarAcesso, registrarLead, limparCache,
   visitaDispositivo, marcarCadastrado, lerUA,
+  estaBloqueado,
 };
