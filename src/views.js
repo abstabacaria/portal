@@ -252,6 +252,7 @@ function renderPortal({ ap, instagram, autoCode, error, marca }) {
     ${error ? `<div class="err">${escapeAttr(error)}</div>` : ''}
     <form method="post" action="/auth" id="f">
       ${hidden(ap)}
+      <input type="hidden" name="cyid" value="${escapeAttr(marca.cyid || '')}">
       <input type="hidden" name="code" value="${escapeAttr(autoCode || '')}">
       <input type="hidden" name="go" value="${escapeAttr(go)}">
       ${ehForm ? `<div class="form-titulo">${escapeAttr(formTitulo)}</div>${camposHtml}
