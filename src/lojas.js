@@ -158,6 +158,37 @@ async function registrarAcesso(loja, mac, dispositivo, userAgent, ip) {
   }
 }
 
+// Validação servidor do celular BR (espelho da validação do portal):
+// 11 dígitos, DDD real, 9º dígito, sem repetições/sequências óbvias.
+// Número inválido vira null — o lead salva, mas não polui o CRM.
+const DDDS_BR = new Set([11,12,13,14,15,16,17,18,19,21,22,24,27,28,31,32,33,34,35,37,38,
+  41,42,43,44,45,46,47,48,49,51,53,54,55,61,62,63,64,65,66,67,68,69,
+  71,73,74,75,77,79,81,82,83,84,85,86,87,88,89,91,92,93,94,95,96,97,98,99]);
+function telefoneValido(v) {
+  let d = String(v || '').replace(/\D/g, '');
+  if (d.length === 13 && d.startsWith('55')) d = d.slice(2);
+  if (d.length !== 11) return null;
+  if (!DDDS_BR.has(+d.slice(0, 2))) return null;
+  if (d[2] !== '9') return null;
+  const num = d.slice(2);
+  const resto = num.slice(1);                       // 8 dígitos após o 9 fixo
+  if (/^(\d)\1+$/.test(resto)) return null;
+  if ('01234567890123456789'.includes(resto)) return null;
+  if ('98765432109876543210'.includes(resto)) return null;
+  return d;
+}
+
+// Nome: só letras (com acento), espaço, hífen e apóstrofo.
+// Números e símbolos são removidos; sobrando menos de 2 letras → null.
+function limparNome(v) {
+  const limpo = String(v || '')
+    .replace(/[^A-Za-zÀ-ÖØ-öø-ÿ' -]/g, '')
+    .replace(/ {2,}/g, ' ')
+    .trim()
+    .slice(0, 80);
+  return limpo.length >= 2 ? limpo : null;
+}
+
 // grava um lead coletado pelo formulário (isolado por loja)
 // Além do JSONB `dados` (histórico), preenche as colunas planas usadas
 // pelo CRM (portal_pessoas) — nome, telefone e o consentimento.
@@ -173,9 +204,9 @@ async function registrarLead(loja, dados, mac, userAgent) {
       registro.optin_data = new Date().toISOString();
       registro.optin_texto = 'Aceito receber novidades e ofertas no WhatsApp e concordo com a Política de Privacidade.';
     }
-    const telefone = String(
+    const telefone = telefoneValido(
       registro.telefone || registro.whatsapp || registro.celular || ''
-    ).replace(/\D/g, '') || null;
+    );
 
     await fetch(`${SUPABASE_URL}/rest/v1/portal_leads`, {
       method: 'POST',
@@ -185,7 +216,7 @@ async function registrarLead(loja, dados, mac, userAgent) {
         slug: loja.slug,
         dados: registro,
         mac: mac || null,
-        nome: registro.nome || null,
+        nome: limparNome(registro.nome),
         telefone,
         user_agent: userAgent ? String(userAgent).slice(0, 500) : null,
         optin,
