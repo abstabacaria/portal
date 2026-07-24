@@ -112,6 +112,8 @@ function layout({ title, body, marca }) {
   .foot a{ color:inherit; text-decoration:underline }
   .fld-form{width:100%;box-sizing:border-box;padding:14px 16px;margin:0 0 10px;border:1.5px solid ${t.linha};border-radius:12px;font-size:16px;background:${t.campoBg};color:${t.campoTx}}
   .fld-form:focus{outline:none;border-color:${t.cor}}
+  .fld-rot{font-size:12.5px;color:${t.muted};margin:2px 2px 6px;font-weight:600}
+  .fld-rot b{color:${t.cor2};font-weight:700}
   .form-titulo{font-weight:800;font-size:17px;margin:4px 0 14px;color:var(--text)}
   .optin{display:flex;gap:9px;align-items:flex-start;margin:2px 2px 6px;font-size:12.5px;color:var(--muted);line-height:1.45;cursor:pointer}
   .optin input{flex:0 0 18px;width:18px;height:18px;margin-top:1px;accent-color:${t.cor};cursor:pointer}
@@ -237,10 +239,19 @@ function renderPortal({ ap, instagram, autoCode, error, marca }) {
                 : ehForm   ? `Seus dados vão só pra ${escapeAttr(nome)}. Ao cadastrar, a internet libera na hora.`
                 : `Você será direcionado ao nosso Instagram <b>${escapeAttr(igHandle)}</b> com a internet já liberada.`;
 
-  const tiposInput = { nome:'text', telefone:'tel', whatsapp:'tel', email:'email', aniversario:'date', nascimento:'date', cpf:'text', cep:'text', bairro:'text' };
-  const camposHtml = ehForm ? campos.map(c =>
-    `<input class="fld-form" type="${tiposInput[c.campo]||'text'}" name="lead_${escapeAttr(c.campo)}" placeholder="${escapeAttr(c.label)}${c.obrigatorio?' *':''}" ${c.obrigatorio?'required':''}>`
-  ).join('') : '';
+  // Campos de data usam TEXTO com máscara dd/mm/aaaa: o <input type=date>
+  // fica vazio e sem dica no iOS (placeholder é ignorado). A conversão pro
+  // formato do banco (aaaa-mm-dd) acontece via JS no envio do formulário.
+  const tiposInput = { nome:'text', telefone:'tel', whatsapp:'tel', email:'email', cpf:'text', cep:'text', bairro:'text' };
+  const ehData = c => c === 'aniversario' || c === 'nascimento';
+  const camposHtml = ehForm ? campos.map(c => {
+    const rot = `<div class="fld-rot">${escapeAttr(c.label)}${c.obrigatorio?' <b>*</b>':''}</div>`;
+    if (ehData(c.campo)) {
+      return rot + `<input class="fld-form fld-data" type="text" inputmode="numeric" maxlength="10"
+        name="lead_${escapeAttr(c.campo)}" placeholder="dd/mm/aaaa" autocomplete="bday" ${c.obrigatorio?'required':''}>`;
+    }
+    return rot + `<input class="fld-form" type="${tiposInput[c.campo]||'text'}" name="lead_${escapeAttr(c.campo)}" placeholder="${escapeAttr(c.label)}${c.obrigatorio?' *':''}" ${c.obrigatorio?'required':''}>`;
+  }).join('') : '';
   const formTitulo = marca.formTitulo || 'Cadastre-se para usar o Wi-Fi';
   const go = ehForm ? 'form' : destino;
 
@@ -294,7 +305,40 @@ function renderPortal({ ap, instagram, autoCode, error, marca }) {
     (function(){
       var f=document.getElementById('f'), b=document.getElementById('btn'), ld=document.getElementById('load'), ls=document.getElementById('loadS');
       var enviando=false;
+
+      // ---- Campos de data: máscara dd/mm/aaaa + conversão pro banco ----
+      var camposData = [].slice.call(document.querySelectorAll('.fld-data'));
+      camposData.forEach(function(inp){
+        inp.addEventListener('input', function(){
+          var d = inp.value.replace(/\D/g,'').slice(0,8);
+          var out = d;
+          if (d.length > 4) out = d.slice(0,2)+'/'+d.slice(2,4)+'/'+d.slice(4);
+          else if (d.length > 2) out = d.slice(0,2)+'/'+d.slice(2);
+          inp.value = out;
+        });
+      });
+      function dataValida(v){
+        var m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+        if(!m) return null;
+        var di=+m[1], me=+m[2], an=+m[3], agora=new Date().getFullYear();
+        if(di<1||di>31||me<1||me>12||an<1900||an>agora) return null;
+        return an+'-'+('0'+me).slice(-2)+'-'+('0'+di).slice(-2);
+      }
+
       f.addEventListener('submit',function(e){
+        // valida e converte as datas ANTES de qualquer coisa
+        for (var i=0;i<camposData.length;i++){
+          var inp=camposData[i], v=inp.value.trim();
+          if (!v){ if(inp.required){ e.preventDefault(); inp.focus(); return false; } continue; }
+          var iso=dataValida(v);
+          if(!iso){
+            e.preventDefault();
+            inp.style.borderColor='#e05a45'; inp.focus();
+            inp.value=''; inp.placeholder='data inválida — dd/mm/aaaa';
+            return false;
+          }
+          inp.value=iso;   // banco recebe aaaa-mm-dd (formato do CRM)
+        }
         if(enviando){ e.preventDefault(); return false; }   // trava o clique duplo
         enviando=true;
         b.classList.add('carregando');
