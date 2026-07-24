@@ -350,9 +350,12 @@ function renderPronto({ marca, destinoUrl, rotulo }) {
   const logo = marca.logo || LOGO;
   const nome = marca.nome || 'Wi-Fi';
 
-  // Detecta destino Instagram e monta as variantes de link
+  // Detecta destino Instagram e monta as variantes de link.
+  // O handle vem da URL do destino OU da marca da loja (caso o destino
+  // seja a rota /ig, que não contém o nome do perfil).
   const igMatch = String(destinoUrl || '').match(/instagram\.com\/([A-Za-z0-9._]+)/i);
-  const igHandle = igMatch ? igMatch[1] : null;
+  const igHandle = igMatch ? igMatch[1] : ((marca.igHandle || '').replace(/^@/, '') || null);
+  const igUniversal = igHandle ? `https://instagram.com/${igHandle}` : null;
   const igIntent = igHandle
     ? `intent://instagram.com/_u/${igHandle}#Intent;package=com.instagram.android;scheme=https;S.browser_fallback_url=${encodeURIComponent(destinoUrl)};end`
     : null;
@@ -369,9 +372,10 @@ function renderPronto({ marca, destinoUrl, rotulo }) {
       <img src="${LOGO_CONECTAY}" alt="ConectaY" style="height:36px;object-fit:contain;opacity:.9"></div>
     <script>
     (function(){
-      var destino   = ${JSON.stringify(destinoUrl)};
-      var igIntent  = ${JSON.stringify(igIntent)};
-      var igApp     = ${JSON.stringify(igApp)};
+      var destino     = ${JSON.stringify(destinoUrl)};
+      var igIntent    = ${JSON.stringify(igIntent)};
+      var igApp       = ${JSON.stringify(igApp)};
+      var igUniversal = ${JSON.stringify(igUniversal)};
       var isAndroid = /Android/i.test(navigator.userAgent || '');
       var isIOS     = /iPhone|iPad|iPod/i.test(navigator.userAgent || '');
       var btn  = document.getElementById('btnDest');
@@ -385,8 +389,16 @@ function renderPronto({ marca, destinoUrl, rotulo }) {
         setTimeout(function(){ try { window.location.href = igIntent; } catch(e){} }, 2000);
         // Sem fallback web automático: abrir o site do IG no mini-navegador
         // do captive só atrapalha; o botão resolve os casos bloqueados.
+      } else if (isIOS && igUniversal) {
+        // iOS + INSTAGRAM: o botão vira UNIVERSAL LINK direto
+        // (https://instagram.com/perfil). No iOS, o TOQUE nesse link abre
+        // o app — e preservar o gesto (sem pulo pelo /ig) é o que garante
+        // isso. A tentativa automática usa o esquema do app.
+        btn.setAttribute('href', igUniversal);
+        hint.innerHTML = 'Se o Instagram não abrir sozinho, <b>toque no botão acima</b> 👆';
+        setTimeout(function(){ try { window.location.href = igApp; } catch(e){} }, 2000);
       } else if (isIOS && igApp) {
-        // iOS + INSTAGRAM: tenta o app, cai pro site se não tiver instalado.
+        // iOS + INSTAGRAM (sem handle detectável): tenta o app, cai pro site.
         setTimeout(function(){
           window.location.href = igApp;
           setTimeout(function(){ window.location.href = destino; }, 1500);
