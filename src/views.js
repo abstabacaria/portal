@@ -250,6 +250,14 @@ function renderPortal({ ap, instagram, autoCode, error, marca }) {
       return rot + `<input class="fld-form fld-data" type="text" inputmode="numeric" maxlength="10"
         name="lead_${escapeAttr(c.campo)}" placeholder="dd/mm/aaaa" autocomplete="bday" ${c.obrigatorio?'required':''}>`;
     }
+    if (c.campo === 'nome') {
+      return rot + `<input class="fld-form fld-nome" type="text" maxlength="80" autocomplete="name"
+        name="lead_${escapeAttr(c.campo)}" placeholder="${escapeAttr(c.label)}${c.obrigatorio?' *':''}" ${c.obrigatorio?'required':''}>`;
+    }
+    if (c.campo === 'telefone' || c.campo === 'whatsapp' || c.campo === 'celular') {
+      return rot + `<input class="fld-form fld-tel" type="tel" inputmode="numeric" maxlength="16"
+        name="lead_${escapeAttr(c.campo)}" placeholder="(21) 99999-9999" autocomplete="tel-national" ${c.obrigatorio?'required':''}>`;
+    }
     return rot + `<input class="fld-form" type="${tiposInput[c.campo]||'text'}" name="lead_${escapeAttr(c.campo)}" placeholder="${escapeAttr(c.label)}${c.obrigatorio?' *':''}" ${c.obrigatorio?'required':''}>`;
   }).join('') : '';
   const formTitulo = marca.formTitulo || 'Cadastre-se para usar o Wi-Fi';
@@ -310,7 +318,7 @@ function renderPortal({ ap, instagram, autoCode, error, marca }) {
       var camposData = [].slice.call(document.querySelectorAll('.fld-data'));
       camposData.forEach(function(inp){
         inp.addEventListener('input', function(){
-          var d = inp.value.replace(/\D/g,'').slice(0,8);
+          var d = inp.value.replace(/\\D/g,'').slice(0,8);
           var out = d;
           if (d.length > 4) out = d.slice(0,2)+'/'+d.slice(2,4)+'/'+d.slice(4);
           else if (d.length > 2) out = d.slice(0,2)+'/'+d.slice(2);
@@ -318,14 +326,63 @@ function renderPortal({ ap, instagram, autoCode, error, marca }) {
         });
       });
       function dataValida(v){
-        var m = v.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+        var m = v.match(/^(\\d{2})\\/(\\d{2})\\/(\\d{4})$/);
         if(!m) return null;
         var di=+m[1], me=+m[2], an=+m[3], agora=new Date().getFullYear();
         if(di<1||di>31||me<1||me>12||an<1900||an>agora) return null;
         return an+'-'+('0'+me).slice(-2)+'-'+('0'+di).slice(-2);
       }
 
+      // ---- Campos de WhatsApp: máscara (XX) XXXXX-XXXX + validação BR ----
+      var camposTel = [].slice.call(document.querySelectorAll('.fld-tel'));
+      camposTel.forEach(function(inp){
+        inp.addEventListener('input', function(){
+          var d = inp.value.replace(/\\D/g,'').slice(0,11);
+          var out = d;
+          if (d.length > 7) out = '('+d.slice(0,2)+') '+d.slice(2,7)+'-'+d.slice(7);
+          else if (d.length > 2) out = '('+d.slice(0,2)+') '+d.slice(2);
+          inp.value = out;
+        });
+      });
+      var DDDS = [11,12,13,14,15,16,17,18,19,21,22,24,27,28,31,32,33,34,35,37,38,
+                  41,42,43,44,45,46,47,48,49,51,53,54,55,61,62,63,64,65,66,67,68,69,
+                  71,73,74,75,77,79,81,82,83,84,85,86,87,88,89,91,92,93,94,95,96,97,98,99];
+      function telValido(v){
+        var d = v.replace(/\\D/g,'');
+        if (d.length === 13 && d.slice(0,2) === '55') d = d.slice(2);
+        if (d.length !== 11) return null;                       // celular BR = 11 dígitos
+        if (DDDS.indexOf(+d.slice(0,2)) < 0) return null;       // DDD tem que existir
+        if (d[2] !== '9') return null;                          // celular começa com 9
+        var num = d.slice(2);
+        var resto = num.slice(1);                               // 8 dígitos após o 9 fixo
+        if (/^(\\d)\\1+$/.test(resto)) return null;               // 9 8888-8888 etc.
+        if ('01234567890123456789'.indexOf(resto) >= 0) return null; // 9 1234-5678
+        if ('98765432109876543210'.indexOf(resto) >= 0) return null; // 9 8765-4321
+        return d;
+      }
+
+      // ---- Campo nome: só letras, espaço, hífen e apóstrofo ----
+      var camposNome = [].slice.call(document.querySelectorAll('.fld-nome'));
+      camposNome.forEach(function(inp){
+        inp.addEventListener('input', function(){
+          var limpo = inp.value.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ' -]/g, '');
+          if (limpo !== inp.value) inp.value = limpo;
+        });
+      });
+
       f.addEventListener('submit',function(e){
+        // valida o nome (mínimo 2 letras quando obrigatório)
+        for (var k=0;k<camposNome.length;k++){
+          var nin=camposNome[k];
+          var nv=nin.value.replace(/[^A-Za-zÀ-ÖØ-öø-ÿ' -]/g,'').replace(/ {2,}/g,' ').trim();
+          nin.value=nv;
+          if (nin.required && nv.length < 2){
+            e.preventDefault();
+            nin.style.borderColor='#e05a45'; nin.focus();
+            nin.value=''; nin.placeholder='digite seu nome (só letras)';
+            return false;
+          }
+        }
         // valida e converte as datas ANTES de qualquer coisa
         for (var i=0;i<camposData.length;i++){
           var inp=camposData[i], v=inp.value.trim();
@@ -338,6 +395,19 @@ function renderPortal({ ap, instagram, autoCode, error, marca }) {
             return false;
           }
           inp.value=iso;   // banco recebe aaaa-mm-dd (formato do CRM)
+        }
+        // valida os WhatsApps (DDD real + celular com 9 + anti-fake)
+        for (var j=0;j<camposTel.length;j++){
+          var tin=camposTel[j], tv=tin.value.trim();
+          if (!tv){ if(tin.required){ e.preventDefault(); tin.focus(); return false; } continue; }
+          var tok=telValido(tv);
+          if(!tok){
+            e.preventDefault();
+            tin.style.borderColor='#e05a45'; tin.focus();
+            tin.value=''; tin.placeholder='número inválido — (DDD) 9XXXX-XXXX';
+            return false;
+          }
+          tin.value=tok;   // envia só os dígitos, limpo
         }
         if(enviando){ e.preventDefault(); return false; }   // trava o clique duplo
         enviando=true;
