@@ -141,6 +141,7 @@ function marcaDaLoja(loja) {
       corCard: loja.cor_card || '#1b1917',
       logo: loja.logo_url || '/static/logo.png',
       mensagem: loja.mensagem || '',
+      bannerAtivo: !!loja.banner_ativo,
       autoCode: loja.codigo_wifi || AUTO_CODE,   // liberação automática: nunca deixa vazio
       apSecret: loja.ap_secret || AP_SECRET,
       destinoTipo: loja.destino_tipo || 'instagram',
@@ -431,7 +432,7 @@ app.get('/contato.vcf', async (req, res) => {
 });
 
 // Saúde do serviço (útil pra monitorar na VPS).
-app.get('/health', (req, res) => res.json({ ok: true, servico: 'conectay-portal', versao: '2.5.1', ts: Date.now() }));
+app.get('/health', (req, res) => res.json({ ok: true, servico: 'conectay-portal', versao: '2.6.0', ts: Date.now() }));
 
 // Página que abre o APP do Instagram, com estratégia POR PLATAFORMA:
 //   ANDROID → intent:// (único esquema que o navegador do captive aceita;
