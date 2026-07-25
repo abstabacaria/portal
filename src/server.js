@@ -431,7 +431,7 @@ app.get('/contato.vcf', async (req, res) => {
 });
 
 // Saúde do serviço (útil pra monitorar na VPS).
-app.get('/health', (req, res) => res.json({ ok: true, servico: 'conectay-portal', versao: '2.5.0', ts: Date.now() }));
+app.get('/health', (req, res) => res.json({ ok: true, servico: 'conectay-portal', versao: '2.5.1', ts: Date.now() }));
 
 // Página que abre o APP do Instagram, com estratégia POR PLATAFORMA:
 //   ANDROID → intent:// (único esquema que o navegador do captive aceita;
@@ -489,13 +489,14 @@ a{display:inline-block;margin-top:20px;background:linear-gradient(135deg,#ff6a1a
     // tentativa automática
     window.location.href = intent;
   } else if(isIOS){
-    // iOS: o esquema instagram:// funciona no Safari, mas é BLOQUEADO na
-    // mini-janela do captive. E o site (fallback) barra perfis restritos.
-    // Estratégia: tenta o app; se não sair da página, mostra o botão com
-    // UNIVERSAL LINK (https://instagram.com/perfil) — no iOS, um TOQUE
-    // nesse link abre o app de verdade. Sem redirect automático pro site.
-    btn.setAttribute('href', web);   // toque = universal link = abre o app
+    // iOS: o Universal Link (https://instagram.com/perfil) abre o APP de
+    // verdade — e diferente do instagram://, NÃO é bloqueado no redirect.
+    // Dispara automático E deixa o botão como garantia (toque = mesmo efeito).
+    btn.setAttribute('href', web);
+    // tenta primeiro o app via esquema (Safari normal), e logo em seguida
+    // navega pro universal link, que abre o app sozinho na maioria dos casos.
     try { window.location.href = app; } catch(e){}
+    setTimeout(function(){ window.location.href = web; }, 900);
   } else {
     // Desktop e demais: vai pro site depois de tentar o app.
     var t2=setTimeout(function(){ window.location.href=web; }, 1400);
