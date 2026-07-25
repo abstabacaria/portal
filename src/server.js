@@ -6,7 +6,7 @@ const { validateCode, logAccess, getMetrics } = require('./db');
 const {
   lojaPorDominio, lojaPorSlug, validarCodigoDaLoja,
   registrarAcesso, registrarLead, visitaDispositivo, marcarCadastrado,
-  estaBloqueado,
+  estaBloqueado, fidelidadeInfo,
 } = require('./lojas');
 const { renderPortal, renderResult, renderPronto, renderPrivacidade, montarVcard } = require('./views');
 
@@ -73,10 +73,23 @@ function extractApParams(src) {
   };
 }
 
+// Resolve a sessão por fidelidade: VIP > recorrente > novo, conforme o
+// histórico do aparelho/pessoa. Retorna segundos ou null (usa o padrão).
+function sessaoPorFidelidade(loja, info) {
+  if (!loja || !loja.fidelidade_ativa || !info) return null;
+  if (info.status === 'vip' && loja.sess_vip > 0) return loja.sess_vip;
+  const recorrente = info.status === 'vip' || info.categoria === 'recorrente'
+    || (info.total_visitas || info.visitas || 0) >= 3;
+  if (recorrente && loja.sess_recorrente > 0) return loja.sess_recorrente;
+  if ((info.novo || info.conhecido === false || true) && loja.sess_novo > 0) return loja.sess_novo;
+  return null;
+}
+
 // Monta a URL de liberação de volta para o AP, com token de segurança.
 // Sessão e limites de banda vêm da LOJA quando configurados no painel;
 // senão usam os padrões globais do ambiente.
-function buildReleaseUrl(p, loja) {
+// sessOverride (segundos) tem prioridade — usado pela sessão por fidelidade.
+function buildReleaseUrl(p, loja, sessOverride) {
   const ts = p.ts || String(Math.floor(Date.now() / 1000));
   const userContext = `${p.user_hash}|${ts}`;
   const token = AP_SECRET
@@ -88,8 +101,10 @@ function buildReleaseUrl(p, loja) {
   params.set('ts', ts);
   if (token) params.set('token', token);
   params.set('user_hash', p.user_hash);
+  const ov = parseInt(sessOverride, 10);
   const st = parseInt(loja && loja.session_timeout, 10);
-  params.set('session_timeout', (st && st > 0) ? String(st) : SESSION_TIMEOUT);
+  params.set('session_timeout',
+    (ov && ov > 0) ? String(ov) : ((st && st > 0) ? String(st) : SESSION_TIMEOUT));
   params.set('idle_timeout', IDLE_TIMEOUT);
   const dl = parseInt(loja && loja.download_kbps, 10);
   const ul = parseInt(loja && loja.upload_kbps, 10);
@@ -134,6 +149,7 @@ function marcaDaLoja(loja) {
       siteUrl: loja.site_url || '',
       formCampos: loja.form_campos || null,
       formTitulo: loja.form_titulo || '',
+      modoAp: loja.modo_ap || '',
       vcardAtivo: !!loja.vcard_ativo,
       ativo: loja.ativo !== false,
       achou: true,
@@ -247,7 +263,7 @@ app.post('/auth', async (req, res) => {
       // MODO SIMPLES — APs sem o protocolo Intelbras (ex.: D-Link em Web
       // Redirection). Não há internet a liberar: só captura o lead e segue
       // pro destino. Ativado com &modo=simples na URL configurada no AP.
-      if (ap.modo === 'simples') {
+      if (ap.modo === 'simples' || marca.modoAp === 'simples') {
         let telefoneLead = null;
         if (req.body.go === 'form') {
           const dados = {};
@@ -357,7 +373,17 @@ app.post('/auth', async (req, res) => {
       ap.continue = urlFinal;
     }
 
-    const releaseUrl = buildReleaseUrl(ap, loja);
+    // Sessão por fidelidade (só Intelbras): busca o histórico do aparelho/pessoa
+    // e escala o tempo. Falha silenciosa -> cai no timeout padrão da loja.
+    let sessOverride = null;
+    if (loja && loja.fidelidade_ativa) {
+      try {
+        const info = await fidelidadeInfo(loja, ap.mac, telefoneLead || req.cookies.cyid);
+        sessOverride = sessaoPorFidelidade(loja, info);
+      } catch (e) {}
+    }
+
+    const releaseUrl = buildReleaseUrl(ap, loja, sessOverride);
     // NÃO apagamos o cookie do AP aqui: se a pessoa voltar e tocar de novo,
     // sem ele o portal não sabe o redirect_uri e cai na tela de erro.
     return res.redirect(302, releaseUrl);
@@ -405,7 +431,7 @@ app.get('/contato.vcf', async (req, res) => {
 });
 
 // Saúde do serviço (útil pra monitorar na VPS).
-app.get('/health', (req, res) => res.json({ ok: true, servico: 'conectay-portal', versao: '2.4.0', ts: Date.now() }));
+app.get('/health', (req, res) => res.json({ ok: true, servico: 'conectay-portal', versao: '2.5.0', ts: Date.now() }));
 
 // Página que abre o APP do Instagram, com estratégia POR PLATAFORMA:
 //   ANDROID → intent:// (único esquema que o navegador do captive aceita;
