@@ -110,6 +110,20 @@ function layout({ title, body, marca }) {
   .banner-aviso{ background:linear-gradient(135deg,${t.cor},${t.cor2}); color:#fff; font-weight:700;
     font-size:14px; text-align:center; padding:12px 14px; border-radius:12px; margin:0 0 18px;
     box-shadow:0 6px 18px ${t.cor}44; line-height:1.4; position:relative; z-index:1 }
+  .popup-bg{ position:fixed; inset:0; background:rgba(0,0,0,.82); backdrop-filter:blur(4px);
+    z-index:200; display:flex; align-items:center; justify-content:center; padding:20px;
+    animation:popfade .25s ease }
+  @keyframes popfade{ from{opacity:0} to{opacity:1} }
+  .popup-in{ position:relative; max-width:100%; max-height:88vh; border-radius:16px; overflow:hidden;
+    box-shadow:0 24px 70px rgba(0,0,0,.6); animation:popup-up .3s ease }
+  @keyframes popup-up{ from{transform:translateY(16px);opacity:.5} to{transform:none;opacity:1} }
+  .popup-in img,.popup-in video{ display:block; max-width:100%; max-height:88vh; width:auto; height:auto }
+  .popup-x{ position:absolute; top:10px; right:10px; width:34px; height:34px; border-radius:50%;
+    background:rgba(0,0,0,.6); color:#fff; border:0; font-size:20px; line-height:1; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; z-index:2 }
+  .popup-x:disabled{ opacity:.45 }
+  .popup-timer{ position:absolute; bottom:10px; left:50%; transform:translateX(-50%);
+    background:rgba(0,0,0,.6); color:#fff; font-size:11px; padding:4px 10px; border-radius:99px }
   .hint b{ color:var(--brand-2) }
   .foot{ text-align:center; color:var(--muted); font-size:11px; margin-top:20px; letter-spacing:.3px }
   .foot a{ color:inherit; text-decoration:underline }
@@ -442,6 +456,43 @@ function renderPortal({ ap, instagram, autoCode, error, marca }) {
       var m=document.getElementById('modalPol');
       m.classList.remove('on'); m.setAttribute('aria-hidden','true');
     }
+    ${(marca.popupAtivo && marca.popupUrl) ? `
+    // ---- Pop-up promocional ----
+    (function(){
+      var tipo=${JSON.stringify(marca.popupTipo)};
+      var url=${JSON.stringify(marca.popupUrl)};
+      var link=${JSON.stringify(marca.popupLink)};
+      var segs=${JSON.stringify(marca.popupSegundos)};
+      var bg=document.createElement('div'); bg.className='popup-bg';
+      var midia = tipo==='video'
+        ? '<video src="'+url+'" autoplay muted playsinline loop></video>'
+        : '<img src="'+url+'" alt="">';
+      var clicavel = link ? 'style="cursor:pointer"' : '';
+      bg.innerHTML='<div class="popup-in">'
+        + '<button class="popup-x" id="popX" title="Fechar">&times;</button>'
+        + '<div id="popMidia" '+clicavel+'>'+midia+'</div>'
+        + (segs>0?'<div class="popup-timer" id="popTimer"></div>':'')
+        + '</div>';
+      document.body.appendChild(bg);
+      function fechar(){ if(bg.parentNode) bg.parentNode.removeChild(bg); }
+      var x=document.getElementById('popX');
+      if(link){ document.getElementById('popMidia').onclick=function(){ window.open(link,'_blank'); }; }
+      if(segs>0){
+        var rest=segs; x.disabled=true;
+        var tm=document.getElementById('popTimer');
+        tm.textContent='Fecha em '+rest+'s';
+        var iv=setInterval(function(){
+          rest--;
+          if(rest<=0){ clearInterval(iv); fechar(); }
+          else tm.textContent='Fecha em '+rest+'s';
+        },1000);
+        // libera o X quando o tempo acabar (ou deixa fechar sozinho)
+        setTimeout(function(){ x.disabled=false; }, segs*1000);
+      }
+      x.onclick=fechar;
+      bg.onclick=function(e){ if(e.target===bg && !x.disabled) fechar(); };
+    })();
+    ` : ''}
     </script>`;
   return layout({ title: escapeAttr(nome) + ' — Wi-Fi', body, marca });
 }
