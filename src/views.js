@@ -107,6 +107,9 @@ function layout({ title, body, marca }) {
   .load-s b{color:${t.cor2}}
   @media (prefers-reduced-motion:reduce){.ring,.igbtn .spin{animation-duration:2s}}
   .hint{ text-align:center; font-size:12.5px; color:var(--muted); margin:0 0 4px; line-height:1.5 }
+  .banner-aviso{ background:linear-gradient(135deg,${t.cor},${t.cor2}); color:#fff; font-weight:700;
+    font-size:14px; text-align:center; padding:12px 14px; border-radius:12px; margin:0 0 18px;
+    box-shadow:0 6px 18px ${t.cor}44; line-height:1.4; position:relative; z-index:1 }
   .hint b{ color:var(--brand-2) }
   .foot{ text-align:center; color:var(--muted); font-size:11px; margin-top:20px; letter-spacing:.3px }
   .foot a{ color:inherit; text-decoration:underline }
@@ -264,6 +267,7 @@ function renderPortal({ ap, instagram, autoCode, error, marca }) {
   const go = ehForm ? 'form' : destino;
 
   const body = `
+    ${(marca.bannerAtivo && marca.mensagem) ? `<div class="banner-aviso">${escapeAttr(marca.mensagem)}</div>` : ''}
     <div class="logo">${(logo && !logo.endsWith('/static/logo.png')) ? `<img src="${escapeAttr(logo)}" alt="${escapeAttr(nome)}">` : `<div class="logo-nome">${escapeAttr(nome)}</div>`}</div>
     <h1>${marca.voltou ? 'Que bom te ver de novo!' : 'Wi-Fi liberado'}</h1>
     <p class="sub">${subTxt}</p>
