@@ -504,13 +504,12 @@ function renderPronto({ marca, destinoUrl, rotulo }) {
         // Sem fallback web automático: abrir o site do IG no mini-navegador
         // do captive só atrapalha; o botão resolve os casos bloqueados.
       } else if (isIOS && igUniversal) {
-        // iOS + INSTAGRAM: o botão vira UNIVERSAL LINK direto
-        // (https://instagram.com/perfil). No iOS, o TOQUE nesse link abre
-        // o app — e preservar o gesto (sem pulo pelo /ig) é o que garante
-        // isso. A tentativa automática usa o esquema do app.
+        // iOS + INSTAGRAM: o Universal Link abre o app sozinho (não é
+        // bloqueado como o instagram://). Dispara automático + botão de garantia.
         btn.setAttribute('href', igUniversal);
         hint.innerHTML = 'Se o Instagram não abrir sozinho, <b>toque no botão acima</b> 👆';
-        setTimeout(function(){ try { window.location.href = igApp; } catch(e){} }, 2000);
+        setTimeout(function(){ try { window.location.href = igApp; } catch(e){} }, 1500);
+        setTimeout(function(){ window.location.href = igUniversal; }, 2400);
       } else if (isIOS && igApp) {
         // iOS + INSTAGRAM (sem handle detectável): tenta o app, cai pro site.
         setTimeout(function(){
