@@ -1,540 +1,1601 @@
-require('dotenv').config();
-const express = require('express');
-const crypto = require('crypto');
-const path = require('path');
-const { validateCode, logAccess, getMetrics } = require('./db');
-const {
-  lojaPorDominio, lojaPorSlug, validarCodigoDaLoja,
-  registrarAcesso, registrarLead, visitaDispositivo, marcarCadastrado,
-  estaBloqueado, fidelidadeInfo,
-} = require('./lojas');
-const { renderPortal, renderResult, renderPronto, renderPrivacidade, montarVcard } = require('./views');
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>ConectaY · Painel</title>
+<link rel="icon" type="image/png" href="https://i.postimg.cc/BQjJGBKf/logo-conectay-transparent.png">
+<link rel="apple-touch-icon" href="https://i.postimg.cc/BQjJGBKf/logo-conectay-transparent.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="config.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<style>
+:root{
+  --azul:#0ea5e9; --ciano:#22d3ee; --navy:#070b16; --vidro:rgba(16,24,39,.72); --vidro2:rgba(13,21,36,.9);
+  --borda:#1e293b; --bordaHi:#2b3b55; --texto:#e2e8f0; --mudo:#8b9bb4; --fraco:#5b6b84;
+  --ok:#34d399; --alerta:#fbbf24; --erro:#f87171; --grad:linear-gradient(135deg,#0ea5e9,#22d3ee);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--navy);color:var(--texto);font-family:'Inter',system-ui,sans-serif;min-height:100vh}
+body::before{content:'';position:fixed;inset:0;z-index:-1;pointer-events:none;
+  background:radial-gradient(900px 500px at 85% -10%, rgba(14,165,233,.13), transparent 60%),
+             radial-gradient(700px 500px at -10% 110%, rgba(34,211,238,.08), transparent 60%)}
+h1,h2,h3,.marca{font-family:'Sora','Inter',sans-serif}
+a{color:var(--ciano);text-decoration:none}
+button{font-family:inherit;cursor:pointer;transition:.18s}
+input,select,textarea{font-family:inherit;background:#0b1220;border:1px solid var(--borda);color:var(--texto);
+  border-radius:11px;padding:10px 13px;font-size:.9rem;outline:none;width:100%;transition:.18s}
+input:focus,select:focus,textarea:focus{border-color:var(--azul);box-shadow:0 0 0 3px rgba(14,165,233,.15)}
+label{font-size:.75rem;color:var(--mudo);display:block;margin:12px 0 6px;font-weight:500}
+::placeholder{color:var(--fraco)}
+small.dica{color:var(--fraco);font-size:.7rem;display:block;margin-top:4px}
 
-const app = express();
-app.use(express.urlencoded({ extended: false }));
+#telaLogin{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px}
+.cardLogin{width:100%;max-width:390px;background:var(--vidro);backdrop-filter:blur(14px);
+  border:1px solid var(--borda);border-radius:22px;padding:38px 30px;box-shadow:0 24px 70px rgba(0,0,0,.55)}
+.hex{width:96px;height:96px;margin:0 auto 6px;display:block;object-fit:contain;
+  filter:drop-shadow(0 6px 18px rgba(14,165,233,.35))}
+.cardLogin h1{text-align:center;font-size:1.45rem;margin-bottom:4px}
+.cardLogin .sub{text-align:center;color:var(--mudo);font-size:.84rem;margin-bottom:18px}
+.btnP{width:100%;margin-top:18px;padding:13px;border:0;border-radius:12px;font-weight:700;color:#fff;font-size:.95rem;
+  background:var(--grad);box-shadow:0 10px 26px rgba(14,165,233,.35)}
+.btnP:hover{transform:translateY(-1px)}
+.msgErro{background:#3b0d0d;border:1px solid #7f1d1d;color:#fecaca;border-radius:11px;padding:10px;
+  font-size:.82rem;margin-top:14px;display:none}
 
-// Parser de cookie leve (evita dependência extra).
-app.use((req, _res, next) => {
-  req.cookies = {};
-  const raw = req.headers.cookie;
-  if (raw) for (const part of raw.split(';')) {
-    const i = part.indexOf('=');
-    if (i > -1) req.cookies[part.slice(0, i).trim()] = decodeURIComponent(part.slice(i + 1).trim());
-  }
-  next();
-});
-app.use('/static', express.static(path.join(__dirname, '..', 'public')));
+#app{display:none;min-height:100vh}
+.shell{display:grid;grid-template-columns:232px 1fr;min-height:100vh}
+aside{background:var(--vidro2);backdrop-filter:blur(12px);border-right:1px solid var(--borda);
+  padding:22px 14px;display:flex;flex-direction:column;gap:4px;position:sticky;top:0;height:100vh}
+aside .marca{display:flex;align-items:center;gap:10px;font-weight:800;font-size:1.05rem;padding:0 10px 20px}
+aside .marca b{color:var(--azul)}
+aside .rotulo{font-size:.65rem;letter-spacing:.12em;color:var(--fraco);padding:14px 12px 6px;text-transform:uppercase}
+.navItem{display:flex;align-items:center;gap:11px;padding:11px 12px;border-radius:11px;border:0;background:transparent;
+  color:var(--mudo);font-size:.88rem;font-weight:500;width:100%;text-align:left}
+.navItem svg{flex:none;opacity:.85}
+.navItem:hover{background:rgba(14,165,233,.08);color:var(--texto)}
+.navItem.on{background:linear-gradient(90deg,rgba(14,165,233,.18),rgba(34,211,238,.06));
+  color:#fff;box-shadow:inset 2px 0 0 var(--azul)}
+.navItem .pill{margin-left:auto;background:var(--grad);color:#04202e;border-radius:99px;font-size:.66rem;font-weight:700;padding:2px 8px}
+aside .rodape{margin-top:auto;padding:12px;border-top:1px solid var(--borda)}
+aside .rodape .quem{font-size:.78rem;font-weight:600}
+aside .rodape .papel{font-size:.68rem;color:var(--fraco)}
+.btnSair{margin-top:10px;width:100%;background:transparent;border:1px solid var(--borda);color:var(--mudo);
+  border-radius:9px;padding:8px;font-size:.78rem}
+.btnSair:hover{border-color:var(--erro);color:var(--erro)}
 
-const {
-  PORT = 8080,
-  AP_SECRET = '',
-  SESSION_TIMEOUT = '10800',
-  IDLE_TIMEOUT = '900',
-  DOWNLOAD_KBPS = '0',
-  UPLOAD_KBPS = '0',
-  INSTAGRAM_URL = 'https://instagram.com/absolem',
-  REDIRECT_AFTER = '',
-  AUTO_CODE = 'ABSOLEM',
-  METRICS_KEY = '',
-} = process.env;
+.conteudo{padding:26px 30px;max-width:1240px;width:100%}
+.topo{display:flex;align-items:center;gap:14px;margin-bottom:24px;flex-wrap:wrap}
+.topo h1{font-size:1.3rem}
+.topo .data{color:var(--fraco);font-size:.8rem}
+.topo .fim{margin-left:auto;display:flex;gap:10px;align-items:center}
+#seletorLoja{width:auto;min-width:190px;background:var(--vidro)}
 
-// Extrai o @handle do Instagram e monta o link do APP (deep link) + fallback web.
-const IG_HANDLE = (INSTAGRAM_URL || '')
-  .replace(/^https?:\/\/(www\.)?instagram\.com\//i, '')
-  .replace(/[\/?#].*$/, '')
-  .replace(/^@/, '') || 'abstabacaria';
-const IG_APP_LINK = 'instagram://user?username=' + IG_HANDLE;
-const IG_WEB_LINK = 'https://instagram.com/' + IG_HANDLE;
+.card{background:var(--vidro);backdrop-filter:blur(10px);border:1px solid var(--borda);border-radius:16px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(172px,1fr));gap:13px;margin-bottom:20px}
+.kpi{padding:17px 18px}
+.kpi .ic{width:34px;height:34px;border-radius:10px;background:rgba(14,165,233,.14);display:flex;
+  align-items:center;justify-content:center;margin-bottom:12px;color:var(--ciano)}
+.kpi .v{font-family:'Sora';font-size:1.7rem;font-weight:700;letter-spacing:-.02em}
+.kpi .l{color:var(--mudo);font-size:.74rem;margin-top:2px}
+.kpi .delta{font-size:.7rem;margin-top:7px;display:inline-flex;gap:4px;border-radius:99px;padding:3px 9px;font-weight:600}
+.delta.up{background:rgba(52,211,153,.12);color:var(--ok)}
+.delta.down{background:rgba(248,113,113,.12);color:var(--erro)}
+.graficos{display:grid;grid-template-columns:repeat(12,1fr);gap:13px}
+.gCard{padding:18px}
+.gCard h3{font-size:.8rem;color:var(--mudo);margin-bottom:14px;font-weight:600;display:flex;align-items:center;gap:8px}
+.gCard h3::before{content:'';width:7px;height:7px;border-radius:99px;background:var(--grad)}
+.gCard canvas{max-height:215px}
+.g-8{grid-column:span 8}.g-6{grid-column:span 6}.g-4{grid-column:span 4}
+@media(max-width:900px){.g-8,.g-6,.g-4{grid-column:span 12}}
 
-/* -------------------------------------------------------------------------
-   PROTOCOLO INTELBRAS ZEUS OS — Captive Portal Externo (modo "Externo")
-   1) O AP redireciona o cliente para cá (GET) com os parâmetros do device.
-   2) Mostramos a página (seguir Instagram / grupo / formulário).
-   3) Ao aprovar, montamos a URL de liberação (redirect_uri do AP) com o
-      token HMAC-SHA256 e mandamos o navegador do cliente para lá.
-   Referência: "Especificações do Captive Portal Externo v2.0".
-   NÃO ALTERAR sem testar num AP real — é isso que solta a internet.
-   ------------------------------------------------------------------------- */
+.filtros{display:flex;gap:11px;flex-wrap:wrap;margin-bottom:16px;align-items:end}
+.filtros>div{flex:1;min-width:150px}
+.filtros .acao{flex:none;display:flex;gap:8px}
+.btnG{background:var(--vidro);border:1px solid var(--borda);color:var(--mudo);border-radius:10px;
+  padding:10px 15px;font-size:.82rem;font-weight:500}
+.btnG:hover{border-color:var(--azul);color:var(--texto)}
+.btnFb{background:rgba(24,95,165,.2);border-color:#185fa5;color:#85b7eb}
+.btnG4{background:rgba(52,168,83,.15);border-color:#34a853;color:#6bbf7f}
+.btnPerigo{border-color:#7f1d1d;color:#fda4af}
+.btnPerigo:hover{border-color:var(--erro);color:var(--erro)}
+.tWrap{overflow-x:auto;border-radius:16px;border:1px solid var(--borda)}
+table{width:100%;border-collapse:collapse;background:var(--vidro)}
+th,td{padding:12px 15px;text-align:left;font-size:.84rem;border-bottom:1px solid var(--borda);white-space:nowrap}
+th{color:var(--fraco);font-weight:600;font-size:.68rem;text-transform:uppercase;letter-spacing:.07em;background:var(--vidro2)}
+tbody tr:hover{background:rgba(14,165,233,.05)}
+tr:last-child td{border-bottom:0}
+.tag{display:inline-block;background:#12304a;color:var(--ciano);border-radius:99px;padding:2px 9px;font-size:.68rem;margin:1px}
+.badge{display:inline-flex;align-items:center;gap:5px;border-radius:99px;padding:3px 11px;font-size:.7rem;font-weight:600}
+.badge::before{content:'';width:5px;height:5px;border-radius:99px;background:currentColor}
+.b-novo{background:rgba(125,211,252,.12);color:#7dd3fc}
+.b-recorrente{background:rgba(110,231,183,.12);color:#6ee7b7}
+.b-saudade{background:rgba(252,211,77,.12);color:#fcd34d}
+.b-inativo{background:rgba(253,164,175,.12);color:#fda4af}
+.b-aniversario{background:rgba(196,181,253,.14);color:#c4b5fd}
+.b-vip{background:rgba(252,211,77,.12);color:#fcd34d}
+.b-ativo{background:rgba(110,231,183,.12);color:#6ee7b7}
+.b-bloqueado{background:rgba(253,164,175,.12);color:#fda4af}
 
-// Parâmetros que o AP envia e que precisamos carregar adiante.
-function extractApParams(src) {
-  return {
-    continue: src.continue || REDIRECT_AFTER || '',
-    ip: src.ip || '',
-    ap_mac: src.ap_mac || '',
-    mac: src.mac || '',
-    radio: src.radio || '',
-    ssid: src.ssid || '',
-    ts: src.ts || '',
-    redirect_uri: src.redirect_uri || '',
-    user_hash: src.user_hash || '',
-    loja: src.loja || '',
-    modo: src.modo || '',
-  };
+.cats{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:18px}
+.cats button{border:1px solid var(--borda);background:var(--vidro);color:var(--mudo);border-radius:99px;
+  padding:9px 16px;font-size:.8rem;font-weight:600}
+.cats button.on{border-color:transparent;color:#04202e;background:var(--grad)}
+.disparo{padding:17px 19px;margin-bottom:12px;display:flex;gap:15px;flex-wrap:wrap;align-items:center}
+.disparo .avatar{width:42px;height:42px;border-radius:12px;background:rgba(14,165,233,.14);color:var(--ciano);
+  display:flex;align-items:center;justify-content:center;font-weight:700;font-family:'Sora';flex:none}
+.disparo .info{flex:1;min-width:230px}
+.disparo .msg{color:var(--mudo);font-size:.84rem;margin-top:7px;line-height:1.55;
+  background:rgba(11,18,32,.6);border:1px solid var(--borda);border-radius:0 12px 12px 12px;padding:10px 13px}
+.btnZap{background:#16a34a;border:0;color:#fff;border-radius:11px;padding:11px 17px;font-weight:700;
+  font-size:.84rem;display:inline-flex;align-items:center;gap:7px}
+.btnOk{background:transparent;border:1px solid var(--borda);color:var(--mudo);border-radius:11px;padding:11px 15px;font-size:.84rem}
+.btnOk:hover{border-color:var(--ok);color:var(--ok)}
+
+/* ---------- Editor + Preview ---------- */
+.editorWrap{display:grid;grid-template-columns:1fr 320px;gap:18px;align-items:start}
+@media(max-width:1000px){.editorWrap{grid-template-columns:1fr}}
+.secao{font-family:'Sora';font-size:.82rem;color:var(--ciano);font-weight:700;letter-spacing:.03em;
+  margin:22px 0 4px;padding-top:14px;border-top:1px solid var(--borda);grid-column:1/-1}
+.secao:first-child{border-top:0;padding-top:0;margin-top:6px}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:0 18px;padding:18px 22px 22px}
+.grid2 .full{grid-column:1/-1}
+.sufixo{display:flex;align-items:center}
+.sufixo input{border-radius:11px 0 0 11px}
+.sufixo span{background:var(--vidro2);border:1px solid var(--borda);border-left:0;border-radius:0 11px 11px 0;
+  padding:10px 13px;font-size:.84rem;color:var(--mudo);white-space:nowrap}
+
+.logoUp{border:2px dashed var(--borda);border-radius:14px;padding:18px;text-align:center;cursor:pointer;
+  background:rgba(11,18,32,.5);transition:.18s}
+.logoUp:hover{border-color:var(--azul);background:rgba(14,165,233,.06)}
+.logoUp img{max-width:110px;max-height:110px;object-fit:contain;border-radius:12px;display:block;margin:0 auto}
+.logoUp .ph{color:var(--fraco);font-size:.82rem}
+.logoUp .ph .ico{font-size:1.8rem;display:block;margin-bottom:6px}
+
+.presets{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
+.presets button{width:40px;height:28px;border-radius:8px;border:2px solid transparent;padding:0}
+.presets button:hover,.presets button.on{border-color:#fff}
+
+.campos{display:flex;flex-direction:column;gap:8px;margin-top:6px}
+.campoLinha{display:flex;gap:8px;align-items:center;background:rgba(11,18,32,.6);border:1px solid var(--borda);
+  border-radius:11px;padding:9px 11px}
+.campoLinha input[type=text]{flex:1;padding:7px 10px;font-size:.83rem}
+.campoLinha select{width:auto;padding:7px 9px;font-size:.8rem}
+.campoLinha .obg{display:flex;align-items:center;gap:5px;font-size:.72rem;color:var(--mudo);white-space:nowrap}
+.campoLinha .obg input{width:16px;height:16px;accent-color:var(--azul)}
+.campoLinha .del{background:transparent;border:0;color:var(--erro);font-size:1.05rem;padding:0 4px}
+
+/* Preview */
+.previewBox{position:sticky;top:24px}
+.previewBox h3{font-size:.78rem;color:var(--mudo);margin-bottom:10px;text-align:center;font-weight:600}
+.fone{width:100%;max-width:300px;margin:0 auto;background:#0a0f1e;border:7px solid #1e293b;border-radius:30px;
+  padding:16px 12px 20px;box-shadow:0 18px 45px rgba(0,0,0,.5)}
+.fone .notch{width:56px;height:5px;background:#1e293b;border-radius:99px;margin:0 auto 14px}
+.pvCard{background:#101827;border:1px solid #1e293b;border-radius:17px;padding:20px 16px;text-align:center}
+.pvCard img{width:66px;height:66px;object-fit:contain;border-radius:14px;margin:0 auto 10px;display:block}
+.pvCard .tit{font-family:'Sora';font-size:.92rem;font-weight:700;margin-bottom:4px}
+.pvCard .sub{color:var(--mudo);font-size:.7rem;margin-bottom:12px;line-height:1.45}
+.pvCard .campo{background:#0b1220;border:1px solid #1e293b;border-radius:9px;padding:8px 10px;
+  font-size:.68rem;color:var(--fraco);text-align:left;margin-bottom:7px}
+.pvCard .campo b{color:var(--mudo);display:block;font-size:.6rem;font-weight:500;margin-bottom:2px}
+.pvCard .optin{display:flex;gap:6px;text-align:left;font-size:.58rem;color:var(--fraco);line-height:1.4;margin:10px 0 4px}
+.pvCard .optin i{width:12px;height:12px;border-radius:3px;background:var(--azul);flex:none;margin-top:1px;display:block}
+.pvCard .btn{border-radius:9px;padding:10px;font-family:'Sora';font-weight:700;font-size:.76rem;color:#fff;margin-top:8px}
+.pvCard .rod{font-size:.55rem;color:#475569;margin-top:11px}
+
+.vazio{color:var(--mudo);text-align:center;padding:52px 12px;font-size:.9rem}
+.vazio .emj{font-size:2rem;display:block;margin-bottom:10px}
+.aba{display:none}.aba.ativa{display:block;animation:surge .25s ease}
+@keyframes surge{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media(prefers-reduced-motion:reduce){.aba.ativa{animation:none}}
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#0d3a2e;color:#6ee7b7;
+  border:1px solid #14532d;border-radius:12px;padding:12px 22px;font-size:.87rem;display:none;z-index:120;
+  box-shadow:0 10px 30px rgba(0,0,0,.4)}
+.toast.ruim{background:#3b0d0d;border-color:#7f1d1d;color:#fecaca}
+
+/* Modal */
+.modalBg{position:fixed;inset:0;background:rgba(4,8,16,.8);backdrop-filter:blur(4px);z-index:100;
+  display:none;align-items:flex-start;justify-content:center;padding:26px 16px;overflow-y:auto}
+.modalBg.on{display:flex}
+.modal{background:#0d1524;border:1px solid var(--borda);border-radius:20px;max-width:1000px;width:100%;
+  box-shadow:0 30px 80px rgba(0,0,0,.6)}
+.modal .cab{display:flex;align-items:center;padding:18px 22px;border-bottom:1px solid var(--borda);position:sticky;top:0;
+  background:#0d1524;border-radius:20px 20px 0 0;z-index:2}
+.modal .cab h2{font-size:1.05rem}
+.modal .cab .x{margin-left:auto;background:transparent;border:0;color:var(--mudo);font-size:1.4rem;line-height:1}
+.modal .pe{display:flex;gap:10px;padding:16px 22px;border-top:1px solid var(--borda);position:sticky;bottom:0;
+  background:#0d1524;border-radius:0 0 20px 20px}
+.modal .pe .btnP{margin:0;max-width:200px}
+
+@media(max-width:760px){
+  .shell{grid-template-columns:1fr}
+  aside{position:fixed;bottom:0;top:auto;height:auto;width:100%;flex-direction:row;padding:8px 10px;
+    border-right:0;border-top:1px solid var(--borda);z-index:20;overflow-x:auto}
+  aside .marca,aside .rotulo,aside .rodape{display:none}
+  .navItem{flex-direction:column;gap:4px;font-size:.62rem;padding:8px 10px;flex:1;justify-content:center;text-align:center}
+  .navItem .pill{display:none}
+  .conteudo{padding:18px 16px 90px}
 }
 
-// Resolve a sessão por fidelidade: VIP > recorrente > novo, conforme o
-// histórico do aparelho/pessoa. Retorna segundos ou null (usa o padrão).
-function sessaoPorFidelidade(loja, info) {
-  if (!loja || !loja.fidelidade_ativa || !info) return null;
-  if (info.status === 'vip' && loja.sess_vip > 0) return loja.sess_vip;
-  const recorrente = info.status === 'vip' || info.categoria === 'recorrente'
-    || (info.total_visitas || info.visitas || 0) >= 3;
-  if (recorrente && loja.sess_recorrente > 0) return loja.sess_recorrente;
-  if ((info.novo || info.conhecido === false || true) && loja.sess_novo > 0) return loja.sess_novo;
-  return null;
-}
+/* editor de perfil do cliente */
+.pf-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
+.pf-grid .pf-full{grid-column:1/-1}
+.pf-grid label{font-size:.72rem;color:var(--mudo);display:block;margin:12px 0 6px;font-weight:500}
+.pf-grid input,.pf-grid select,.pf-grid textarea{width:100%}
+.pf-grid textarea{resize:vertical;font-family:inherit}
+.pf-hist{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:18px;padding-top:16px;border-top:1px solid var(--borda)}
+.pf-hi{text-align:center;background:var(--vidro);border:1px solid var(--borda);border-radius:11px;padding:11px 6px;font-size:.68rem;color:var(--fraco)}
+.pf-hi span{display:block;font-family:'Sora';font-size:1.05rem;font-weight:700;color:var(--texto);margin-bottom:3px}
+@media(max-width:520px){.pf-grid{grid-template-columns:1fr}.pf-hist{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
 
-// Monta a URL de liberação de volta para o AP, com token de segurança.
-// Sessão e limites de banda vêm da LOJA quando configurados no painel;
-// senão usam os padrões globais do ambiente.
-// sessOverride (segundos) tem prioridade — usado pela sessão por fidelidade.
-function buildReleaseUrl(p, loja, sessOverride) {
-  const ts = p.ts || String(Math.floor(Date.now() / 1000));
-  const userContext = `${p.user_hash}|${ts}`;
-  const token = AP_SECRET
-    ? crypto.createHmac('sha256', AP_SECRET).update(userContext).digest('hex')
-    : '';
-
-  const params = new URLSearchParams();
-  if (p.continue) params.set('continue', p.continue);
-  params.set('ts', ts);
-  if (token) params.set('token', token);
-  params.set('user_hash', p.user_hash);
-  const ov = parseInt(sessOverride, 10);
-  const st = parseInt(loja && loja.session_timeout, 10);
-  params.set('session_timeout',
-    (ov && ov > 0) ? String(ov) : ((st && st > 0) ? String(st) : SESSION_TIMEOUT));
-  params.set('idle_timeout', IDLE_TIMEOUT);
-  const dl = parseInt(loja && loja.download_kbps, 10);
-  const ul = parseInt(loja && loja.upload_kbps, 10);
-  params.set('download_kbps', (!isNaN(dl) && dl >= 0) ? String(dl) : DOWNLOAD_KBPS);
-  params.set('upload_kbps', (!isNaN(ul) && ul >= 0) ? String(ul) : UPLOAD_KBPS);
-
-  return `${p.redirect_uri}?${params.toString()}`;
-}
-
-// Acha a loja: primeiro por ?loja=slug (teste sem domínio), senão pelo domínio.
-async function acharLoja(req) {
-  const slug = (req.query && req.query.loja) || (req.body && req.body.loja) || '';
-  if (slug) {
-    const l = await lojaPorSlug(slug);
-    if (l) return l;
-  }
-  return await lojaPorDominio(req.headers.host);
-}
-
-// Constrói a "marca" a partir da loja achada pelo domínio.
-// Se não achar, devolve uma marca NEUTRA do ConectaY — nunca mais a de outro
-// cliente (antes caía na Absolem e mostrava a marca errada no portal alheio).
-function marcaDaLoja(loja) {
-  if (loja) {
-    const ig = String(loja.instagram || '').replace(/^@/, '');
-    return {
-      nome: loja.nome || 'Wi-Fi',
-      instagram: ig ? 'https://instagram.com/' + ig : '',
-      igHandle: ig || '',
-      cor: loja.cor || '#ff6a1a',
-      cor2: loja.cor2 || loja.cor || '#ff6a1a',
-      corFundo: loja.cor_fundo || '#1a1512',
-      corFundo2: loja.cor_fundo2 || loja.cor_fundo || '',
-      corCard: loja.cor_card || '#1b1917',
-      logo: loja.logo_url || '/static/logo.png',
-      mensagem: loja.mensagem || '',
-      bannerAtivo: !!loja.banner_ativo,
-      popupAtivo: !!loja.popup_ativo,
-      popupTipo: loja.popup_tipo || 'imagem',
-      popupUrl: loja.popup_url || '',
-      popupLink: loja.popup_link || '',
-      popupSegundos: parseInt(loja.popup_segundos, 10) || 0,
-      autoCode: loja.codigo_wifi || AUTO_CODE,   // liberação automática: nunca deixa vazio
-      apSecret: loja.ap_secret || AP_SECRET,
-      destinoTipo: loja.destino_tipo || 'instagram',
-      whatsappLink: loja.whatsapp_link || '',
-      googleReviewUrl: loja.google_review_url || '',
-      siteUrl: loja.site_url || '',
-      formCampos: loja.form_campos || null,
-      formTitulo: loja.form_titulo || '',
-      modoAp: loja.modo_ap || '',
-      vcardAtivo: !!loja.vcard_ativo,
-      ativo: loja.ativo !== false,
-      achou: true,
-    };
-  }
-  return {
-    nome: 'ConectaY', instagram: '', igHandle: '',
-    cor: '#0ea5e9', cor2: '#22d3ee', corFundo: '#0a0f1e', corCard: '#101827',
-    logo: 'https://i.postimg.cc/BQjJGBKf/logo-conectay-transparent.png', mensagem: '', autoCode: AUTO_CODE,
-    apSecret: AP_SECRET, destinoTipo: 'instagram', ativo: true, achou: false,
-  };
-}
-
-// Para onde o cliente vai DEPOIS que a internet libera.
-function urlDoDestino(loja, marca, host, destino) {
-  const d = destino || marca.destinoTipo || 'instagram';
-  if (d === 'whatsapp' && marca.whatsappLink) return marca.whatsappLink;
-  if (d === 'google_review' && marca.googleReviewUrl) return marca.googleReviewUrl;
-  if (d === 'site' && marca.siteUrl) return marca.siteUrl;
-  if (marca.instagram) return 'https://' + host + '/ig';   // deep link do app
-  return '';
-}
-function rotuloDoDestino(destino, marca) {
-  if (destino === 'whatsapp') return '💬 Entrar no grupo';
-  if (destino === 'google_review') return '⭐ Avaliar no Google';
-  if (destino === 'site') return '🌐 Visitar o site';
-  return '📸 Abrir o Instagram';
-}
-
-// ---------- Política de privacidade ----------
-app.get('/privacidade', (_req, res) => res.send(renderPrivacidade()));
-
-// ---------- Página inicial — o AP redireciona o cliente para cá (GET) ----------
-app.get('/', async (req, res) => {
-  // privacidade.conectay.com.br mostra a política, não um portal
-  if (/^privacidade\./i.test(String(req.headers.host || ''))) {
-    return res.send(renderPrivacidade());
-  }
-
-  const p = extractApParams(req.query);
-  let loja = null;
-  try { loja = await acharLoja(req); } catch (e) { console.error('[get] acharLoja:', e.message); }
-  const marca = marcaDaLoja(loja);
-  if (req.query && req.query.loja) p.loja = req.query.loja;  // carrega o slug adiante
-
-  // domínio não cadastrado: avisa em vez de mostrar a marca de outra loja
-  if (!marca.achou) {
-    return res.status(404).send(renderResult({
-      ok: false, marca,
-      title: 'Portal não encontrado',
-      msg: 'Este endereço ainda não está configurado. Se você é o lojista, cadastre o domínio no painel ConectaY.',
-    }));
-  }
-
-  // loja cadastrada mas DESLIGADA no painel: portal fora do ar
-  if (!marca.ativo) {
-    return res.send(renderResult({
-      ok: false, marca,
-      title: marca.nome,
-      msg: 'O Wi-Fi deste local está temporariamente indisponível. Tente novamente mais tarde.',
-    }));
-  }
-
-  // ID de dispositivo próprio (cookie de 1 ano) — sobrevive ao MAC aleatório.
-  // Se o cliente já tem, reusamos; senão, geramos um novo agora.
-  let cyid = req.cookies.cyid;
-  if (!cyid) cyid = crypto.randomBytes(16).toString('hex');
-
-  // PORTAL INTELIGENTE: reconhece o aparelho por COOKIE ou MAC.
-  // Se a loja não usa rotação (ou a função não existe no banco), nada muda.
-  if (loja.rotacao_ativa) {
-    const info = await visitaDispositivo(loja, p.mac, cyid);
-    if (info && info.destino) {
-      marca.destinoTipo = info.destino;
-      marca.voltou = !!info.conhecido && info.destino !== 'formulario';
-    }
-  }
-
-  // guarda o cyid na tela pra reenviar no POST /auth (a mini-janela do captive
-  // portal nem sempre devolve cookie no POST, então mandamos também num campo)
-  marca.cyid = cyid;
-
-  const umAno = 60 * 60 * 24 * 365;
-  res.setHeader('Set-Cookie', [
-    `apx=${encodeURIComponent(JSON.stringify(p))}; HttpOnly; Path=/; Max-Age=600; SameSite=Lax`,
-    `cyid=${cyid}; HttpOnly; Path=/; Max-Age=${umAno}; SameSite=Lax`,
-  ]);
-  res.send(renderPortal({ ap: p, instagram: marca.instagram, autoCode: marca.autoCode, error: null, marca }));
-});
-
-// ---------- Envio do formulário (código escondido no botão) ----------
-app.post('/auth', async (req, res) => {
-  try {
-    let ap;
-    try { ap = JSON.parse(req.cookies.apx || '{}'); } catch { ap = {}; }
-    ap = extractApParams({ ...ap, ...req.body }); // body pode reenviar campos ocultos
-
-    let loja = null;
-    try { loja = await acharLoja(req); } catch (e) { console.error('[auth] acharLoja:', e.message); }
-    const marca = marcaDaLoja(loja);
-    const host = req.headers.host || '';
-    const code = String(req.body.code || '').trim().toUpperCase();
-    const base = { code, client_mac: ap.mac, ap_mac: ap.ap_mac, ssid: ap.ssid, user_hash: ap.user_hash };
-
-    if (!code) {
-      await logAccess({ ...base, result: 'denied', reason: 'Código vazio' });
-      return res.send(renderPortal({ ap, instagram: marca.instagram, autoCode: marca.autoCode, error: 'Digite o código para liberar o Wi-Fi.', marca }));
-    }
-
-    if (!ap.redirect_uri) {
-      // MODO SIMPLES — APs sem o protocolo Intelbras (ex.: D-Link em Web
-      // Redirection). Não há internet a liberar: só captura o lead e segue
-      // pro destino. Ativado com &modo=simples na URL configurada no AP.
-      if (ap.modo === 'simples' || marca.modoAp === 'simples') {
-        let telefoneLead = null;
-        if (req.body.go === 'form') {
-          const dados = {};
-          for (const k in req.body) {
-            if (k.startsWith('lead_') && req.body[k]) dados[k.slice(5)] = String(req.body[k]).slice(0, 200);
-          }
-          if (Object.keys(dados).length) {
-            try {
-              telefoneLead = await registrarLead(loja, dados, ap.mac, req.headers['user-agent'] || '');
-            } catch (e) {}
-            const cyid = req.cookies.cyid || req.body.cyid || null;
-            try { marcarCadastrado(loja, ap.mac, telefoneLead, cyid); } catch (e) {}
-          }
-        }
-        try { registrarAcesso(loja, ap.mac, null, req.headers['user-agent'] || '', ap.ip); } catch (e) {}
-        await logAccess({ ...base, result: 'granted', reason: 'modo simples (sem release)' });
-
-        const goS = String(req.body.go || '');
-        const destinoS = (goS === 'form')
-          ? (marca.destinoTipo === 'formulario' ? 'instagram' : marca.destinoTipo)
-          : (goS || marca.destinoTipo);
-        if (marca.vcardAtivo) {
-          return res.redirect(302, 'https://' + host + '/pronto?d=' + encodeURIComponent(destinoS));
-        }
-        const urlS = urlDoDestino(loja, marca, host, destinoS);
-        return res.redirect(302, urlS || ('https://' + host + '/pronto?d=' + encodeURIComponent(destinoS)));
-      }
-
-      // Sem redirect_uri não há como liberar — provavelmente acesso fora do fluxo do AP.
-      await logAccess({ ...base, result: 'denied', reason: 'Sem redirect_uri (fora do AP)' });
-      return res.send(renderResult({
-        ok: false, marca,
-        title: 'Abra pelo Wi-Fi da loja',
-        msg: 'Esta página precisa ser aberta ao conectar na rede do Wi-Fi. Conecte-se e tente de novo.',
-        link: marca.instagram ? { href: '/ig', label: '📸 Ir pro Instagram assim mesmo' } : null,
-      }));
-    }
-
-    // BLOQUEIO: se o MAC, o cookie do aparelho ou o telefone informado
-    // estiverem na lista de bloqueio da loja, nega educadamente.
-    // (Sessões já ativas no AP não são derrubadas — o efeito pega na
-    // próxima autenticação, no máximo em <session_timeout>.)
-    const cyidBloq = req.cookies.cyid || req.body.cyid || '';
-    const telBloq = String(req.body.lead_telefone || req.body.lead_whatsapp || req.body.lead_celular || '').replace(/\D/g, '');
-    const bloq = await estaBloqueado(loja, { mac: ap.mac, cyid: cyidBloq, telefone: telBloq });
-    if (bloq) {
-      await logAccess({ ...base, result: 'denied', reason: 'Bloqueado' + (bloq.motivo ? ': ' + bloq.motivo : '') });
-      return res.send(renderResult({
-        ok: false, marca,
-        title: 'Acesso indisponível',
-        msg: 'O acesso ao Wi-Fi não está disponível para este dispositivo. Em caso de dúvida, fale com o estabelecimento.',
-      }));
-    }
-
-    // Validação do código (que vai ESCONDIDO no botão — liberação automática).
-    let outcome;
-    if (marca.achou && String(loja.codigo_wifi || '').trim()) {
-      outcome = validarCodigoDaLoja(loja, code);
-    } else {
-      const esperado = String(AUTO_CODE || '').trim().toUpperCase();
-      outcome = (esperado && code === esperado)
-        ? { granted: true, reason: 'ok' }
-        : { granted: false, reason: 'Código inválido' };
-    }
-
-    if (!outcome.granted) {
-      await logAccess({ ...base, result: 'denied', reason: outcome.reason });
-      return res.send(renderPortal({ ap, instagram: marca.instagram, autoCode: marca.autoCode, error: `${outcome.reason}.`, marca }));
-    }
-
-    // registra o acesso (não espera, não derruba se falhar)
-    try {
-      registrarAcesso(loja, ap.mac, null, req.headers['user-agent'] || '', ap.ip);
-    } catch (e) {}
-
-    // modo formulário: coleta os campos lead_* e salva como lead da loja
-    let telefoneLead = null;
-    if (req.body.go === 'form') {
-      const dados = {};
-      for (const k in req.body) {
-        if (k.startsWith('lead_') && req.body[k]) dados[k.slice(5)] = String(req.body[k]).slice(0, 200);
-      }
-      if (Object.keys(dados).length) {
-        try {
-          telefoneLead = await registrarLead(loja, dados, ap.mac, req.headers['user-agent'] || '');
-        } catch (e) {}
-        // marca o aparelho como cadastrado (portal inteligente) — cookie OU mac
-        const cyid = req.cookies.cyid || req.body.cyid || null;
-        try { marcarCadastrado(loja, ap.mac, telefoneLead, cyid); } catch (e) {}
-      }
-    }
-
-    // Liberado! Registra e manda o navegador de volta ao AP para soltar a internet.
-    await logAccess({ ...base, result: 'granted', reason: outcome.reason });
-
-    // Para onde mandar depois da liberação.
-    const go = String(req.body.go || '');
-    const destino = (go === 'form')
-      ? (marca.destinoTipo === 'formulario' ? 'instagram' : marca.destinoTipo)
-      : (go || marca.destinoTipo);
-    const urlFinal = urlDoDestino(loja, marca, host, destino);
-
-    if (marca.vcardAtivo) {
-      // passa antes pela tela que oferece salvar o contato
-      ap.continue = 'https://' + host + '/pronto?d=' + encodeURIComponent(destino);
-    } else if (urlFinal) {
-      ap.continue = urlFinal;
-    }
-
-    // Sessão por fidelidade (só Intelbras): busca o histórico do aparelho/pessoa
-    // e escala o tempo. Falha silenciosa -> cai no timeout padrão da loja.
-    let sessOverride = null;
-    if (loja && loja.fidelidade_ativa) {
-      try {
-        const info = await fidelidadeInfo(loja, ap.mac, telefoneLead || req.cookies.cyid);
-        sessOverride = sessaoPorFidelidade(loja, info);
-      } catch (e) {}
-    }
-
-    const releaseUrl = buildReleaseUrl(ap, loja, sessOverride);
-    // NÃO apagamos o cookie do AP aqui: se a pessoa voltar e tocar de novo,
-    // sem ele o portal não sabe o redirect_uri e cai na tela de erro.
-    return res.redirect(302, releaseUrl);
-  } catch (err) {
-    // Rede de segurança: NADA pode fazer o portal responder 'failed to respond'.
-    console.error('[auth] erro inesperado:', err && err.message);
-    try {
-      let ap2 = {}; try { ap2 = JSON.parse(req.cookies.apx || '{}'); } catch {}
-      ap2 = extractApParams({ ...ap2, ...req.body });
-      if (ap2.redirect_uri) {
-        if (req.body.go === 'instagram' || req.body.go === 'form') {
-          ap2.continue = 'https://' + (req.headers.host || '') + '/ig';
-        }
-        return res.redirect(302, buildReleaseUrl(ap2));  // libera assim mesmo
-      }
-    } catch {}
-    return res.redirect(302, '/ig');
-  }
-});
-
-// ---------- Tela pós-liberação (só quando o cartão de contato está ligado) ----------
-app.get('/pronto', async (req, res) => {
-  let loja = null;
-  try { loja = await lojaPorDominio(req.headers.host); } catch (e) {}
-  const marca = marcaDaLoja(loja);
-  const destino = String(req.query.d || marca.destinoTipo || 'instagram');
-  const url = urlDoDestino(loja, marca, req.headers.host || '', destino) || 'https://conectay.com.br';
-  res.send(renderPronto({ marca, destinoUrl: url, rotulo: rotuloDoDestino(destino, marca) }));
-});
-
-// ---------- Cartão de contato (.vcf) ----------
-app.get('/contato.vcf', async (req, res) => {
-  try {
-    const loja = await lojaPorDominio(req.headers.host);
-    if (!loja || !loja.vcard_ativo || !loja.vcard_telefone) {
-      return res.status(404).send('Contato não disponível.');
-    }
-    const nome = String(loja.vcard_nome || loja.nome || 'contato').replace(/[^\w\s-]/g, '').trim();
-    res.setHeader('Content-Type', 'text/vcard; charset=utf-8');
-    res.setHeader('Content-Disposition', `attachment; filename="${nome}.vcf"`);
-    res.send(montarVcard(loja));
-  } catch (e) {
-    res.status(500).send('Erro ao gerar contato.');
-  }
-});
-
-// Saúde do serviço (útil pra monitorar na VPS).
-app.get('/health', (req, res) => res.json({ ok: true, servico: 'conectay-portal', versao: '2.7.0', ts: Date.now() }));
-
-// Página que abre o APP do Instagram, com estratégia POR PLATAFORMA:
-//   ANDROID → intent:// (único esquema que o navegador do captive aceita;
-//             instagram:// é bloqueado no Android, por isso não abria).
-//   iOS     → instagram:// (funciona) com fallback pro site.
-//   Outros  → site direto.
-// Resolve a loja pelo domínio pra abrir o Instagram DELA (não o global).
-app.get('/ig', async (req, res) => {
-  let handle = IG_HANDLE;
-  try {
-    const loja = await lojaPorDominio(req.headers.host);
-    if (loja && loja.instagram) {
-      const h = String(loja.instagram)
-        .replace(/^https?:\/\/(www\.)?instagram\.com\//i, '')
-        .replace(/[\/?#].*$/, '')
-        .replace(/^@/, '');
-      if (h) handle = h;
-    }
-  } catch (e) { /* se falhar, usa o global */ }
-
-  const webLink    = 'https://instagram.com/' + handle;
-  const appLink    = 'instagram://user?username=' + handle;
-  const intentLink = 'intent://instagram.com/_u/' + handle
-    + '#Intent;package=com.instagram.android;scheme=https;S.browser_fallback_url='
-    + encodeURIComponent(webLink) + ';end';
-
-  res.setHeader('Content-Type', 'text/html; charset=utf-8');
-  res.send(`<!doctype html><html lang="pt-BR"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Abrindo o Instagram…</title>
-<style>body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;background:#0d0d0f;color:#fff;font-family:system-ui,-apple-system,sans-serif;text-align:center;padding:24px}
-.box{max-width:340px}h1{font-size:20px;margin:0 0 10px}p{color:#aaa;font-size:14px;line-height:1.5;margin:0}
-a{display:inline-block;margin-top:20px;background:linear-gradient(135deg,#ff6a1a,#e1306c);color:#fff;text-decoration:none;padding:15px 26px;border-radius:999px;font-weight:800;font-size:15px}</style></head>
-<body><div class="box">
-<h1>📸 Abrindo o Instagram…</h1>
-<p>Estamos te levando pro nosso Instagram. Se não abrir sozinho, toque no botão abaixo.</p>
-<a href="${appLink}" id="btnIg">Abrir Instagram</a>
+<!-- ============ LOGIN ============ -->
+<div id="telaLogin">
+  <div class="cardLogin">
+    <img class="hex" src="https://i.postimg.cc/BQjJGBKf/logo-conectay-transparent.png" alt="ConectaY">
+    <p class="sub">Painel de Wi-Fi Marketing</p>
+    <label>E-mail</label><input id="loginEmail" type="email" autocomplete="username" placeholder="voce@email.com">
+    <label>Senha</label><input id="loginSenha" type="password" autocomplete="current-password" placeholder="••••••••">
+    <button class="btnP" onclick="entrar()">Entrar no painel</button>
+    <div class="msgErro" id="loginErro"></div>
+  </div>
 </div>
+
+<!-- ============ APP ============ -->
+<div id="app">
+<div class="shell">
+  <aside>
+    <div class="marca">
+      <img src="https://i.postimg.cc/BQjJGBKf/logo-conectay-transparent.png" alt="ConectaY" style="height:34px;object-fit:contain">
+    </div>
+    <div class="rotulo">Menu</div>
+    <button class="navItem on" data-aba="dashboard" onclick="irAba('dashboard')">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/></svg>Dashboard</button>
+    <button class="navItem" data-aba="leads" onclick="irAba('leads')">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="8" r="3.4"/><path d="M2.8 20c.8-3.5 3.3-5.4 6.2-5.4s5.4 1.9 6.2 5.4"/><circle cx="17.2" cy="9.5" r="2.6"/><path d="M15.5 14.5c2.6.2 4.7 1.8 5.6 4.6"/></svg>Leads</button>
+    <button class="navItem" data-aba="conectados" onclick="irAba('conectados');carregarConectados();carregarBloqueios()">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2.5 9a15 15 0 0 1 19 0M5.5 12.5a10 10 0 0 1 13 0M8.5 16a5.4 5.4 0 0 1 7 0"/><circle cx="12" cy="19.3" r="1.2" fill="currentColor"/></svg>Conectados</button>
+    <button class="navItem" data-aba="mensagens" onclick="irAba('mensagens')">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11.5a8.4 8.4 0 0 1-8.5 8.3 8.9 8.9 0 0 1-3.7-.8L3 20l1.1-5.4a8 8 0 0 1-.9-3.7A8.4 8.4 0 0 1 11.7 2.6 8.4 8.4 0 0 1 21 11.5Z"/></svg>
+      Mensagens <span class="pill" id="pillMsgs" style="display:none">0</span></button>
+    <button class="navItem" data-aba="aparencia" onclick="irAba('aparencia')">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3.2"/><path d="M12 2v3M12 19v3M4.2 4.2 6.3 6.3M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8 6.3 17.7M17.7 6.3l2.1-2.1"/></svg>Aparência</button>
+    <button class="navItem" data-aba="lojas" id="navLojas" style="display:none" onclick="irAba('lojas')">
+      <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 9.5 4.6 4h14.8L21 9.5M3 9.5v10A1.5 1.5 0 0 0 4.5 21h15a1.5 1.5 0 0 0 1.5-1.5v-10M3 9.5c0 1.7 1.5 3 3.2 3s3-1.3 3-3c0 1.7 1.4 3 3 3s2.8-1.3 2.8-3c0 1.7 1.4 3 3 3s3-1.3 3-3M9 21v-6h6v6"/></svg>
+      Lojas <span style="font-size:.62rem;color:var(--fraco)">admin</span></button>
+    <div class="rodape">
+      <div class="quem" id="quemNome">—</div>
+      <div class="papel" id="quemPapel">—</div>
+      <button class="btnSair" onclick="sair()">Sair</button>
+    </div>
+  </aside>
+
+  <div class="conteudo">
+    <div class="topo">
+      <div><h1 id="tituloAba">Dashboard</h1><div class="data" id="dataHoje"></div></div>
+      <div class="fim">
+        <select id="seletorLoja" style="display:none" onchange="trocarLoja()"></select>
+        <span id="nomeLojaFixo" style="color:var(--mudo);font-size:.86rem"></span>
+      </div>
+    </div>
+
+    <section class="aba ativa" id="aba-dashboard">
+      <div class="kpis" id="kpis"></div>
+      <div class="graficos">
+        <div class="card gCard g-8"><h3>Visitas — últimos 14 dias</h3><canvas id="ch14"></canvas></div>
+        <div class="card gCard g-4"><h3>Base por categoria</h3><canvas id="chCat"></canvas></div>
+        <div class="card gCard g-6"><h3>Horários de pico (30d)</h3><canvas id="chHora"></canvas></div>
+        <div class="card gCard g-6"><h3>Dias mais movimentados (30d)</h3><canvas id="chDia"></canvas></div>
+        <div class="card gCard g-6"><h3>Dispositivos</h3><canvas id="chDisp"></canvas></div>
+        <div class="card gCard g-6"><h3>Sistema operacional</h3><canvas id="chSO"></canvas></div>
+      </div>
+    </section>
+
+    <section class="aba" id="aba-leads">
+      <div class="filtros">
+        <div><label>Buscar</label><input id="fBusca" placeholder="Nome ou telefone" oninput="renderLeads()"></div>
+        <div><label>Categoria</label><select id="fCat" onchange="renderLeads()">
+          <option value="">Todas</option><option value="novo">Novo</option><option value="recorrente">Recorrente</option>
+          <option value="saudade">Saudade</option><option value="inativo">Inativo</option></select></div>
+        <div><label>Status</label><select id="fStatus" onchange="renderLeads()">
+          <option value="">Todos</option><option value="ativo">Ativo</option><option value="vip">VIP</option>
+          <option value="bloqueado">Bloqueado</option></select></div>
+        <div class="acao"><label>&nbsp;</label>
+          <button class="btnG" onclick="exportarCSV()">⬇ CSV</button>
+          <button class="btnG btnFb" onclick="exportarFbAds()">⬇ Meta Ads</button>
+          <button class="btnG btnG4" onclick="exportarGoogleAds()">⬇ Google Ads</button>
+          <button class="btnG" onclick="exportarVcf()">📇 Agenda (.vcf)</button></div>
+      </div>
+      <div id="tabelaLeads"></div>
+    </section>
+
+    <!-- CONECTADOS (todos os perfis) -->
+    <section class="aba" id="aba-conectados">
+      <div class="filtros">
+        <div style="flex:2;min-width:230px"><label>&nbsp;</label>
+          <span style="color:var(--mudo);font-size:.82rem" id="infoConectados">Aparelhos que passaram pelo portal dentro da janela da sessão.</span></div>
+        <div class="acao"><label>&nbsp;</label>
+          <button class="btnG" onclick="carregarConectados();carregarBloqueios()">🔄 Atualizar</button></div>
+      </div>
+      <div id="tabelaConectados"></div>
+      <h3 style="font-family:'Sora';font-size:.9rem;margin:26px 0 12px;color:var(--mudo)">🚫 Bloqueados</h3>
+      <div id="tabelaBloqueios"></div>
+    </section>
+
+    <section class="aba" id="aba-mensagens">
+      <div class="cats" id="catsMsg"></div>
+      <div id="listaDisparos"></div>
+    </section>
+
+    <!-- APARÊNCIA (cliente e admin) -->
+    <section class="aba" id="aba-aparencia">
+      <div class="editorWrap">
+        <div class="card"><div class="grid2" id="formAparencia"></div>
+          <div style="padding:0 22px 22px"><button class="btnP" style="max-width:210px" onclick="salvarAparencia()">Salvar alterações</button></div>
+        </div>
+        <div class="previewBox">
+          <h3>Prévia do portal</h3>
+          <div class="fone"><div class="notch"></div><div id="pvAparencia"></div></div>
+          <button class="btnG" style="width:100%;margin-top:12px" onclick="abrirPortalReal()">Abrir portal real ↗</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- LOJAS (admin) -->
+    <section class="aba" id="aba-lojas">
+      <div style="display:flex;margin-bottom:16px">
+        <button class="btnP" style="max-width:170px;margin:0" onclick="abrirEditor(null)">➕ Nova loja</button>
+      </div>
+      <div id="tabelaLojas"></div>
+    </section>
+  </div>
+</div>
+</div>
+
+<!-- ============ MODAL EDITOR DE LOJA ============ -->
+<div class="modalBg" id="modalBg">
+  <div class="modal">
+    <div class="cab"><h2 id="modalTitulo">Nova loja</h2><button class="x" onclick="fecharEditor()">×</button></div>
+    <div class="editorWrap" style="padding:0 0 0 0">
+      <div><div class="grid2" id="formLoja"></div></div>
+      <div class="previewBox" style="padding:20px 20px 0 0">
+        <h3>Prévia do portal</h3>
+        <div class="fone"><div class="notch"></div><div id="pvLoja"></div></div>
+      </div>
+    </div>
+    <div class="pe">
+      <button class="btnP" onclick="salvarLoja()">Salvar loja</button>
+      <button class="btnG" onclick="fecharEditor()">Cancelar</button>
+      <span id="statusLoja" style="align-self:center;font-size:.8rem;color:var(--mudo)"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== EDITOR DE PERFIL DO CLIENTE ===== -->
+<div class="modalBg" id="modalPessoa">
+  <div class="modal" style="max-width:560px">
+    <div class="cab">
+      <h2>👤 Perfil do cliente</h2>
+      <a id="pfWa" href="#" target="_blank" class="btnG" style="margin-left:auto;margin-right:8px;padding:6px 12px;text-decoration:none">💬 WhatsApp</a>
+      <button class="x" onclick="fecharEditorPessoa()">×</button>
+    </div>
+    <div style="padding:20px 22px" id="pfBody"></div>
+    <div class="pe">
+      <button class="btnP" style="margin:0;max-width:180px" onclick="salvarEditorPessoa()">Salvar perfil</button>
+      <button class="btnG" onclick="fecharEditorPessoa()">Cancelar</button>
+      <button class="btnG btnPerigo" style="margin-left:auto" onclick="excluirEditorPessoa()">🗑 Excluir</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
 <script>
-(function(){
-  var app=${JSON.stringify(appLink)}, web=${JSON.stringify(webLink)}, intent=${JSON.stringify(intentLink)};
-  var isAndroid=/Android/i.test(navigator.userAgent||'');
-  var btn=document.getElementById('btnIg');
+/* =========================================================
+   CONFIG
+========================================================= */
+const CFG = window.CONECTAY || {};
+const SUPABASE_URL = CFG.url || 'https://iekxuehdrxsimqtfejxm.supabase.co';
+const SUPABASE_ANON_KEY = CFG.anonKey || '';
+const EDGE_CRIAR_USUARIO = SUPABASE_URL + '/functions/v1/smart-responder';
 
-  var isIOS=/iPhone|iPad|iPod/i.test(navigator.userAgent||'');
+if (!SUPABASE_ANON_KEY || SUPABASE_ANON_KEY === 'COLE_AQUI_SUA_ANON_KEY') {
+  document.addEventListener('DOMContentLoaded', () => {
+    const e = document.getElementById('loginErro');
+    if (e) { e.textContent = 'Falta colar a anon key no arquivo config.js.'; e.style.display = 'block'; }
+  });
+}
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY || 'sem-chave');
+let eu=null, lojas=[], lojaAtual=null, pessoas=[], disparos=[], catFiltro='';
+let edit=null;           // loja em edição no modal
+let bloqueios=[];
+const charts={};
+const titulos={dashboard:'Dashboard',leads:'Leads',conectados:'Conectados',mensagens:'Mensagens',aparencia:'Aparência',lojas:'Lojas'};
+const TEMAS=[
+  {n:'Escuro',      f:'#0a0f1e', f2:'#12213f', c:'#101827'},
+  {n:'Meia-noite',  f:'#000000', f2:'#171717', c:'#111111'},
+  {n:'Claro',       f:'#f1f5f9', f2:'#e2e8f0', c:'#ffffff'},
+  {n:'Areia',       f:'#fff7ed', f2:'#ffedd5', c:'#ffffff'},
+  {n:'Verde',       f:'#052e1f', f2:'#064e3b', c:'#07352a'},
+  {n:'Vinho',       f:'#1c0812', f2:'#3b0d1f', c:'#25101a'},
+  {n:'Roxo',        f:'#12071f', f2:'#2e1065', c:'#1b0d2b'},
+  {n:'Grafite',     f:'#18181b', f2:'#27272a', c:'#212124'}
+];
+function lum(hex){ const h=String(hex||'#000').replace('#','');
+  const v=h.length===3?h.split('').map(c=>c+c).join(''):h;
+  const n=parseInt(v.slice(0,6)||'000000',16), r=(n>>16)&255, g=(n>>8)&255, b=n&255;
+  const f=c=>{c/=255;return c<=.03928?c/12.92:Math.pow((c+.055)/1.055,2.4)};
+  return .2126*f(r)+.7152*f(g)+.0722*f(b); }
+function paletaPv(l){ const card=l.cor_card||'#101827', fundo=l.cor_fundo||'#0a0f1e', claro=lum(card)>.45;
+  return { c1:l.cor||'#0ea5e9', c2:l.cor2||l.cor||'#22d3ee', fundo, fundo2:l.cor_fundo2||fundo, card,
+    texto:claro?'#0f172a':'#e2e8f0', mudo:claro?'#475569':'#94a3b8',
+    borda:claro?'rgba(15,23,42,.14)':'#1e293b', input:claro?'rgba(255,255,255,.7)':'#0b1220' }; }
 
-  if(isAndroid){
-    // Android: intent:// é o único que abre o APP a partir daqui.
-    btn.setAttribute('href', intent);
-    var t=setTimeout(function(){ window.location.href=web; }, 3000);
-    function cancel(){ clearTimeout(t); }
-    window.addEventListener('pagehide', cancel);
-    window.addEventListener('blur', cancel);
-    document.addEventListener('visibilitychange', function(){ if(document.hidden) cancel(); });
-    // tentativa automática
-    window.location.href = intent;
-  } else if(isIOS){
-    // iOS: o Universal Link (https://instagram.com/perfil) abre o APP de
-    // verdade — e diferente do instagram://, NÃO é bloqueado no redirect.
-    // Dispara automático E deixa o botão como garantia (toque = mesmo efeito).
-    btn.setAttribute('href', web);
-    // tenta primeiro o app via esquema (Safari normal), e logo em seguida
-    // navega pro universal link, que abre o app sozinho na maioria dos casos.
-    try { window.location.href = app; } catch(e){}
-    setTimeout(function(){ window.location.href = web; }, 900);
+const PRESETS=[['#0ea5e9','#22d3ee'],['#ff6a1a','#8a3000'],['#70008f','#c026d3'],['#16a34a','#4ade80'],
+               ['#e11d48','#fb7185'],['#f59e0b','#fbbf24'],['#1e293b','#475569'],['#7c3aed','#a78bfa']];
+const esc = s => String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+document.getElementById('dataHoje').textContent =
+  new Date().toLocaleDateString('pt-BR',{weekday:'long',day:'numeric',month:'long'});
+
+/* ---------------- Sessão ---------------- */
+async function entrar(){
+  const { error } = await sb.auth.signInWithPassword({
+    email: document.getElementById('loginEmail').value.trim(),
+    password: document.getElementById('loginSenha').value });
+  if (error){ const e=document.getElementById('loginErro');
+    e.textContent = /Invalid API key/i.test(error.message) ? 'Chave do Supabase não configurada no painel.' : 'E-mail ou senha inválidos.';
+    e.style.display='block'; return; }
+  iniciar();
+}
+async function sair(){ await sb.auth.signOut(); location.reload(); }
+
+async function iniciar(){
+  const { data:{ session } } = await sb.auth.getSession();
+  if (!session) return;
+  const { data:perfil } = await sb.from('portal_usuarios').select('*').eq('user_id', session.user.id).single();
+  if (!perfil){ alert('Seu usuário ainda não foi liberado no painel.'); return sair(); }
+  eu = perfil;
+  telaLogin.style.display='none'; app.style.display='block';
+  quemNome.textContent = session.user.email.split('@')[0];
+  quemPapel.textContent = eu.papel==='admin' ? 'Administrador' : 'Cliente';
+
+  const { data:ls } = await sb.from('portal_lojas').select('*').order('nome');
+  lojas = ls || [];
+  if (eu.papel==='admin'){
+    navLojas.style.display='flex';
+    seletorLoja.style.display='inline-block';
+    seletorLoja.innerHTML = lojas.map(l=>`<option value="${l.id}">${esc(l.nome)}</option>`).join('');
+    lojaAtual = lojas[0] || null;
+    renderLojasAdmin();
   } else {
-    // Desktop e demais: vai pro site depois de tentar o app.
-    var t2=setTimeout(function(){ window.location.href=web; }, 1400);
-    function cancel2(){ clearTimeout(t2); }
-    window.addEventListener('pagehide', cancel2);
-    window.addEventListener('blur', cancel2);
-    document.addEventListener('visibilitychange', function(){ if(document.hidden) cancel2(); });
-    window.location.href = app;
+    lojaAtual = lojas.find(l=>String(l.id)===String(eu.loja_id)) || lojas[0] || null;
+    nomeLojaFixo.textContent = lojaAtual ? lojaAtual.nome : '';
   }
-})();
-</script></body></html>`);
-});
+  if (lojaAtual) await carregarTudo();
+}
+function trocarLoja(){
+  lojaAtual = lojas.find(l=>String(l.id)===seletorLoja.value);
+  carregarTudo();
+}
+async function carregarTudo(){
+  await Promise.all([carregarDashboard(), carregarLeads(), carregarDisparos(), carregarConectados(), carregarBloqueios()]);
+  montarAparencia();
+}
 
-// API de métricas — protegida por METRICS_KEY, com CORS liberado para o widget.
-app.get('/api/metrics', async (req, res) => {
-  res.setHeader('Access-Control-Allow-Origin', '*');
-  res.setHeader('Cache-Control', 'no-store');
+/* ---------------- Dashboard ---------------- */
+const ICO={
+  hoje:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M4.9 4.9 7 7M17 17l2.1 2.1M2 12h3M19 12h3M4.9 19.1 7 17M17 7l2.1-2.1"/></svg>',
+  mes:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 17l5-5 4 3 6-7 3 3M3 21h18"/></svg>',
+  unicos:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c1-3.8 3.6-5.7 7-5.7s6 1.9 7 5.7"/></svg>',
+  rec:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 11a8 8 0 1 0-2.3 6.3M20 5v6h-6"/></svg>',
+  novos:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="8" r="3.4"/><path d="M3.5 20c.8-3.4 3.2-5.3 6.5-5.3M17 14v6M14 17h6"/></svg>',
+  base:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5.5" rx="8" ry="3"/><path d="M4 5.5v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6M4 11.5v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg>'};
 
-  const key = req.query.key || req.headers['x-metrics-key'] || '';
-  if (!METRICS_KEY || key !== METRICS_KEY) {
-    return res.status(401).json({ error: 'Chave inválida' });
+async function carregarDashboard(){
+  const { data, error } = await sb.rpc('portal_dashboard', { p_loja: lojaAtual.id });
+  if (error){ console.error(error); return; }
+  const d=data, cresc = d.mes_anterior>0 ? Math.round((d.mes_atual-d.mes_anterior)/d.mes_anterior*100) : null;
+  kpis.innerHTML = [
+    [ICO.hoje,'Visitas hoje',d.hoje],[ICO.mes,'Visitas no mês',d.mes_atual,cresc],
+    [ICO.unicos,'Visitantes únicos',d.unicos],[ICO.rec,'Clientes recorrentes',d.recorrentes],
+    [ICO.novos,'Novos cadastros (30d)',d.novos_30d],[ICO.base,'Base total (CRM)',d.total_leads]
+  ].map(([ic,l,v,dl])=>`<div class="card kpi"><div class="ic">${ic}</div>
+    <div class="v">${(v??0).toLocaleString('pt-BR')}</div><div class="l">${l}</div>
+    ${dl!=null?`<span class="delta ${dl>=0?'up':'down'}">${dl>=0?'↑':'↓'} ${Math.abs(dl)}% vs mês anterior</span>`:''}</div>`).join('');
+
+  const A='#0ea5e9', C='#22d3ee';
+  desenhar('ch14','line',{labels:(d.ultimos_14d||[]).map(x=>x.dia.slice(8)+'/'+x.dia.slice(5,7)),
+    datasets:[{data:(d.ultimos_14d||[]).map(x=>x.n),borderColor:A,borderWidth:2.5,backgroundColor:gradArea(),
+      fill:true,tension:.4,pointRadius:0,pointHoverRadius:5,pointBackgroundColor:C}]});
+  const hs=Array.from({length:24},(_,h)=>({h,n:0})); (d.por_hora||[]).forEach(x=>hs[x.h].n=x.n);
+  const mh=Math.max(...hs.map(x=>x.n));
+  desenhar('chHora','bar',{labels:hs.map(x=>x.h+'h'),
+    datasets:[{data:hs.map(x=>x.n),backgroundColor:hs.map(x=>x.n===mh&&x.n>0?C:'rgba(14,165,233,.45)'),borderRadius:5}]});
+  const nd=['Seg','Ter','Qua','Qui','Sex','Sáb','Dom'], ds=Array.from({length:7},(_,i)=>({d:i+1,n:0}));
+  (d.por_dia_semana||[]).forEach(x=>ds[x.d-1].n=x.n);
+  const md=Math.max(...ds.map(x=>x.n));
+  desenhar('chDia','bar',{labels:nd,
+    datasets:[{data:ds.map(x=>x.n),backgroundColor:ds.map(x=>x.n===md&&x.n>0?C:'rgba(14,165,233,.45)'),borderRadius:5}]});
+  desenhar('chDisp','doughnut',{labels:(d.dispositivos||[]).map(x=>x.k),
+    datasets:[{data:(d.dispositivos||[]).map(x=>x.n),backgroundColor:[A,C,'#818cf8','#64748b'],borderWidth:0,hoverOffset:6}]});
+  desenhar('chSO','doughnut',{labels:(d.sistemas||[]).map(x=>x.k),
+    datasets:[{data:(d.sistemas||[]).map(x=>x.n),backgroundColor:[C,A,'#a78bfa','#f472b6','#64748b'],borderWidth:0,hoverOffset:6}]});
+  desenhar('chCat','doughnut',{labels:(d.categorias||[]).map(x=>x.k),
+    datasets:[{data:(d.categorias||[]).map(x=>x.n),backgroundColor:['#7dd3fc','#6ee7b7','#fcd34d','#fda4af'],borderWidth:0,hoverOffset:6}]});
+}
+function gradArea(){ const c=ch14.getContext('2d'), g=c.createLinearGradient(0,0,0,220);
+  g.addColorStop(0,'rgba(14,165,233,.28)'); g.addColorStop(1,'rgba(14,165,233,0)'); return g; }
+function desenhar(id,tipo,dados){
+  if (charts[id]) charts[id].destroy();
+  const o={maintainAspectRatio:true,plugins:{legend:{display:tipo==='doughnut',position:'bottom',
+      labels:{color:'#8b9bb4',boxWidth:10,padding:14,font:{size:11}}},
+    tooltip:{backgroundColor:'#0d1524',borderColor:'#1e293b',borderWidth:1,titleColor:'#e2e8f0',bodyColor:'#8b9bb4',cornerRadius:9,padding:10}},
+    scales:tipo==='doughnut'?{}:{x:{ticks:{color:'#5b6b84',font:{size:10}},grid:{display:false}},
+      y:{ticks:{color:'#5b6b84',font:{size:10}},grid:{color:'rgba(30,41,59,.5)'},beginAtZero:true,border:{display:false}}}};
+  if (tipo==='doughnut') o.cutout='68%';
+  charts[id]=new Chart(document.getElementById(id),{type:tipo,data:dados,options:o});
+}
+
+/* ---------------- Leads ---------------- */
+async function carregarLeads(){
+  const { data } = await sb.from('portal_pessoas').select('*')
+    .eq('loja_id', lojaAtual.id).order('ultima_visita',{ascending:false}).limit(2000);
+  pessoas = data || []; renderLeads();
+}
+function renderLeads(){
+  const q=(fBusca.value||'').toLowerCase(), cat=fCat.value, st=fStatus.value;
+  const lista=pessoas.filter(p=>(!q||(p.nome||'').toLowerCase().includes(q)||(p.telefone||'').includes(q))
+    &&(!cat||p.categoria===cat)&&(!st||p.status===st));
+  if(!lista.length){ tabelaLeads.innerHTML='<div class="card vazio"><span class="emj">🔍</span>Nenhum lead encontrado.</div>'; return; }
+  tabelaLeads.innerHTML=`<div class="tWrap"><table><thead><tr><th>Nome</th><th>WhatsApp</th><th>Visitas</th>
+    <th>Última</th><th>Categoria</th><th>Status</th><th>Tags</th><th></th></tr></thead><tbody>
+    ${lista.map(p=>`<tr><td><b>${esc(p.nome)||'—'}</b>${(p.aniversario)?' 🎂':''}</td>
+    <td><a href="https://wa.me/55${p.telefone}" target="_blank">${fmtTel(p.telefone)}</a></td>
+    <td>${p.total_visitas}</td><td>${p.ultima_visita?fmtData(p.ultima_visita):'—'}</td>
+    <td><span class="badge b-${p.categoria}">${p.categoria}</span></td>
+    <td><span class="badge b-${p.status||'ativo'}">${p.status||'ativo'}</span></td>
+    <td>${(p.tags||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join('')||'—'}</td>
+    <td><button class="btnG" style="padding:6px 10px" onclick="editarPessoa(${p.id})">✏️</button></td></tr>`).join('')}
+    </tbody></table></div>`;
+}
+const fmtTel=t=>t&&t.length>=10?`(${t.slice(0,2)}) ${t.slice(2,-4)}-${t.slice(-4)}`:t;
+const fmtData=d=>{const[a,m,x]=d.split('-');return `${x}/${m}/${a.slice(2)}`};
+
+// ===== EDITOR COMPLETO DE PERFIL (modal) =====
+// Abre o mesmo editor pela aba Leads (id) e pela aba Conectados (pid).
+function editarPessoa(id){ abrirEditorPessoa(id); }
+function editarConectado(pid){ abrirEditorPessoa(pid); }
+
+let pessoaEdit=null;
+function abrirEditorPessoa(id){
+  const p=(pessoas||[]).find(x=>x.id===id);
+  if(!p){ toast('Cadastro não encontrado',true); return; }
+  pessoaEdit=p;
+  const dtBR=v=>{ if(!v) return ''; const s=String(v).slice(0,10); const[a,m,d]=s.split('-'); return (d&&m&&a)?`${d}/${m}/${a}`:''; };
+  const cats=['novo','recorrente','saudade','inativo'];
+  const box=document.getElementById('pfBody');
+  box.innerHTML=`
+    <div class="pf-grid">
+      <div class="pf-full"><label>Nome</label><input id="pf_nome" value="${esc(p.nome||'')}" placeholder="Nome do cliente"></div>
+      <div><label>WhatsApp</label><input id="pf_tel" value="${esc(p.telefone||'')}" placeholder="21999999999" inputmode="numeric"></div>
+      <div><label>Aniversário</label><input id="pf_niver" value="${esc(dtBR(p.aniversario))}" placeholder="dd/mm/aaaa" maxlength="10" inputmode="numeric"></div>
+      <div><label>Status</label>
+        <select id="pf_status">
+          <option value="ativo" ${(!p.status||p.status==='ativo')?'selected':''}>Ativo</option>
+          <option value="vip" ${p.status==='vip'?'selected':''}>⭐ VIP</option>
+          <option value="bloqueado" ${p.status==='bloqueado'?'selected':''}>🚫 Bloqueado</option>
+        </select></div>
+      <div><label>Categoria</label>
+        <select id="pf_cat">
+          ${cats.map(c=>`<option value="${c}" ${p.categoria===c?'selected':''}>${c}</option>`).join('')}
+        </select></div>
+      <div class="pf-full"><label>Tags <small style="color:var(--fraco)">(separe por vírgula)</small></label>
+        <input id="pf_tags" value="${esc((p.tags||[]).join(', '))}" placeholder="fiel, indicação, atacado"></div>
+      <div class="pf-full"><label>Observações</label>
+        <textarea id="pf_obs" rows="3" placeholder="Anotações internas sobre o cliente">${esc(p.observacoes||'')}</textarea></div>
+    </div>
+    <div class="pf-hist">
+      <div class="pf-hi"><span>${p.total_visitas||0}</span>visitas</div>
+      <div class="pf-hi"><span>${p.primeira_visita?fmtData(p.primeira_visita):'—'}</span>primeira</div>
+      <div class="pf-hi"><span>${p.ultima_visita?fmtData(p.ultima_visita):'—'}</span>última</div>
+      <div class="pf-hi"><span>${esc(p.categoria||'—')}</span>categoria atual</div>
+    </div>`;
+  // máscaras leves
+  var t=document.getElementById('pf_tel');
+  t.oninput=function(){ this.value=this.value.replace(/\D/g,'').slice(0,13); };
+  var n=document.getElementById('pf_niver');
+  n.oninput=function(){ var d=this.value.replace(/\D/g,'').slice(0,8),o=d;
+    if(d.length>4)o=d.slice(0,2)+'/'+d.slice(2,4)+'/'+d.slice(4); else if(d.length>2)o=d.slice(0,2)+'/'+d.slice(2);
+    this.value=o; };
+  document.getElementById('pfWa').href = p.telefone?('https://wa.me/55'+p.telefone):'#';
+  document.getElementById('pfWa').style.display = p.telefone?'inline-flex':'none';
+  document.getElementById('modalPessoa').classList.add('on');
+}
+function fecharEditorPessoa(){ document.getElementById('modalPessoa').classList.remove('on'); pessoaEdit=null; }
+async function salvarEditorPessoa(){
+  if(!pessoaEdit) return;
+  const nome=document.getElementById('pf_nome').value.trim();
+  const tel=document.getElementById('pf_tel').value.replace(/\D/g,'');
+  if(tel && tel.length<10) return toast('Telefone incompleto',true);
+  // aniversario dd/mm/aaaa -> aaaa-mm-dd
+  let niver=null; const nv=document.getElementById('pf_niver').value.trim();
+  if(nv){ const m=nv.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if(!m) return toast('Aniversário inválido (dd/mm/aaaa)',true);
+    const di=+m[1],me=+m[2],an=+m[3];
+    if(di<1||di>31||me<1||me>12||an<1900||an>new Date().getFullYear()) return toast('Data impossível',true);
+    niver=an+'-'+('0'+me).slice(-2)+'-'+('0'+di).slice(-2); }
+  const upd={
+    nome:nome||null,
+    telefone:tel||pessoaEdit.telefone,
+    aniversario:niver,
+    status:document.getElementById('pf_status').value,
+    categoria:document.getElementById('pf_cat').value,
+    tags:document.getElementById('pf_tags').value.split(',').map(t=>t.trim()).filter(Boolean),
+    observacoes:document.getElementById('pf_obs').value.trim()||null,
+  };
+  const {error}=await sb.from('portal_pessoas').update(upd).eq('id',pessoaEdit.id);
+  if(error) return toast('Erro: '+error.message,true);
+  Object.assign(pessoaEdit,upd);
+  renderLeads&&renderLeads();
+  if(document.getElementById('aba-conectados').classList.contains('ativa')) carregarConectados&&carregarConectados();
+  toast('Perfil salvo ✓');
+  fecharEditorPessoa();
+}
+async function excluirEditorPessoa(){
+  if(!pessoaEdit) return;
+  if(!confirm(`Excluir ${pessoaEdit.nome||'este cliente'} do CRM?\n\nOs registros de acesso permanecem; só o perfil consolidado é removido.`)) return;
+  const {error}=await sb.from('portal_pessoas').delete().eq('id',pessoaEdit.id);
+  if(error) return toast('Erro: '+error.message+' (delete é admin-only)',true);
+  pessoas=(pessoas||[]).filter(x=>x.id!==pessoaEdit.id);
+  renderLeads&&renderLeads();
+  if(document.getElementById('aba-conectados').classList.contains('ativa')) carregarConectados&&carregarConectados();
+  toast('Cadastro excluído');
+  fecharEditorPessoa();
+}
+function baixar(nome,txt,tipo){ const b=new Blob(['\ufeff'+txt],{type:(tipo||'text/csv')+';charset=utf-8'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=nome; a.click(); }
+
+// devolve a lista JÁ FILTRADA pela tela (busca, categoria, status)
+function pessoasFiltradas(){
+  const q=(fBusca.value||'').toLowerCase(), cat=fCat.value, st=fStatus.value;
+  return pessoas.filter(p=>(!q||(p.nome||'').toLowerCase().includes(q)||(p.telefone||'').includes(q))
+    &&(!cat||p.categoria===cat)&&(!st||p.status===st));
+}
+function sufixoArquivo(){
+  const p=[lojaAtual.slug];
+  if(fCat.value) p.push(fCat.value);
+  if(fStatus.value) p.push(fStatus.value);
+  return p.join('_')+'_'+new Date().toISOString().slice(0,10);
+}
+function exportarCSV(){
+  const lista=pessoasFiltradas();
+  if(!lista.length) return toast('Nenhum lead nos filtros atuais',true);
+  const L=[['nome','telefone','aniversario','primeira_visita','ultima_visita','visitas','categoria','status','tags','obs']];
+  lista.forEach(p=>L.push([p.nome||'',p.telefone,p.aniversario||'',p.primeira_visita||'',p.ultima_visita||'',
+    p.total_visitas,p.categoria,p.status||'ativo',(p.tags||[]).join('|'),(p.observacoes||'').replace(/\n/g,' ')]));
+  baixar(`leads_${sufixoArquivo()}.csv`, L.map(l=>l.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(';')).join('\n'));
+  toast(`CSV exportado (${lista.length} leads)`);
+}
+function exportarFbAds(){
+  const lista=pessoasFiltradas().filter(p=>p.status!=='bloqueado');
+  if(!lista.length) return toast('Nenhum lead nos filtros atuais',true);
+  const L=[['phone','fn']];
+  lista.forEach(p=>L.push([`+55${p.telefone}`,(p.nome||'').split(' ')[0].toLowerCase()]));
+  baixar(`meta_ads_${sufixoArquivo()}.csv`, L.map(l=>l.join(',')).join('\n'));
+  toast(`Audiência com ${lista.length} contatos — suba em Públicos personalizados`);
+}
+function exportarGoogleAds(){
+  const lista=pessoasFiltradas().filter(p=>p.telefone && p.status!=='bloqueado');
+  if(!lista.length) return toast('Nenhum lead nos filtros atuais',true);
+  // Customer Match: cabeçalhos EM INGLÊS, telefone em E.164, país fora do hash.
+  // Enviamos texto puro — o Google faz o hash SHA256 no navegador ao subir.
+  const L=[['Phone','First Name','Country']];
+  lista.forEach(p=>{
+    const primeiro=(p.nome||'').trim().split(/\s+/)[0]||'';
+    L.push([`+55${p.telefone}`, primeiro, 'BR']);
+  });
+  baixar(`google_ads_${sufixoArquivo()}.csv`,
+    L.map(l=>l.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n'));
+  toast(`${lista.length} contatos — suba em Público-alvo › Lista de clientes`);
+}
+function exportarVcf(){
+  const lista=pessoasFiltradas().filter(p=>p.telefone && p.status!=='bloqueado');
+  if(!lista.length) return toast('Nenhum lead nos filtros atuais',true);
+  const marca=(lojaAtual.nome||'').slice(0,18);
+  const vcf=lista.map(p=>{
+    const nome=((p.nome||'Cliente').replace(/[\r\n;]/g,' ').trim())+' · '+marca;
+    const l=['BEGIN:VCARD','VERSION:3.0',`N:;${nome};;;`,`FN:${nome}`,
+             `TEL;TYPE=CELL:+55${p.telefone}`,`NOTE:${p.categoria} · ${p.total_visitas} visita(s) · ConectaY`];
+    if(p.aniversario && /^\d{4}-\d{2}-\d{2}$/.test(p.aniversario)) l.push(`BDAY:${p.aniversario}`);
+    l.push('END:VCARD');
+    return l.join('\r\n');
+  }).join('\r\n');
+  baixar(`agenda_${sufixoArquivo()}.vcf`, vcf, 'text/vcard');
+  toast(`${lista.length} contatos no .vcf — abra o arquivo no celular pra importar`);
+}
+
+/* ---------------- Conectados & Bloqueios ---------------- */
+function fmtHora(iso){ if(!iso) return '—'; const d=new Date(iso);
+  return d.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}); }
+
+// aceita criado_em OU created_at, conforme o schema
+async function acessosRecentes(desde){
+  for(const col of ['criado_em','created_at']){
+    const {data,error}=await sb.from('portal_acessos').select('*').eq('loja_id',lojaAtual.id)
+      .gte(col,desde).order(col,{ascending:false}).limit(800);
+    if(!error) return {rows:data||[],col};
   }
-  try {
-    const data = await getMetrics();
-    return res.json(data);
-  } catch (err) {
-    console.error('[metrics] Erro:', err.message);
-    return res.status(500).json({ error: 'Falha ao obter métricas' });
+  return {rows:[],col:null};
+}
+async function carregarConectados(){
+  if(!lojaAtual) return;
+  const seg = (lojaAtual.session_timeout>0) ? lojaAtual.session_timeout : 10800;
+  const rot = seg>=3600 ? (Math.round(seg/3600)+'h') : (Math.round(seg/60)+'min');
+  infoConectados.textContent = `Aparelhos que autenticaram nas últimas ${rot} (janela da sessão da loja). Lista aproximada: o aparelho pode já ter saído do local.`;
+  const desde = new Date(Date.now()-seg*1000).toISOString();
+  const {rows,col}=await acessosRecentes(desde);
+  // 1 linha por aparelho (MAC), a mais recente
+  const vistos=new Set(), lista=[];
+  for(const a of rows){ const k=a.mac||('__'+(a.id??Math.random())); if(vistos.has(k)) continue; vistos.add(k); lista.push(a); }
+  // cruza MAC → lead (nome/telefone) pra identificar quem é
+  const mapa={};
+  try{
+    const {data:lds}=await sb.from('portal_leads').select('mac,telefone,nome')
+      .eq('loja_id',lojaAtual.id).not('mac','is',null).limit(2000);
+    (lds||[]).forEach(x=>{ if(x.mac && !mapa[x.mac]) mapa[x.mac]={t:x.telefone,n:x.nome}; });
+  }catch(e){}
+  // enriquece com a pessoa do CRM (id/status/visitas) pra habilitar VIP e edição
+  const porTel={};
+  try{
+    (pessoas||[]).forEach(p=>{ if(p.telefone) porTel[p.telefone]=p; });
+  }catch(e){}
+  Object.values(mapa).forEach(m=>{ const p=m.t?porTel[m.t]:null; if(p){ m.pid=p.id; m.status=p.status||'ativo'; m.visitas=p.total_visitas; } });
+  if(!lista.length){
+    tabelaConectados.innerHTML='<div class="card vazio"><span class="emj">📡</span>Nenhum aparelho autenticou na janela atual.</div>';
+    return;
   }
-});
+  tabelaConectados.innerHTML=`<div class="tWrap"><table><thead><tr>
+    <th>Quando</th><th>Cliente</th><th>Aparelho</th><th>MAC</th><th>Ações</th></tr></thead><tbody>
+  ${lista.map(a=>{ const li=mapa[a.mac]||{};
+    const ehVip = li.status==='vip';
+    const acoesLead = li.pid ? `
+      <button class="btnG" style="padding:6px 9px" title="${ehVip?'Remover VIP':'Marcar como VIP'}"
+        onclick="alternarVip(${li.pid},'${ehVip?'ativo':'vip'}')">${ehVip?'⭐ VIP':'☆ VIP'}</button>
+      <button class="btnG" style="padding:6px 9px" title="Editar nome/telefone"
+        onclick="editarConectado(${li.pid})">✏️</button>
+      <button class="btnG" style="padding:6px 9px" title="Histórico de visitas"
+        onclick="historicoConectado(${li.pid})">📊</button>` : '';
+    return `<tr><td>${fmtHora(col?a[col]:null)}</td>
+    <td>${li.n?('<b>'+esc(li.n)+'</b>'+(ehVip?' <span class="badge b-vip" style="font-size:.6rem">VIP</span>':'')+'<br>'):''}${li.t?('<a target="_blank" href="https://wa.me/55'+li.t+'">'+fmtTel(li.t)+'</a>'):'<span style="color:var(--fraco)">não identificado</span>'}</td>
+    <td>${esc(a.dispositivo||'—')}${a.so?(' · '+esc(a.so)):''}</td>
+    <td style="font-family:monospace;font-size:.74rem">${esc(a.mac||'—')}</td>
+    <td style="display:flex;gap:6px;flex-wrap:wrap">${acoesLead}
+      <button class="btnG btnPerigo" style="padding:6px 9px"
+      onclick="bloquear('${esc(a.mac||'')}','${esc(li.t||'')}','${esc(String(li.n||'').replace(/'/g,''))}')">🚫</button></td></tr>`;}).join('')}
+  </tbody></table></div>`;
+}
+// ⭐ marca/desmarca VIP direto da lista de conectados
+async function alternarVip(pid,novo){
+  const {error}=await sb.from('portal_pessoas').update({status:novo}).eq('id',pid);
+  if(error) return toast('Erro: '+error.message,true);
+  const p=(pessoas||[]).find(x=>x.id===pid); if(p) p.status=novo;
+  toast(novo==='vip'?'Marcado como VIP ⭐':'VIP removido');
+  carregarConectados();
+}
+// ✏️ (edição agora abre o editor completo — ver abrirEditorPessoa acima)
+// 📊 resumo de visitas do aparelho/pessoa
+function historicoConectado(pid){
+  const p=(pessoas||[]).find(x=>x.id===pid); if(!p) return toast('Cadastro não encontrado',true);
+  const cat={novo:'Novo',recorrente:'Recorrente',saudade:'Saudade (sumido)',inativo:'Inativo'}[p.categoria]||p.categoria||'—';
+  const linhas=[
+    `👤 ${p.nome||'—'}`,
+    `📱 ${fmtTel(p.telefone)||'—'}`,
+    `🔁 ${p.total_visitas||0} visita(s)`,
+    `🏷️ Categoria: ${cat}`,
+    p.status==='vip'?'⭐ Cliente VIP':`Status: ${p.status||'ativo'}`,
+    `📅 Primeira: ${p.primeira_visita?fmtData(p.primeira_visita):'—'}`,
+    `📅 Última: ${p.ultima_visita?fmtData(p.ultima_visita):'—'}`,
+    p.aniversario?`🎂 ${fmtData(p.aniversario)}`:'',
+  ].filter(Boolean).join('\n');
+  alert(linhas);
+}
+async function bloquear(mac,telefone,nome){
+  if(!mac && !telefone) return toast('Sem MAC nem telefone pra bloquear',true);
+  const alvo=nome||fmtTel(telefone)||mac;
+  if(!confirm(`Bloquear ${alvo}?\n\nO bloqueio vale a partir da PRÓXIMA autenticação — a conexão atual continua até a sessão expirar.`)) return;
+  const motivo=prompt('Motivo (opcional):','')||null;
+  const {error}=await sb.from('portal_bloqueios').insert({
+    loja_id:lojaAtual.id, mac:mac||null, telefone:telefone||null, motivo });
+  if(error) return toast('Erro: '+error.message+' (rodou a migração 002?)',true);
+  toast('Bloqueado ✓ — vale na próxima autenticação');
+  carregarBloqueios();
+}
+async function carregarBloqueios(){
+  if(!lojaAtual) return;
+  const {data,error}=await sb.from('portal_bloqueios').select('*')
+    .eq('loja_id',lojaAtual.id).eq('ativo',true).order('criado_em',{ascending:false}).limit(300);
+  if(error){ tabelaBloqueios.innerHTML='<div class="card vazio">Não consegui carregar os bloqueios (rodou a migração 002?).</div>'; return; }
+  bloqueios=data||[];
+  if(!bloqueios.length){ tabelaBloqueios.innerHTML='<div class="card vazio" style="padding:26px">Ninguém bloqueado. 👌</div>'; return; }
+  tabelaBloqueios.innerHTML=`<div class="tWrap"><table><thead><tr>
+    <th>Desde</th><th>MAC</th><th>Telefone</th><th>Motivo</th><th></th></tr></thead><tbody>
+  ${bloqueios.map(b=>`<tr><td>${fmtHora(b.criado_em)}</td>
+    <td style="font-family:monospace;font-size:.74rem">${esc(b.mac||'—')}</td>
+    <td>${b.telefone?fmtTel(b.telefone):'—'}</td><td>${esc(b.motivo||'—')}</td>
+    <td><button class="btnG" style="padding:6px 10px" onclick="desbloquear(${b.id})">✓ Desbloquear</button></td></tr>`).join('')}
+  </tbody></table></div>`;
+}
+async function desbloquear(id){
+  const {error}=await sb.from('portal_bloqueios').update({ativo:false}).eq('id',id);
+  if(error) return toast('Erro: '+error.message,true);
+  toast('Desbloqueado ✓'); carregarBloqueios();
+}
 
-app.listen(PORT, () => {
-  console.log(`[conectay] Portal ouvindo na porta ${PORT}`);
-  if (!AP_SECRET) console.warn('[conectay] AVISO: AP_SECRET vazio — configure a mesma senha no AP para segurança.');
-});
+/* ---------------- Mensagens ---------------- */
+async function carregarDisparos(){
+  const { data } = await sb.from('portal_disparos_prontos').select('*')
+    .eq('loja_id', lojaAtual.id).order('criado_em',{ascending:false}).limit(500);
+  disparos = data || [];
+  pillMsgs.textContent=disparos.length; pillMsgs.style.display=disparos.length?'inline-block':'none';
+  renderDisparos();
+}
+function renderDisparos(){
+  const cs=['','aniversario','saudade','inativo','recorrente','novo'];
+  const rot={'':'Todas','aniversario':'🎂 Aniversário','saudade':'🥺 Saudade','inativo':'😴 Inativo','recorrente':'🤝 Recorrente','novo':'✨ Novo'};
+  catsMsg.innerHTML=cs.map(c=>{const n=c?disparos.filter(d=>d.categoria===c).length:disparos.length;
+    return `<button class="${catFiltro===c?'on':''}" onclick="catFiltro='${c}';renderDisparos()">${rot[c]} · ${n}</button>`}).join('');
+  const lista=catFiltro?disparos.filter(d=>d.categoria===catFiltro):disparos;
+  if(!lista.length){ listaDisparos.innerHTML='<div class="card vazio"><span class="emj">🎉</span>Nenhuma mensagem pendente.<br><small style="color:var(--fraco)">Geradas automaticamente todo dia às 7h.</small></div>'; return; }
+  listaDisparos.innerHTML=lista.map(d=>`<div class="card disparo">
+    <div class="avatar">${(d.nome||'C').trim()[0].toUpperCase()}</div>
+    <div class="info"><b>${esc(d.nome)||'Cliente'}</b>
+      <span style="color:var(--fraco);font-size:.82rem"> · ${fmtTel(d.telefone)} · ${d.total_visitas||0} visita(s)</span>
+      <span class="badge b-${d.categoria}" style="margin-left:6px">${d.categoria}</span>
+      <div class="msg">${esc(d.mensagem)}</div></div>
+    <a class="btnZap" target="_blank" href="https://wa.me/55${d.telefone}?text=${encodeURIComponent(d.mensagem)}"
+       onclick="setTimeout(()=>marcarEnviado(${d.id}),400)">Abrir WhatsApp</a>
+    <button class="btnOk" onclick="marcarEnviado(${d.id})">✓ Enviado</button></div>`).join('');
+}
+async function marcarEnviado(id){
+  const {error}=await sb.from('portal_disparos').update({status:'enviado',enviado_em:new Date().toISOString()}).eq('id',id);
+  if(error) return toast('Erro: '+error.message,true);
+  disparos=disparos.filter(d=>d.id!==id);
+  pillMsgs.textContent=disparos.length; pillMsgs.style.display=disparos.length?'inline-block':'none';
+  renderDisparos(); toast('Marcado como enviado ✓');
+}
+
+/* =========================================================
+   CAMPOS DO FORMULÁRIO (aceita os 2 formatos do banco)
+========================================================= */
+function lerCampos(fc){
+  const padrao=[{campo:'nome',label:'Seu nome',obrigatorio:false},
+                {campo:'telefone',label:'WhatsApp',obrigatorio:true},
+                {campo:'aniversario',label:'Data de aniversário',obrigatorio:false}];
+  if(!fc) return padrao;
+  if(Array.isArray(fc)){ const l=fc.map(c=>({campo:c.campo||c.nome||c.key,
+      label:c.label||c.rotulo||c.campo, obrigatorio:!!(c.obrigatorio??c.obrig??c.req)})).filter(c=>c.campo);
+    return l.length?l:padrao; }
+  if(typeof fc==='object'){ const l=Object.entries(fc).map(([k,v])=>({campo:k,
+      label:(v&&(v.label||v.rotulo))||k.charAt(0).toUpperCase()+k.slice(1),
+      obrigatorio:!!(v&&(v.obrig??v.obrigatorio??v.req))}));
+    return l.length?l:padrao; }
+  return padrao;
+}
+
+/* =========================================================
+   PREVIEW DO PORTAL (ao vivo)
+========================================================= */
+function preview(l){
+  const p=paletaPv(l), t=l.destino_tipo||'instagram';
+  const logo=l.logo_url?`<img src="${esc(l.logo_url)}" alt="">`:'';
+  const rot = t==='whatsapp'?'Entrar no grupo do WhatsApp'
+            : t==='google_review'?'Avalie a gente no Google ⭐'
+            : t==='formulario'?(l.botao_txt||'Conectar ao Wi-Fi')
+            : `Seguir @${(l.instagram||'sualoja').replace('@','')}`;
+  const sub = t==='formulario'?'Preencha rapidinho e conecte-se em segundos.'
+            : t==='whatsapp'?'Entre no nosso grupo e navegue à vontade.'
+            : t==='google_review'?'Deixe sua avaliação e navegue à vontade.'
+            : 'Siga a gente no Instagram e navegue à vontade.';
+  const campos = t==='formulario' ? lerCampos(l.form_campos).map(c=>
+     `<div class="campo" style="background:${p.input};border-color:${p.borda};color:${p.mudo}">
+        <b style="color:${p.mudo}">${esc(c.label)}${c.obrigatorio?' *':''}</b>${
+        c.campo==='telefone'?'(21) 99999-9999':c.campo==='aniversario'?'dd/mm/aaaa':'...'}</div>`).join('') : '';
+  const optin = t==='formulario'
+    ? `<div class="optin" style="color:${p.mudo}"><i style="background:${p.c1}"></i><span>Aceito receber novidades da ${esc(l.nome||'loja')} no WhatsApp e a Política de Privacidade.</span></div>`
+    : '';
+  return `<div style="background:${p.fundo===p.fundo2?p.fundo:`linear-gradient(160deg,${p.fundo},${p.fundo2})`};
+      border-radius:14px;padding:14px 10px">
+    ${(l.banner_ativo&&l.mensagem)?`<div style="background:linear-gradient(135deg,${esc(p.c1)},${esc(p.c2)});color:#fff;font-weight:700;font-size:.62rem;text-align:center;padding:7px 8px;border-radius:9px;margin-bottom:8px;line-height:1.3">${esc(l.mensagem)}</div>`:''}
+    <div class="pvCard" style="background:${p.card};border-color:${p.borda};color:${p.texto}">${logo}
+    <div class="tit" style="color:${p.texto}">${esc(l.form_titulo|| 'Wi-Fi grátis · '+(l.nome||'Sua Loja'))}</div>
+    <div class="sub" style="color:${p.mudo}">${sub}</div>${campos}${optin}
+    <div class="btn" style="background:linear-gradient(135deg,${esc(p.c1)},${esc(p.c2)})">${esc(rot)}</div>
+    ${l.vcard_ativo?`<div class="btn" style="background:${p.input};border:1px solid ${p.borda};color:${p.texto};margin-top:6px">📇 Salvar nosso contato</div>`:''}
+    <div class="rod" style="color:${p.mudo}">Powered by ConectaY</div></div></div>`;
+}
+
+/* =========================================================
+   UPLOAD DE LOGO (comprime e guarda em logo_url)
+========================================================= */
+// Sobe imagem/vídeo do pop-up pro Supabase Storage (bucket 'portal-popups')
+// e preenche o campo de URL. Requer o bucket público criado (ver migração 010).
+function uploadPopup(pfx){
+  const tipo=document.getElementById(pfx+'_popupTipo').value;
+  const inp=document.createElement('input'); inp.type='file';
+  inp.accept = tipo==='video' ? 'video/*' : 'image/*';
+  inp.onchange=async ()=>{
+    const f=inp.files[0]; if(!f) return;
+    const limite = tipo==='video' ? 15 : 5;
+    if(f.size > limite*1024*1024) return toast('Arquivo muito grande (máx '+limite+' MB)',true);
+    toast('Enviando…');
+    try{
+      const lojaId = (typeof lojaAtual!=='undefined'&&lojaAtual)?lojaAtual.id:'x';
+      const ext=(f.name.split('.').pop()||'bin').toLowerCase().replace(/[^a-z0-9]/g,'');
+      const path='loja'+lojaId+'/popup_'+Date.now()+'.'+ext;
+      const {error}=await sb.storage.from('portal-popups').upload(path,f,{upsert:true,contentType:f.type});
+      if(error){
+        if(/bucket|not found|does not exist/i.test(error.message))
+          return toast('Crie o bucket "portal-popups" no Supabase Storage (público) — ou use a URL.',true);
+        return toast('Erro no upload: '+error.message,true);
+      }
+      const {data}=sb.storage.from('portal-popups').getPublicUrl(path);
+      document.getElementById(pfx+'_popupUrl').value=data.publicUrl;
+      if(typeof pvAp==='function' && pfx==='ap') pvAp();
+      if(typeof pvLj==='function' && pfx==='lj') pvLj();
+      toast('Enviado ✓ — lembre de salvar');
+    }catch(e){ toast('Falha: '+e.message,true); }
+  };
+  inp.click();
+}
+
+function escolherLogo(destinoInputId, previewFn){
+  const inp=document.createElement('input'); inp.type='file'; inp.accept='image/*';
+  inp.onchange=()=>{ const f=inp.files[0]; if(!f) return;
+    if(f.size>4*1024*1024) return toast('Imagem muito grande (máx 4 MB)',true);
+    const fr=new FileReader();
+    fr.onload=()=>{ const img=new Image();
+      img.onload=()=>{ const M=320, r=Math.min(M/img.width,M/img.height,1);
+        const cv=document.createElement('canvas'); cv.width=img.width*r; cv.height=img.height*r;
+        cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+        const b64=cv.toDataURL('image/png');
+        document.getElementById(destinoInputId).value=b64;
+        previewFn(); toast('Logo carregada — lembre de salvar');
+      };
+      img.onerror=()=>toast('Não consegui ler essa imagem',true);
+      img.src=fr.result; };
+    fr.readAsDataURL(f); };
+  inp.click();
+}
+
+/* =========================================================
+   ABA APARÊNCIA (cliente edita a própria loja)
+========================================================= */
+function montarAparencia(){
+  const l=lojaAtual; if(!l) return;
+  formAparencia.innerHTML=`
+    <div class="secao">📢 Aviso no portal</div>
+    <div class="full">
+      <label style="display:flex;align-items:center;gap:9px;cursor:pointer">
+        <input type="checkbox" id="ap_bannerAtivo" style="width:18px;height:18px;accent-color:var(--azul)" onchange="pvAp()">
+        <span style="color:var(--texto);font-size:.86rem">Mostrar um aviso no topo do portal</span></label>
+      <small class="dica">Aparece pra todo cliente que conecta. Ótimo pra promoção do dia, evento ou recado.</small>
+      <input id="ap_banner" value="${esc(l.mensagem)}" maxlength="120" placeholder="🔥 Hoje: narguile em promoção! Peça no balcão." oninput="pvAp()" style="margin-top:8px">
+      <small class="dica">Máx. 120 caracteres. Deixe curto e chamativo.</small></div>
+
+    <div class="secao">🖼️ Pop-up promocional</div>
+    <div class="full">
+      <label style="display:flex;align-items:center;gap:9px;cursor:pointer">
+        <input type="checkbox" id="ap_popupAtivo" style="width:18px;height:18px;accent-color:var(--azul)" onchange="pvAp()">
+        <span style="color:var(--texto);font-size:.86rem">Mostrar um pop-up ao abrir o portal</span></label>
+      <small class="dica">Imagem ou vídeo em tela cheia sobre o portal. O cliente fecha no X (ou espera o tempo).</small></div>
+    <div class="full" id="ap_wrapPopup">
+      <label>Tipo</label>
+      <select id="ap_popupTipo" onchange="pvAp()"><option value="imagem">🖼️ Imagem</option><option value="video">🎬 Vídeo</option></select>
+      <label style="margin-top:12px">Arquivo</label>
+      <div style="display:flex;gap:8px;align-items:center">
+        <button class="btnG" type="button" onclick="uploadPopup('ap')">⬆ Enviar arquivo</button>
+        <span style="color:var(--fraco);font-size:.76rem">ou cole a URL abaixo</span></div>
+      <input id="ap_popupUrl" value="${esc(l.popup_url)}" placeholder="https://..." oninput="pvAp()" style="margin-top:8px">
+      <label style="margin-top:12px">Link ao clicar <small style="color:var(--fraco)">(opcional)</small></label>
+      <input id="ap_popupLink" value="${esc(l.popup_link)}" placeholder="https://instagram.com/sualoja">
+      <label style="margin-top:12px">Fechar automático após</label>
+      <select id="ap_popupSegs">
+        <option value="0">Só no X (sem tempo)</option>
+        <option value="3">3 segundos</option><option value="5">5 segundos</option>
+        <option value="8">8 segundos</option><option value="10">10 segundos</option>
+      </select></div>
+
+    <div class="secao">🎨 Identidade</div>
+    <div class="full"><label>Nome da loja</label><input id="ap_nome" value="${esc(l.nome)}" oninput="pvAp()"></div>
+    <div class="full"><label>Logo</label>
+      <div class="logoUp" onclick="escolherLogo('ap_logo',pvAp)">
+        <div id="ap_logoBox"></div></div>
+      <input type="hidden" id="ap_logo" value="${esc(l.logo_url)}">
+      <small class="dica">Clique pra enviar PNG ou JPG (redimensiono automaticamente).</small></div>
+    <div><label>Cor principal</label><input type="color" id="ap_cor" value="${l.cor||'#0ea5e9'}" style="height:44px;padding:4px" oninput="pvAp()"></div>
+    <div><label>Cor secundária (gradiente)</label><input type="color" id="ap_cor2" value="${l.cor2||l.cor||'#22d3ee'}" style="height:44px;padding:4px" oninput="pvAp()"></div>
+    <div class="full"><label>Paletas do botão</label><div class="presets" id="ap_presets"></div></div>
+    <div class="full"><label>Tema do portal</label><div class="presets" id="ap_temas"></div>
+      <small class="dica">Clique num tema pra aplicar fundo e cartão. A cor do texto se ajusta sozinha pro contraste.</small></div>
+    <div><label>Cor de fundo</label><input type="color" id="ap_fundo" style="height:44px;padding:4px" oninput="pvAp()"></div>
+    <div><label>Fundo — 2ª cor (degradê)</label><input type="color" id="ap_fundo2" style="height:44px;padding:4px" oninput="pvAp()"></div>
+    <div class="full"><label>Cor do cartão</label><input type="color" id="ap_card" style="height:44px;padding:4px" oninput="pvAp()"></div>
+
+
+    <div class="secao">🎯 O que o cliente faz pra conectar</div>
+    <div class="full"><label>Destino</label>
+      <select id="ap_destino" onchange="pvAp()">
+        <option value="instagram">📸 Seguir no Instagram</option>
+        <option value="whatsapp">💬 Entrar no grupo do WhatsApp</option>
+        <option value="formulario">📝 Preencher formulário (coleta leads)</option>
+        <option value="google_review">⭐ Avaliar no Google</option>
+      </select></div>
+    <div class="full" id="ap_wrapInsta"><label>Instagram (sem @)</label><input id="ap_insta" value="${esc((l.instagram||'').replace('@',''))}" oninput="pvAp()"></div>
+    <div class="full" id="ap_wrapWpp"><label>Link do grupo do WhatsApp</label><input id="ap_wpp" value="${esc(l.whatsapp_link)}" placeholder="https://chat.whatsapp.com/..."></div>
+    <div class="full" id="ap_wrapGoogle"><label>Link de avaliação do Google</label><input id="ap_google" value="${esc(l.google_review_url)}" placeholder="https://g.page/r/..."></div>
+    <div class="full" id="ap_wrapForm">
+      <label>Título do portal</label><input id="ap_formTitulo" value="${esc(l.form_titulo)}" placeholder="Wi-Fi grátis · ${esc(l.nome)}" oninput="pvAp()">
+      <label style="margin-top:12px">Texto do botão</label><input id="ap_botao" value="${esc(l.botao_txt)}" placeholder="Conectar ao Wi-Fi" oninput="pvAp()">
+      <label style="margin-top:12px">Campos do formulário</label>
+      <div class="campos" id="ap_campos"></div>
+      <button class="btnG" style="margin-top:8px" onclick="addCampo('ap')">➕ Adicionar campo</button>
+      <small class="dica">Quanto menos campos, mais gente preenche. Peça só o essencial.</small></div>
+
+
+    <div class="secao">🧠 Portal inteligente</div>
+    <div class="full">
+      <label style="display:flex;align-items:center;gap:9px;cursor:pointer">
+        <input type="checkbox" id="ap_rotAtiva" style="width:18px;height:18px;accent-color:var(--azul)" onchange="pvAp()">
+        <span style="color:var(--texto);font-size:.86rem">Reconhecer clientes que já vieram</span></label>
+      <small class="dica">O portal identifica o aparelho. Quem <b>já se cadastrou não preenche o formulário de novo</b>
+      e, a cada visita, recebe um pedido diferente da lista abaixo.</small></div>
+    <div class="full" id="ap_wrapRot">
+      <label>Rodízio de pedidos (na ordem)</label>
+      <div style="display:flex;flex-direction:column;gap:7px">
+        <label style="display:flex;align-items:center;gap:8px;margin:0;color:var(--texto);font-size:.83rem">
+          <input type="checkbox" class="ap_rotD" value="instagram" style="width:16px;height:16px;accent-color:var(--azul)">📸 Seguir no Instagram</label>
+        <label style="display:flex;align-items:center;gap:8px;margin:0;color:var(--texto);font-size:.83rem">
+          <input type="checkbox" class="ap_rotD" value="whatsapp" style="width:16px;height:16px;accent-color:var(--azul)">💬 Entrar no grupo do WhatsApp</label>
+        <label style="display:flex;align-items:center;gap:8px;margin:0;color:var(--texto);font-size:.83rem">
+          <input type="checkbox" class="ap_rotD" value="google_review" style="width:16px;height:16px;accent-color:var(--azul)">⭐ Avaliar no Google</label>
+        <label style="display:flex;align-items:center;gap:8px;margin:0;color:var(--texto);font-size:.83rem">
+          <input type="checkbox" class="ap_rotD" value="site" style="width:16px;height:16px;accent-color:var(--azul)">🌐 Visitar o site</label>
+      </div>
+      <small class="dica">Só entram no rodízio os que estiverem preenchidos acima (link do grupo, Instagram etc.).</small>
+      <label style="margin-top:12px">Pedir o cadastro de novo a cada</label>
+      <select id="ap_recad">
+        <option value="0">Nunca (cadastra uma vez só)</option>
+        <option value="6">6 meses</option><option value="12">12 meses</option>
+      </select>
+      <small class="dica">Útil pra manter a base atualizada sem incomodar quem vem sempre.</small></div>
+
+    <div class="secao">📇 Cartão de contato</div>
+    <div class="full">
+      <label style="display:flex;align-items:center;gap:9px;cursor:pointer">
+        <input type="checkbox" id="ap_vcardAtivo" style="width:18px;height:18px;accent-color:var(--azul)" onchange="pvAp()">
+        <span style="color:var(--texto);font-size:.86rem">Oferecer "Salvar nosso contato" após conectar</span>
+      </label>
+      <small class="dica">O cliente salva seu número na agenda dele. Isso libera <b>lista de transmissão</b> no WhatsApp
+      (só entrega pra quem tem seu número salvo) e faz seus status aparecerem pra ele.</small></div>
+    <div id="ap_wrapVcard">
+      <label>WhatsApp da loja</label><input id="ap_vcardTel" placeholder="(21) 99999-9999"></div>
+    <div id="ap_wrapVcard2">
+      <label>Nome que aparece na agenda</label><input id="ap_vcardNome" placeholder="Absolem Tabacaria"></div>`;
+  ap_destino.value = l.destino_tipo || 'instagram';
+  ap_rotAtiva.checked = !!l.rotacao_ativa;
+  ap_recad.value = String(l.recadastro_meses||0);
+  (function(){ const sel=l.rotacao_destinos||['instagram','whatsapp'];
+    document.querySelectorAll('.ap_rotD').forEach(c=>c.checked=sel.includes(c.value)); })();
+  ap_vcardAtivo.checked = !!l.vcard_ativo;
+  ap_bannerAtivo.checked = !!l.banner_ativo;
+  ap_popupAtivo.checked = !!l.popup_ativo;
+  ap_popupTipo.value = l.popup_tipo || 'imagem';
+  setSel(ap_popupSegs, l.popup_segundos);
+  ap_vcardTel.value = l.vcard_telefone || '';
+  ap_vcardNome.value = l.vcard_nome || l.nome || '';
+  ap_fundo.value = l.cor_fundo || '#0a0f1e';
+  ap_fundo2.value = l.cor_fundo2 || l.cor_fundo || '#12213f';
+  ap_card.value = l.cor_card || '#101827';
+  renderTemas('ap_temas','ap',pvAp);
+  renderPresets('ap_presets','ap_cor','ap_cor2',pvAp);
+  renderCampos('ap', lerCampos(l.form_campos));
+  pvAp();
+}
+function pvAp(){
+  const l=lerFormAparencia();
+  ap_logoBox.innerHTML = l.logo_url ? `<img src="${esc(l.logo_url)}" alt="">`
+    : '<div class="ph"><span class="ico">🖼️</span>Clique pra enviar a logo<br><small>PNG ou JPG</small></div>';
+  ap_wrapInsta.style.display  = l.destino_tipo==='instagram'?'block':'none';
+  ap_wrapWpp.style.display    = l.destino_tipo==='whatsapp'?'block':'none';
+  ap_wrapGoogle.style.display = l.destino_tipo==='google_review'?'block':'none';
+  ap_wrapForm.style.display   = l.destino_tipo==='formulario'?'block':'none';
+  ap_wrapRot.style.display = ap_rotAtiva.checked?'block':'none';
+  const vc = ap_vcardAtivo.checked;
+  ap_wrapVcard.style.display = vc?'block':'none';
+  var pop=ap_popupAtivo.checked;
+  document.getElementById('ap_wrapPopup').style.display = pop?'block':'none';
+  ap_wrapVcard2.style.display = vc?'block':'none';
+  pvAparencia.innerHTML = preview(l);
+}
+function lerFormAparencia(){
+  return { nome:ap_nome.value, logo_url:ap_logo.value, cor:ap_cor.value, cor2:ap_cor2.value,
+    mensagem:ap_banner.value, banner_ativo:ap_bannerAtivo.checked,
+    popup_ativo:ap_popupAtivo.checked, popup_tipo:ap_popupTipo.value,
+    popup_url:ap_popupUrl.value, popup_link:ap_popupLink.value,
+    popup_segundos:Number(ap_popupSegs.value||0),
+    destino_tipo:ap_destino.value, instagram:ap_insta.value.replace('@',''),
+    whatsapp_link:ap_wpp.value, google_review_url:ap_google.value,
+    form_titulo:ap_formTitulo.value, botao_txt:ap_botao.value, form_campos:colherCampos('ap'),
+    vcard_ativo:ap_vcardAtivo.checked, vcard_telefone:ap_vcardTel.value.replace(/\D/g,''),
+    vcard_nome:ap_vcardNome.value,
+    cor_fundo:ap_fundo.value, cor_fundo2:ap_fundo2.value, cor_card:ap_card.value,
+    rotacao_ativa:ap_rotAtiva.checked, recadastro_meses:Number(ap_recad.value||0),
+    rotacao_destinos:[...document.querySelectorAll('.ap_rotD')].filter(c=>c.checked).map(c=>c.value) };
+}
+async function salvarAparencia(){
+  const f=lerFormAparencia();
+  const upd={ nome:f.nome.trim(), logo_url:f.logo_url||null, cor:f.cor, cor2:f.cor2,
+    mensagem:f.mensagem.trim()||null, banner_ativo:f.banner_ativo,
+    popup_ativo:f.popup_ativo, popup_tipo:f.popup_tipo,
+    popup_url:f.popup_url.trim()||null, popup_link:f.popup_link.trim()||null,
+    popup_segundos:f.popup_segundos,
+    destino_tipo:f.destino_tipo, instagram:f.instagram.trim()||null,
+    whatsapp_link:f.whatsapp_link.trim()||null, google_review_url:f.google_review_url.trim()||null,
+    form_titulo:f.form_titulo.trim()||null, botao_txt:f.botao_txt.trim()||null,
+    form_campos:f.destino_tipo==='formulario'?f.form_campos:lojaAtual.form_campos,
+    vcard_ativo:f.vcard_ativo, vcard_telefone:f.vcard_telefone||null,
+    vcard_nome:f.vcard_nome.trim()||null,
+    cor_fundo:f.cor_fundo, cor_fundo2:f.cor_fundo2, cor_card:f.cor_card,
+    rotacao_ativa:f.rotacao_ativa, recadastro_meses:f.recadastro_meses,
+    rotacao_destinos:f.rotacao_ativa?['formulario',...f.rotacao_destinos]
+      :((lojaAtual.rotacao_destinos||[]).length?lojaAtual.rotacao_destinos:['formulario','instagram','whatsapp']) };
+  if(upd.rotacao_ativa && !f.rotacao_destinos.length)
+    return toast('Escolha ao menos um pedido pro rodízio',true);
+  if(upd.vcard_ativo && (upd.vcard_telefone||'').length<10)
+    return toast('Informe o WhatsApp da loja com DDD pro cartão de contato',true);
+  if(upd.destino_tipo==='whatsapp' && !upd.whatsapp_link) return toast('Informe o link do grupo do WhatsApp',true);
+  if(upd.destino_tipo==='google_review' && !upd.google_review_url) return toast('Informe o link de avaliação do Google',true);
+  ['rotacao_destinos','rotacao_ativa','recadastro_meses','vcard_ativo',
+   'cor','cor2','cor_fundo','cor_card'].forEach(k=>{ if(upd[k]==null) delete upd[k]; });
+  const {error}=await sb.from('portal_lojas').update(upd).eq('id',lojaAtual.id);
+  if(error) return toast('Erro ao salvar: '+error.message,true);
+  Object.assign(lojaAtual,upd); toast('Aparência salva ✓');
+}
+function abrirPortalReal(){
+  const d=lojaAtual.dominio||`${lojaAtual.slug}.conectay.com.br`;
+  window.open('https://'+d,'_blank');
+}
+
+/* ---- Presets e campos (compartilhado) ---- */
+function renderTemas(elId,pref,cb){
+  document.getElementById(elId).innerHTML = TEMAS.map(t=>
+    `<button title="${t.n}" style="background:linear-gradient(135deg,${t.f},${t.f2});border-color:${t.c}"
+      onclick="aplicarTema('${pref}','${t.f}','${t.f2}','${t.c}');${cb.name}()"></button>`).join('');
+}
+function aplicarTema(pref,f,f2,c){
+  document.getElementById(pref+'_fundo').value=f;
+  document.getElementById(pref+'_fundo2').value=f2;
+  document.getElementById(pref+'_card').value=c;
+}
+function renderPresets(elId,c1Id,c2Id,cb){
+  document.getElementById(elId).innerHTML = PRESETS.map((p,i)=>
+    `<button title="Paleta ${i+1}" style="background:linear-gradient(135deg,${p[0]},${p[1]})"
+      onclick="document.getElementById('${c1Id}').value='${p[0]}';document.getElementById('${c2Id}').value='${p[1]}';${cb.name}()"></button>`).join('');
+}
+function renderCampos(pref, lista){
+  const box=document.getElementById(pref+'_campos');
+  box.innerHTML = lista.map((c,i)=>linhaCampo(pref,c,i)).join('');
+}
+function linhaCampo(pref,c,i){
+  const tipos=['nome','telefone','aniversario','email','cpf','endereco'];
+  return `<div class="campoLinha" data-i="${i}">
+    <select onchange="pref_pv('${pref}')" class="cpChave">
+      ${tipos.map(t=>`<option value="${t}" ${c.campo===t?'selected':''}>${t}</option>`).join('')}
+    </select>
+    <input type="text" class="cpLabel" value="${esc(c.label)}" placeholder="Rótulo" oninput="pref_pv('${pref}')">
+    <label class="obg"><input type="checkbox" class="cpObg" ${c.obrigatorio?'checked':''} onchange="pref_pv('${pref}')">obrig.</label>
+    <button class="del" onclick="this.parentElement.remove();pref_pv('${pref}')">🗑</button></div>`;
+}
+function addCampo(pref){
+  const box=document.getElementById(pref+'_campos');
+  box.insertAdjacentHTML('beforeend', linhaCampo(pref,{campo:'email',label:'E-mail',obrigatorio:false},box.children.length));
+  pref_pv(pref);
+}
+function colherCampos(pref){
+  return [...document.querySelectorAll('#'+pref+'_campos .campoLinha')].map(l=>({
+    campo:l.querySelector('.cpChave').value,
+    label:l.querySelector('.cpLabel').value||l.querySelector('.cpChave').value,
+    obrigatorio:l.querySelector('.cpObg').checked }));
+}
+function pref_pv(pref){ pref==='ap'?pvAp():pvLj(); }
+
+/* =========================================================
+   ADMIN — LISTA E EDITOR COMPLETO DE LOJAS
+========================================================= */
+function renderLojasAdmin(){
+  tabelaLojas.innerHTML=`<div class="tWrap"><table><thead><tr><th>Loja</th><th>Domínio</th><th>Destino</th>
+    <th>Plano</th><th>Valor</th><th>Venc.</th><th>Status</th><th></th></tr></thead><tbody>
+    ${lojas.map(l=>`<tr>
+      <td><b>${esc(l.nome)}</b><br><small style="color:var(--fraco)">${esc(l.slug)}</small></td>
+      <td>${esc(l.dominio)||'—'}</td>
+      <td>${({instagram:'📸 Instagram',whatsapp:'💬 Grupo WhatsApp',formulario:'📝 Formulário',google_review:'⭐ Google'})[l.destino_tipo]||'—'}</td>
+      <td>${esc(l.plano)||'—'}</td>
+      <td>${l.valor_mensal?('R$ '+Number(l.valor_mensal).toFixed(2)):'—'}</td>
+      <td>${l.dia_vencimento?('dia '+l.dia_vencimento):'—'}</td>
+      <td><span class="badge ${l.ativo?'b-ativo':'b-bloqueado'}">${l.ativo?'ativa':'desligada'}</span></td>
+      <td style="display:flex;gap:6px">
+        <button class="btnG" style="padding:6px 10px" onclick="abrirEditor(${l.id})">✏️</button>
+        <button class="btnG" style="padding:6px 10px" onclick="alternarAtivo(${l.id})">${l.ativo?'⏸':'▶️'}</button>
+      </td></tr>`).join('')}</tbody></table></div>`;
+}
+async function alternarAtivo(id){
+  const l=lojas.find(x=>x.id===id);
+  const {error}=await sb.from('portal_lojas').update({ativo:!l.ativo}).eq('id',id);
+  if(error) return toast('Erro: '+error.message,true);
+  l.ativo=!l.ativo; renderLojasAdmin(); toast(l.ativo?'Loja ativada':'Loja desligada');
+}
+
+function abrirEditor(id){
+  edit = id ? Object.assign({}, lojas.find(l=>l.id===id)) : {};
+  modalTitulo.textContent = id ? 'Editar loja' : 'Nova loja';
+  statusLoja.textContent='';
+  const l=edit;
+  formLoja.innerHTML=`
+    <div class="secao">🏪 Dados do contratante</div>
+    <div><label>Nome da loja *</label><input id="lj_nome" value="${esc(l.nome)}" oninput="pvLj()"></div>
+    <div><label>Slug (identificador) *</label><input id="lj_slug" value="${esc(l.slug)}" placeholder="goldpipe" ${l.id?'disabled':''}></div>
+    <div><label>Responsável</label><input id="lj_responsavel" value="${esc(l.responsavel)}"></div>
+    <div><label>Contato (telefone)</label><input id="lj_contato" value="${esc(l.contato)}"></div>
+    <div><label>CPF / CNPJ</label><input id="lj_documento" value="${esc(l.documento)}"></div>
+    <div><label>E-mail do contratante</label><input id="lj_email" value="${esc(l.email_cliente)}"></div>
+    <div class="full"><label>Endereço</label><input id="lj_endereco" value="${esc(l.endereco)}"></div>
+
+    <div class="secao">🔑 Acesso do cliente ao painel</div>
+    <div><label>E-mail de acesso</label><input id="lj_emailAcesso" value="${esc(l.email_acesso)}" placeholder="cliente@email.com"></div>
+    <div><label>Senha ${l.id?'<small>(vazio = não alterar)</small>':'inicial'}</label>
+      <input id="lj_senhaAcesso" type="password" placeholder="${l.id?'••••••••':'mínimo 6 caracteres'}"></div>
+
+    <div class="secao">🌐 Portal</div>
+    <div class="full"><label>Domínio</label>
+      <div class="sufixo"><input id="lj_dominio" value="${esc((l.dominio||'').replace('.conectay.com.br',''))}" placeholder="goldpipe" oninput="sufixoDominio()">
+      <span id="lj_sufixo">.conectay.com.br</span></div>
+      <small class="dica">Só o nome. Com ponto (ex.: minhaloja.com.br) vira domínio próprio.</small></div>
+    <div class="full"><label>O que o cliente faz pra conectar</label>
+      <select id="lj_destino" onchange="pvLj()">
+        <option value="instagram">📸 Seguir no Instagram</option>
+        <option value="whatsapp">💬 Entrar no grupo do WhatsApp</option>
+        <option value="formulario">📝 Preencher formulário (coleta leads)</option>
+        <option value="google_review">⭐ Avaliar no Google</option>
+      </select></div>
+    <div class="full" id="lj_wrapInsta"><label>Instagram (sem @)</label><input id="lj_insta" value="${esc((l.instagram||'').replace('@',''))}" oninput="pvLj()"></div>
+    <div class="full" id="lj_wrapWpp"><label>Link do grupo do WhatsApp</label><input id="lj_wpp" value="${esc(l.whatsapp_link)}" placeholder="https://chat.whatsapp.com/..."></div>
+    <div class="full" id="lj_wrapGoogle"><label>Link de avaliação do Google</label><input id="lj_google" value="${esc(l.google_review_url)}" placeholder="https://g.page/r/..."></div>
+    <div class="full" id="lj_wrapForm">
+      <label>Título do portal</label><input id="lj_formTitulo" value="${esc(l.form_titulo)}" oninput="pvLj()">
+      <label style="margin-top:12px">Texto do botão</label><input id="lj_botao" value="${esc(l.botao_txt)}" placeholder="Conectar ao Wi-Fi" oninput="pvLj()">
+      <label style="margin-top:12px">Campos do formulário</label>
+      <div class="campos" id="lj_campos"></div>
+      <button class="btnG" style="margin-top:8px" onclick="addCampo('lj')">➕ Adicionar campo</button></div>
+
+    <div class="secao">🎨 Aparência</div>
+    <div class="full">
+      <label style="display:flex;align-items:center;gap:9px;cursor:pointer">
+        <input type="checkbox" id="lj_bannerAtivo" style="width:18px;height:18px;accent-color:var(--azul)" onchange="pvLj()">
+        <span style="color:var(--texto);font-size:.86rem">📢 Aviso no topo do portal</span></label>
+      <input id="lj_banner" value="${esc(l.mensagem)}" maxlength="120" placeholder="🔥 Promoção do dia..." oninput="pvLj()" style="margin-top:8px">
+      <small class="dica">Aparece pra quem conecta. Máx. 120 caracteres.</small></div>
+    <div class="full">
+      <label style="display:flex;align-items:center;gap:9px;cursor:pointer">
+        <input type="checkbox" id="lj_popupAtivo" style="width:18px;height:18px;accent-color:var(--azul)" onchange="pvLj()">
+        <span style="color:var(--texto);font-size:.86rem">🖼️ Pop-up promocional (imagem/vídeo)</span></label></div>
+    <div class="full" id="lj_wrapPopup">
+      <select id="lj_popupTipo" onchange="pvLj()"><option value="imagem">🖼️ Imagem</option><option value="video">🎬 Vídeo</option></select>
+      <div style="display:flex;gap:8px;align-items:center;margin-top:8px">
+        <button class="btnG" type="button" onclick="uploadPopup('lj')">⬆ Enviar</button>
+        <span style="color:var(--fraco);font-size:.76rem">ou URL abaixo</span></div>
+      <input id="lj_popupUrl" value="${esc(l.popup_url)}" placeholder="https://..." oninput="pvLj()" style="margin-top:8px">
+      <input id="lj_popupLink" value="${esc(l.popup_link)}" placeholder="Link ao clicar (opcional)" style="margin-top:8px">
+      <select id="lj_popupSegs" style="margin-top:8px">
+        <option value="0">Só no X</option><option value="3">3s</option><option value="5">5s</option>
+        <option value="8">8s</option><option value="10">10s</option>
+      </select></div>
+    <div class="full"><label>Logo</label>
+      <div class="logoUp" onclick="escolherLogo('lj_logo',pvLj)"><div id="lj_logoBox"></div></div>
+      <input type="hidden" id="lj_logo" value="${esc(l.logo_url)}"></div>
+    <div><label>Cor principal</label><input type="color" id="lj_cor" value="${l.cor||'#0ea5e9'}" style="height:44px;padding:4px" oninput="pvLj()"></div>
+    <div><label>Cor secundária</label><input type="color" id="lj_cor2" value="${l.cor2||l.cor||'#22d3ee'}" style="height:44px;padding:4px" oninput="pvLj()"></div>
+    <div class="full"><label>Paletas do botão</label><div class="presets" id="lj_presets"></div></div>
+    <div class="full"><label>Tema do portal</label><div class="presets" id="lj_temas"></div>
+      <small class="dica">Clique num tema pra aplicar fundo e cartão. A cor do texto se ajusta sozinha pro contraste.</small></div>
+    <div><label>Cor de fundo</label><input type="color" id="lj_fundo" style="height:44px;padding:4px" oninput="pvLj()"></div>
+    <div><label>Fundo — 2ª cor (degradê)</label><input type="color" id="lj_fundo2" style="height:44px;padding:4px" oninput="pvLj()"></div>
+    <div class="full"><label>Cor do cartão</label><input type="color" id="lj_card" style="height:44px;padding:4px" oninput="pvLj()"></div>
+
+
+
+    <div class="secao">🧠 Portal inteligente</div>
+    <div class="full">
+      <label style="display:flex;align-items:center;gap:9px;cursor:pointer">
+        <input type="checkbox" id="lj_rotAtiva" style="width:18px;height:18px;accent-color:var(--azul)" onchange="pvLj()">
+        <span style="color:var(--texto);font-size:.86rem">Reconhecer clientes que já vieram</span></label>
+      <small class="dica">O portal identifica o aparelho. Quem <b>já se cadastrou não preenche o formulário de novo</b>
+      e, a cada visita, recebe um pedido diferente da lista abaixo.</small></div>
+    <div class="full" id="lj_wrapRot">
+      <label>Rodízio de pedidos (na ordem)</label>
+      <div style="display:flex;flex-direction:column;gap:7px">
+        <label style="display:flex;align-items:center;gap:8px;margin:0;color:var(--texto);font-size:.83rem">
+          <input type="checkbox" class="lj_rotD" value="instagram" style="width:16px;height:16px;accent-color:var(--azul)">📸 Seguir no Instagram</label>
+        <label style="display:flex;align-items:center;gap:8px;margin:0;color:var(--texto);font-size:.83rem">
+          <input type="checkbox" class="lj_rotD" value="whatsapp" style="width:16px;height:16px;accent-color:var(--azul)">💬 Entrar no grupo do WhatsApp</label>
+        <label style="display:flex;align-items:center;gap:8px;margin:0;color:var(--texto);font-size:.83rem">
+          <input type="checkbox" class="lj_rotD" value="google_review" style="width:16px;height:16px;accent-color:var(--azul)">⭐ Avaliar no Google</label>
+        <label style="display:flex;align-items:center;gap:8px;margin:0;color:var(--texto);font-size:.83rem">
+          <input type="checkbox" class="lj_rotD" value="site" style="width:16px;height:16px;accent-color:var(--azul)">🌐 Visitar o site</label>
+      </div>
+      <small class="dica">Só entram no rodízio os que estiverem preenchidos acima (link do grupo, Instagram etc.).</small>
+      <label style="margin-top:12px">Pedir o cadastro de novo a cada</label>
+      <select id="lj_recad">
+        <option value="0">Nunca (cadastra uma vez só)</option>
+        <option value="6">6 meses</option><option value="12">12 meses</option>
+      </select>
+      <small class="dica">Útil pra manter a base atualizada sem incomodar quem vem sempre.</small></div>
+
+    <div class="secao">📇 Cartão de contato</div>
+    <div class="full">
+      <label style="display:flex;align-items:center;gap:9px;cursor:pointer">
+        <input type="checkbox" id="lj_vcardAtivo" style="width:18px;height:18px;accent-color:var(--azul)" onchange="pvLj()">
+        <span style="color:var(--texto);font-size:.86rem">Oferecer "Salvar nosso contato" após conectar</span></label>
+      <small class="dica">Libera lista de transmissão no WhatsApp e faz os status da loja aparecerem pro cliente.</small></div>
+    <div id="lj_wrapVcard"><label>WhatsApp da loja</label><input id="lj_vcardTel" placeholder="(21) 99999-9999"></div>
+    <div id="lj_wrapVcard2"><label>Nome na agenda</label><input id="lj_vcardNome" placeholder="Nome da loja"></div>
+
+    <div class="secao">📶 Wi-Fi / roteador</div>
+    <div><label>Código do Wi-Fi <small>(libera a internet)</small></label><input id="lj_codigo" value="${esc(l.codigo_wifi)}" placeholder="ex: FULANO2026"></div>
+    <div><label>Segredo do AP <small>(mesma senha no roteador)</small></label><input id="lj_secret" value="${esc(l.ap_secret)}" placeholder="senha forte"></div>
+    <div><label>Tempo de sessão</label>
+      <select id="lj_sessao">
+        <option value="">Padrão global (3h)</option>
+        <option value="1800">30 minutos</option>
+        <option value="3600">1 hora</option>
+        <option value="7200">2 horas</option>
+        <option value="10800">3 horas</option>
+        <option value="21600">6 horas</option>
+        <option value="43200">12 horas</option>
+      </select>
+      <small class="dica">Vale pra novas conexões. Sessão curta = bloqueio faz efeito mais rápido.</small></div>
+    <div class="full">
+      <label style="display:flex;align-items:center;gap:9px;cursor:pointer">
+        <input type="checkbox" id="lj_fidelidade" style="width:18px;height:18px;accent-color:var(--azul)" onchange="pvFidelidade()">
+        <span style="color:var(--texto);font-size:.86rem">🏆 Recompensar clientes fiéis com sessão mais longa</span></label>
+      <small class="dica">Só Intelbras. Quem já vem sempre <b>fica mais tempo sem precisar se recadastrar</b>.
+      O motor reconhece o aparelho e aplica a faixa certa automaticamente.</small></div>
+    <div class="full" id="lj_wrapFidelidade" style="display:none">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+        <div><label>🆕 Novo</label>
+          <select id="lj_sessNovo">
+            <option value="">Padrão</option>
+            <option value="1800">30 min</option><option value="3600">1 hora</option>
+            <option value="7200">2 horas</option><option value="10800">3 horas</option>
+          </select></div>
+        <div><label>🔁 Recorrente</label>
+          <select id="lj_sessRec">
+            <option value="">Padrão</option>
+            <option value="3600">1 hora</option><option value="10800">3 horas</option>
+            <option value="21600">6 horas</option><option value="43200">12 horas</option>
+          </select></div>
+        <div><label>⭐ VIP</label>
+          <select id="lj_sessVip">
+            <option value="">Padrão</option>
+            <option value="10800">3 horas</option><option value="21600">6 horas</option>
+            <option value="43200">12 horas</option><option value="86400">24 horas</option>
+          </select></div>
+      </div>
+      <small class="dica">Recorrente = 3+ visitas ou categoria recorrente. VIP = marcado no perfil do cliente.</small></div>
+    <div><label>Velocidade por cliente (down / up)</label>
+      <div style="display:flex;gap:8px">
+        <select id="lj_down">
+          <option value="">Padrão</option>
+          <option value="0">Ilimitado</option>
+          <option value="2048">2 Mbps</option>
+          <option value="5120">5 Mbps</option>
+          <option value="10240">10 Mbps</option>
+          <option value="20480">20 Mbps</option>
+        </select>
+        <select id="lj_up">
+          <option value="">Padrão</option>
+          <option value="0">Ilimitado</option>
+          <option value="1024">1 Mbps</option>
+          <option value="2048">2 Mbps</option>
+          <option value="5120">5 Mbps</option>
+          <option value="10240">10 Mbps</option>
+        </select>
+      </div>
+      <small class="dica">Limite POR aparelho conectado. Vale pra novas conexões.</small></div>
+
+    <div class="secao">💰 Cobrança <small style="color:var(--fraco);font-weight:400">(controle interno)</small></div>
+    <div><label>Valor mensal (R$)</label><input id="lj_valor" type="number" step="0.01" value="${l.valor_mensal??''}"></div>
+    <div><label>Dia do vencimento</label><input id="lj_diavenc" type="number" min="1" max="31" value="${l.dia_vencimento??''}"></div>
+    <div><label>Plano</label><input id="lj_plano" value="${esc(l.plano)}" placeholder="Básico / Pro"></div>
+    <div><label>Status do pagamento</label>
+      <select id="lj_statusPg">
+        <option value="">—</option><option value="em dia">em dia</option>
+        <option value="pendente">pendente</option><option value="atrasado">atrasado</option></select></div>
+    <div class="full"><label>Observações</label><textarea id="lj_obs" rows="2">${esc(l.obs)}</textarea></div>`;
+
+  lj_destino.value = l.destino_tipo || 'instagram';
+  lj_statusPg.value = l.status_pagamento || '';
+  lj_rotAtiva.checked = !!l.rotacao_ativa;
+  lj_recad.value = String(l.recadastro_meses||0);
+  (function(){ const sel=l.rotacao_destinos||['instagram','whatsapp'];
+    document.querySelectorAll('.lj_rotD').forEach(c=>c.checked=sel.includes(c.value)); })();
+  lj_vcardAtivo.checked = !!l.vcard_ativo;
+  lj_bannerAtivo.checked = !!l.banner_ativo;
+  lj_popupAtivo.checked = !!l.popup_ativo;
+  lj_popupTipo.value = l.popup_tipo || 'imagem';
+  setSel(lj_popupSegs, l.popup_segundos);
+  lj_vcardTel.value = l.vcard_telefone || '';
+  lj_vcardNome.value = l.vcard_nome || l.nome || '';
+  lj_fundo.value = l.cor_fundo || '#0a0f1e';
+  lj_fundo2.value = l.cor_fundo2 || l.cor_fundo || '#12213f';
+  lj_card.value = l.cor_card || '#101827';
+  setSel(lj_sessao, l.session_timeout);
+  lj_fidelidade.checked = !!l.fidelidade_ativa;
+  setSel(lj_sessNovo, l.sess_novo);
+  setSel(lj_sessRec, l.sess_recorrente);
+  setSel(lj_sessVip, l.sess_vip);
+  pvFidelidade();
+  setSel(lj_down, l.download_kbps);
+  setSel(lj_up, l.upload_kbps);
+  renderTemas('lj_temas','lj',pvLj);
+  renderPresets('lj_presets','lj_cor','lj_cor2',pvLj);
+  renderCampos('lj', lerCampos(l.form_campos));
+  sufixoDominio(); pvLj();
+  modalBg.classList.add('on');
+}
+// seleciona o valor no <select>; se não existir na lista, cria a opção
+function setSel(el,val){
+  if(val==null||val===''){ el.value=''; return; }
+  const v=String(val);
+  if(![...el.options].some(o=>o.value===v)){
+    const o=document.createElement('option'); o.value=v; o.textContent=v; el.appendChild(o);
+  }
+  el.value=v;
+}
+function fecharEditor(){ modalBg.classList.remove('on'); edit=null; }
+function pvFidelidade(){ document.getElementById("lj_wrapFidelidade").style.display = document.getElementById("lj_fidelidade").checked?"block":"none"; }
+function sufixoDominio(){ lj_sufixo.style.display = lj_dominio.value.includes('.') ? 'none':'inline-block'; }
+function lerFormLoja(){
+  return { nome:lj_nome.value, logo_url:lj_logo.value, cor:lj_cor.value, cor2:lj_cor2.value,
+    mensagem:lj_banner.value, banner_ativo:lj_bannerAtivo.checked,
+    popup_ativo:lj_popupAtivo.checked, popup_tipo:lj_popupTipo.value,
+    popup_url:lj_popupUrl.value, popup_link:lj_popupLink.value,
+    popup_segundos:Number(lj_popupSegs.value||0),
+    destino_tipo:lj_destino.value, instagram:lj_insta.value.replace('@',''),
+    whatsapp_link:lj_wpp.value, google_review_url:lj_google.value,
+    form_titulo:lj_formTitulo.value, botao_txt:lj_botao.value, form_campos:colherCampos('lj'),
+    vcard_ativo:lj_vcardAtivo.checked, vcard_telefone:lj_vcardTel.value.replace(/\D/g,''),
+    vcard_nome:lj_vcardNome.value,
+    cor_fundo:lj_fundo.value, cor_fundo2:lj_fundo2.value, cor_card:lj_card.value,
+    rotacao_ativa:lj_rotAtiva.checked, recadastro_meses:Number(lj_recad.value||0),
+    rotacao_destinos:[...document.querySelectorAll('.lj_rotD')].filter(c=>c.checked).map(c=>c.value) };
+}
+function pvLj(){
+  const l=lerFormLoja();
+  lj_logoBox.innerHTML = l.logo_url ? `<img src="${esc(l.logo_url)}" alt="">`
+    : '<div class="ph"><span class="ico">🖼️</span>Clique pra enviar a logo<br><small>PNG ou JPG</small></div>';
+  lj_wrapInsta.style.display  = l.destino_tipo==='instagram'?'block':'none';
+  lj_wrapWpp.style.display    = l.destino_tipo==='whatsapp'?'block':'none';
+  lj_wrapGoogle.style.display = l.destino_tipo==='google_review'?'block':'none';
+  lj_wrapForm.style.display   = l.destino_tipo==='formulario'?'block':'none';
+  lj_wrapRot.style.display    = lj_rotAtiva.checked?'block':'none';
+  document.getElementById('lj_wrapPopup').style.display = lj_popupAtivo.checked?'block':'none';
+  lj_wrapVcard.style.display  = lj_vcardAtivo.checked?'block':'none';
+  lj_wrapVcard2.style.display = lj_vcardAtivo.checked?'block':'none';
+  pvLoja.innerHTML = preview(l);
+}
+
+async function salvarLoja(){
+  const f=lerFormLoja();
+  const nome=f.nome.trim(), slug=(edit.slug||lj_slug.value).trim().toLowerCase();
+  if(!nome||!slug) return toast('Preencha nome e slug',true);
+  let dominio=lj_dominio.value.trim().toLowerCase();
+  if(dominio && !dominio.includes('.')) dominio+='.conectay.com.br';
+  if(f.destino_tipo==='whatsapp' && !f.whatsapp_link.trim()) return toast('Informe o link do grupo',true);
+  if(f.vcard_ativo && (f.vcard_telefone||'').length<10) return toast('Informe o WhatsApp da loja com DDD pro cartão de contato',true);
+  if(f.destino_tipo==='google_review' && !f.google_review_url.trim()) return toast('Informe o link de avaliação',true);
+
+  const emailAcesso=lj_emailAcesso.value.trim(), senhaAcesso=lj_senhaAcesso.value.trim();
+  if(!edit.id && emailAcesso && !senhaAcesso) return toast('Informe a senha inicial do cliente',true);
+  if(senhaAcesso && senhaAcesso.length<6) return toast('A senha precisa ter ao menos 6 caracteres',true);
+
+  const dados={ nome, slug, dominio:dominio||null,
+    responsavel:lj_responsavel.value.trim()||null, contato:lj_contato.value.trim()||null,
+    documento:lj_documento.value.trim()||null, email_cliente:lj_email.value.trim()||null,
+    endereco:lj_endereco.value.trim()||null, email_acesso:emailAcesso||null,
+    destino_tipo:f.destino_tipo, instagram:f.instagram.trim()||null,
+    whatsapp_link:f.whatsapp_link.trim()||null, google_review_url:f.google_review_url.trim()||null,
+    form_titulo:f.form_titulo.trim()||null, botao_txt:f.botao_txt.trim()||null,
+    form_campos:f.destino_tipo==='formulario'?f.form_campos:(edit.form_campos||null),
+    logo_url:f.logo_url||null, cor:f.cor, cor2:f.cor2,
+    mensagem:f.mensagem.trim()||null, banner_ativo:f.banner_ativo,
+    popup_ativo:f.popup_ativo, popup_tipo:f.popup_tipo,
+    popup_url:f.popup_url.trim()||null, popup_link:f.popup_link.trim()||null,
+    popup_segundos:f.popup_segundos,
+    vcard_ativo:f.vcard_ativo, vcard_telefone:f.vcard_telefone||null, vcard_nome:f.vcard_nome.trim()||null,
+    cor_fundo:f.cor_fundo, cor_fundo2:f.cor_fundo2, cor_card:f.cor_card,
+    rotacao_ativa:f.rotacao_ativa, recadastro_meses:f.recadastro_meses,
+    rotacao_destinos:f.rotacao_ativa?['formulario',...f.rotacao_destinos]
+      :((edit.rotacao_destinos||[]).length?edit.rotacao_destinos:['formulario','instagram','whatsapp']),
+    codigo_wifi:lj_codigo.value.trim()||null, ap_secret:lj_secret.value.trim()||null,
+    session_timeout: lj_sessao.value===''?null:Number(lj_sessao.value),
+    fidelidade_ativa: lj_fidelidade.checked,
+    sess_novo: lj_sessNovo.value===''?null:Number(lj_sessNovo.value),
+    sess_recorrente: lj_sessRec.value===''?null:Number(lj_sessRec.value),
+    sess_vip: lj_sessVip.value===''?null:Number(lj_sessVip.value),
+    download_kbps: lj_down.value===''?null:Number(lj_down.value),
+    upload_kbps: lj_up.value===''?null:Number(lj_up.value),
+    valor_mensal:lj_valor.value?Number(lj_valor.value):null,
+    dia_vencimento:lj_diavenc.value?Number(lj_diavenc.value):null,
+    plano:lj_plano.value.trim()||null, status_pagamento:lj_statusPg.value||null,
+    obs:lj_obs.value.trim()||null };
+
+  // colunas NOT NULL: se vier vazio, não envia (o banco usa o padrão)
+  ['rotacao_destinos','rotacao_ativa','recadastro_meses','vcard_ativo',
+   'cor','cor2','cor_fundo','cor_card'].forEach(k=>{ if(dados[k]==null) delete dados[k]; });
+
+  statusLoja.textContent='Salvando...';
+  let lojaId=edit.id, erro=null;
+  if(edit.id){
+    const {error}=await sb.from('portal_lojas').update(dados).eq('id',edit.id); erro=error;
+  } else {
+    dados.ativo=true;
+    const {data,error}=await sb.from('portal_lojas').insert(dados).select().single();
+    erro=error; if(data) lojaId=data.id;
+  }
+  if(erro){ statusLoja.textContent=''; return toast('Erro: '+erro.message,true); }
+
+  // cria/atualiza o login do cliente via RPC própria (SECURITY DEFINER)
+  if(emailAcesso && senhaAcesso){
+    statusLoja.textContent='Criando login do cliente...';
+    const { data:res, error:errRpc } = await sb.rpc('conectay_criar_usuario',
+      { p_email: emailAcesso, p_senha: senhaAcesso, p_loja_id: lojaId });
+    if(errRpc){
+      toast('Loja salva, mas o login NÃO foi criado: '+errRpc.message+
+            ' — recarregue a página com Ctrl+Shift+R e tente de novo.', true);
+    } else if(res && res.ok === false){
+      toast('Loja salva, mas o login falhou: '+res.erro, true);
+    } else {
+      toast('Loja salva e login do cliente criado ✓');
+    }
+  } else {
+    toast('Loja salva ✓');
+  }
+
+  statusLoja.textContent='';
+  const {data:ls}=await sb.from('portal_lojas').select('*').order('nome');
+  lojas=ls||[]; renderLojasAdmin();
+  seletorLoja.innerHTML=lojas.map(l=>`<option value="${l.id}">${esc(l.nome)}</option>`).join('');
+  if(lojaAtual){ const at=lojas.find(l=>l.id===lojaAtual.id); if(at){ lojaAtual=at; montarAparencia(); } }
+  fecharEditor();
+}
+
+/* ---------------- Util ---------------- */
+function irAba(nome){
+  document.querySelectorAll('.navItem').forEach(b=>b.classList.toggle('on',b.dataset.aba===nome));
+  document.querySelectorAll('.aba').forEach(a=>a.classList.toggle('ativa',a.id==='aba-'+nome));
+  tituloAba.textContent = titulos[nome]||nome;
+}
+function toast(t,ruim){ const el=document.getElementById('toast'); el.textContent=t;
+  el.className='toast'+(ruim?' ruim':''); el.style.display='block';
+  clearTimeout(el._t); el._t=setTimeout(()=>el.style.display='none',3000); }
+loginSenha.addEventListener('keydown',e=>{ if(e.key==='Enter') entrar(); });
+modalBg.addEventListener('click',e=>{ if(e.target===modalBg) fecharEditor(); });
+
+iniciar();
+</script>
+</body>
+</html>
