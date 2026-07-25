@@ -69,6 +69,7 @@ function extractApParams(src) {
     redirect_uri: src.redirect_uri || '',
     user_hash: src.user_hash || '',
     loja: src.loja || '',
+    modo: src.modo || '',
   };
 }
 
@@ -243,6 +244,38 @@ app.post('/auth', async (req, res) => {
     }
 
     if (!ap.redirect_uri) {
+      // MODO SIMPLES — APs sem o protocolo Intelbras (ex.: D-Link em Web
+      // Redirection). Não há internet a liberar: só captura o lead e segue
+      // pro destino. Ativado com &modo=simples na URL configurada no AP.
+      if (ap.modo === 'simples') {
+        let telefoneLead = null;
+        if (req.body.go === 'form') {
+          const dados = {};
+          for (const k in req.body) {
+            if (k.startsWith('lead_') && req.body[k]) dados[k.slice(5)] = String(req.body[k]).slice(0, 200);
+          }
+          if (Object.keys(dados).length) {
+            try {
+              telefoneLead = await registrarLead(loja, dados, ap.mac, req.headers['user-agent'] || '');
+            } catch (e) {}
+            const cyid = req.cookies.cyid || req.body.cyid || null;
+            try { marcarCadastrado(loja, ap.mac, telefoneLead, cyid); } catch (e) {}
+          }
+        }
+        try { registrarAcesso(loja, ap.mac, null, req.headers['user-agent'] || '', ap.ip); } catch (e) {}
+        await logAccess({ ...base, result: 'granted', reason: 'modo simples (sem release)' });
+
+        const goS = String(req.body.go || '');
+        const destinoS = (goS === 'form')
+          ? (marca.destinoTipo === 'formulario' ? 'instagram' : marca.destinoTipo)
+          : (goS || marca.destinoTipo);
+        if (marca.vcardAtivo) {
+          return res.redirect(302, 'https://' + host + '/pronto?d=' + encodeURIComponent(destinoS));
+        }
+        const urlS = urlDoDestino(loja, marca, host, destinoS);
+        return res.redirect(302, urlS || ('https://' + host + '/pronto?d=' + encodeURIComponent(destinoS)));
+      }
+
       // Sem redirect_uri não há como liberar — provavelmente acesso fora do fluxo do AP.
       await logAccess({ ...base, result: 'denied', reason: 'Sem redirect_uri (fora do AP)' });
       return res.send(renderResult({
@@ -372,7 +405,7 @@ app.get('/contato.vcf', async (req, res) => {
 });
 
 // Saúde do serviço (útil pra monitorar na VPS).
-app.get('/health', (req, res) => res.json({ ok: true, servico: 'conectay-portal', versao: '2.3.1', ts: Date.now() }));
+app.get('/health', (req, res) => res.json({ ok: true, servico: 'conectay-portal', versao: '2.4.0', ts: Date.now() }));
 
 // Página que abre o APP do Instagram, com estratégia POR PLATAFORMA:
 //   ANDROID → intent:// (único esquema que o navegador do captive aceita;
