@@ -153,7 +153,7 @@ function layout({ title, body, marca }) {
 
 function hidden(ap) {
   // Reenvia os parâmetros do AP no POST (além do cookie), por robustez.
-  return ['continue','ip','ap_mac','mac','radio','ssid','ts','redirect_uri','user_hash','loja']
+  return ['continue','ip','ap_mac','mac','radio','ssid','ts','redirect_uri','user_hash','loja','modo']
     .map(k => `<input type="hidden" name="${k}" value="${escapeAttr(ap[k] || '')}">`).join('');
 }
 
