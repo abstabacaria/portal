@@ -218,6 +218,17 @@ tr:last-child td{border-bottom:0}
   .navItem .pill{display:none}
   .conteudo{padding:18px 16px 90px}
 }
+
+/* editor de perfil do cliente */
+.pf-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 16px}
+.pf-grid .pf-full{grid-column:1/-1}
+.pf-grid label{font-size:.72rem;color:var(--mudo);display:block;margin:12px 0 6px;font-weight:500}
+.pf-grid input,.pf-grid select,.pf-grid textarea{width:100%}
+.pf-grid textarea{resize:vertical;font-family:inherit}
+.pf-hist{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:18px;padding-top:16px;border-top:1px solid var(--borda)}
+.pf-hi{text-align:center;background:var(--vidro);border:1px solid var(--borda);border-radius:11px;padding:11px 6px;font-size:.68rem;color:var(--fraco)}
+.pf-hi span{display:block;font-family:'Sora';font-size:1.05rem;font-weight:700;color:var(--texto);margin-bottom:3px}
+@media(max-width:520px){.pf-grid{grid-template-columns:1fr}.pf-hist{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
 <body>
@@ -360,6 +371,23 @@ tr:last-child td{border-bottom:0}
       <button class="btnP" onclick="salvarLoja()">Salvar loja</button>
       <button class="btnG" onclick="fecharEditor()">Cancelar</button>
       <span id="statusLoja" style="align-self:center;font-size:.8rem;color:var(--mudo)"></span>
+    </div>
+  </div>
+</div>
+
+<!-- ===== EDITOR DE PERFIL DO CLIENTE ===== -->
+<div class="modalBg" id="modalPessoa">
+  <div class="modal" style="max-width:560px">
+    <div class="cab">
+      <h2>👤 Perfil do cliente</h2>
+      <a id="pfWa" href="#" target="_blank" class="btnG" style="margin-left:auto;margin-right:8px;padding:6px 12px;text-decoration:none">💬 WhatsApp</a>
+      <button class="x" onclick="fecharEditorPessoa()">×</button>
+    </div>
+    <div style="padding:20px 22px" id="pfBody"></div>
+    <div class="pe">
+      <button class="btnP" style="margin:0;max-width:180px" onclick="salvarEditorPessoa()">Salvar perfil</button>
+      <button class="btnG" onclick="fecharEditorPessoa()">Cancelar</button>
+      <button class="btnG btnPerigo" style="margin-left:auto" onclick="excluirEditorPessoa()">🗑 Excluir</button>
     </div>
   </div>
 </div>
@@ -537,16 +565,96 @@ function renderLeads(){
 const fmtTel=t=>t&&t.length>=10?`(${t.slice(0,2)}) ${t.slice(2,-4)}-${t.slice(-4)}`:t;
 const fmtData=d=>{const[a,m,x]=d.split('-');return `${x}/${m}/${a.slice(2)}`};
 
-async function editarPessoa(id){
-  const p=pessoas.find(x=>x.id===id); if(!p) return;
-  const tags=prompt('Tags separadas por vírgula:',(p.tags||[]).join(', ')); if(tags===null) return;
-  const obs=prompt('Observações:',p.observacoes||''); if(obs===null) return;
-  const st=prompt('Status (ativo / vip / bloqueado):',p.status||'ativo'); if(st===null) return;
-  const novo={tags:tags.split(',').map(t=>t.trim()).filter(Boolean),observacoes:obs,
-    status:['ativo','vip','bloqueado'].includes(st.trim())?st.trim():'ativo'};
-  const {error}=await sb.from('portal_pessoas').update(novo).eq('id',id);
+// ===== EDITOR COMPLETO DE PERFIL (modal) =====
+// Abre o mesmo editor pela aba Leads (id) e pela aba Conectados (pid).
+function editarPessoa(id){ abrirEditorPessoa(id); }
+function editarConectado(pid){ abrirEditorPessoa(pid); }
+
+let pessoaEdit=null;
+function abrirEditorPessoa(id){
+  const p=(pessoas||[]).find(x=>x.id===id);
+  if(!p){ toast('Cadastro não encontrado',true); return; }
+  pessoaEdit=p;
+  const dtBR=v=>{ if(!v) return ''; const s=String(v).slice(0,10); const[a,m,d]=s.split('-'); return (d&&m&&a)?`${d}/${m}/${a}`:''; };
+  const cats=['novo','recorrente','saudade','inativo'];
+  const box=document.getElementById('pfBody');
+  box.innerHTML=`
+    <div class="pf-grid">
+      <div class="pf-full"><label>Nome</label><input id="pf_nome" value="${esc(p.nome||'')}" placeholder="Nome do cliente"></div>
+      <div><label>WhatsApp</label><input id="pf_tel" value="${esc(p.telefone||'')}" placeholder="21999999999" inputmode="numeric"></div>
+      <div><label>Aniversário</label><input id="pf_niver" value="${esc(dtBR(p.aniversario))}" placeholder="dd/mm/aaaa" maxlength="10" inputmode="numeric"></div>
+      <div><label>Status</label>
+        <select id="pf_status">
+          <option value="ativo" ${(!p.status||p.status==='ativo')?'selected':''}>Ativo</option>
+          <option value="vip" ${p.status==='vip'?'selected':''}>⭐ VIP</option>
+          <option value="bloqueado" ${p.status==='bloqueado'?'selected':''}>🚫 Bloqueado</option>
+        </select></div>
+      <div><label>Categoria</label>
+        <select id="pf_cat">
+          ${cats.map(c=>`<option value="${c}" ${p.categoria===c?'selected':''}>${c}</option>`).join('')}
+        </select></div>
+      <div class="pf-full"><label>Tags <small style="color:var(--fraco)">(separe por vírgula)</small></label>
+        <input id="pf_tags" value="${esc((p.tags||[]).join(', '))}" placeholder="fiel, indicação, atacado"></div>
+      <div class="pf-full"><label>Observações</label>
+        <textarea id="pf_obs" rows="3" placeholder="Anotações internas sobre o cliente">${esc(p.observacoes||'')}</textarea></div>
+    </div>
+    <div class="pf-hist">
+      <div class="pf-hi"><span>${p.total_visitas||0}</span>visitas</div>
+      <div class="pf-hi"><span>${p.primeira_visita?fmtData(p.primeira_visita):'—'}</span>primeira</div>
+      <div class="pf-hi"><span>${p.ultima_visita?fmtData(p.ultima_visita):'—'}</span>última</div>
+      <div class="pf-hi"><span>${esc(p.categoria||'—')}</span>categoria atual</div>
+    </div>`;
+  // máscaras leves
+  var t=document.getElementById('pf_tel');
+  t.oninput=function(){ this.value=this.value.replace(/\D/g,'').slice(0,13); };
+  var n=document.getElementById('pf_niver');
+  n.oninput=function(){ var d=this.value.replace(/\D/g,'').slice(0,8),o=d;
+    if(d.length>4)o=d.slice(0,2)+'/'+d.slice(2,4)+'/'+d.slice(4); else if(d.length>2)o=d.slice(0,2)+'/'+d.slice(2);
+    this.value=o; };
+  document.getElementById('pfWa').href = p.telefone?('https://wa.me/55'+p.telefone):'#';
+  document.getElementById('pfWa').style.display = p.telefone?'inline-flex':'none';
+  document.getElementById('modalPessoa').classList.add('on');
+}
+function fecharEditorPessoa(){ document.getElementById('modalPessoa').classList.remove('on'); pessoaEdit=null; }
+async function salvarEditorPessoa(){
+  if(!pessoaEdit) return;
+  const nome=document.getElementById('pf_nome').value.trim();
+  const tel=document.getElementById('pf_tel').value.replace(/\D/g,'');
+  if(tel && tel.length<10) return toast('Telefone incompleto',true);
+  // aniversario dd/mm/aaaa -> aaaa-mm-dd
+  let niver=null; const nv=document.getElementById('pf_niver').value.trim();
+  if(nv){ const m=nv.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+    if(!m) return toast('Aniversário inválido (dd/mm/aaaa)',true);
+    const di=+m[1],me=+m[2],an=+m[3];
+    if(di<1||di>31||me<1||me>12||an<1900||an>new Date().getFullYear()) return toast('Data impossível',true);
+    niver=an+'-'+('0'+me).slice(-2)+'-'+('0'+di).slice(-2); }
+  const upd={
+    nome:nome||null,
+    telefone:tel||pessoaEdit.telefone,
+    aniversario:niver,
+    status:document.getElementById('pf_status').value,
+    categoria:document.getElementById('pf_cat').value,
+    tags:document.getElementById('pf_tags').value.split(',').map(t=>t.trim()).filter(Boolean),
+    observacoes:document.getElementById('pf_obs').value.trim()||null,
+  };
+  const {error}=await sb.from('portal_pessoas').update(upd).eq('id',pessoaEdit.id);
   if(error) return toast('Erro: '+error.message,true);
-  Object.assign(p,novo); renderLeads(); toast('Lead atualizado');
+  Object.assign(pessoaEdit,upd);
+  renderLeads&&renderLeads();
+  if(document.getElementById('aba-conectados').classList.contains('ativa')) carregarConectados&&carregarConectados();
+  toast('Perfil salvo ✓');
+  fecharEditorPessoa();
+}
+async function excluirEditorPessoa(){
+  if(!pessoaEdit) return;
+  if(!confirm(`Excluir ${pessoaEdit.nome||'este cliente'} do CRM?\n\nOs registros de acesso permanecem; só o perfil consolidado é removido.`)) return;
+  const {error}=await sb.from('portal_pessoas').delete().eq('id',pessoaEdit.id);
+  if(error) return toast('Erro: '+error.message+' (delete é admin-only)',true);
+  pessoas=(pessoas||[]).filter(x=>x.id!==pessoaEdit.id);
+  renderLeads&&renderLeads();
+  if(document.getElementById('aba-conectados').classList.contains('ativa')) carregarConectados&&carregarConectados();
+  toast('Cadastro excluído');
+  fecharEditorPessoa();
 }
 function baixar(nome,txt,tipo){ const b=new Blob(['\ufeff'+txt],{type:(tipo||'text/csv')+';charset=utf-8'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(b); a.download=nome; a.click(); }
@@ -640,20 +748,60 @@ async function carregarConectados(){
       .eq('loja_id',lojaAtual.id).not('mac','is',null).limit(2000);
     (lds||[]).forEach(x=>{ if(x.mac && !mapa[x.mac]) mapa[x.mac]={t:x.telefone,n:x.nome}; });
   }catch(e){}
+  // enriquece com a pessoa do CRM (id/status/visitas) pra habilitar VIP e edição
+  const porTel={};
+  try{
+    (pessoas||[]).forEach(p=>{ if(p.telefone) porTel[p.telefone]=p; });
+  }catch(e){}
+  Object.values(mapa).forEach(m=>{ const p=m.t?porTel[m.t]:null; if(p){ m.pid=p.id; m.status=p.status||'ativo'; m.visitas=p.total_visitas; } });
   if(!lista.length){
     tabelaConectados.innerHTML='<div class="card vazio"><span class="emj">📡</span>Nenhum aparelho autenticou na janela atual.</div>';
     return;
   }
   tabelaConectados.innerHTML=`<div class="tWrap"><table><thead><tr>
-    <th>Quando</th><th>Cliente</th><th>Aparelho</th><th>MAC</th><th></th></tr></thead><tbody>
+    <th>Quando</th><th>Cliente</th><th>Aparelho</th><th>MAC</th><th>Ações</th></tr></thead><tbody>
   ${lista.map(a=>{ const li=mapa[a.mac]||{};
+    const ehVip = li.status==='vip';
+    const acoesLead = li.pid ? `
+      <button class="btnG" style="padding:6px 9px" title="${ehVip?'Remover VIP':'Marcar como VIP'}"
+        onclick="alternarVip(${li.pid},'${ehVip?'ativo':'vip'}')">${ehVip?'⭐ VIP':'☆ VIP'}</button>
+      <button class="btnG" style="padding:6px 9px" title="Editar nome/telefone"
+        onclick="editarConectado(${li.pid})">✏️</button>
+      <button class="btnG" style="padding:6px 9px" title="Histórico de visitas"
+        onclick="historicoConectado(${li.pid})">📊</button>` : '';
     return `<tr><td>${fmtHora(col?a[col]:null)}</td>
-    <td>${li.n?('<b>'+esc(li.n)+'</b><br>'):''}${li.t?('<a target="_blank" href="https://wa.me/55'+li.t+'">'+fmtTel(li.t)+'</a>'):'<span style="color:var(--fraco)">não identificado</span>'}</td>
+    <td>${li.n?('<b>'+esc(li.n)+'</b>'+(ehVip?' <span class="badge b-vip" style="font-size:.6rem">VIP</span>':'')+'<br>'):''}${li.t?('<a target="_blank" href="https://wa.me/55'+li.t+'">'+fmtTel(li.t)+'</a>'):'<span style="color:var(--fraco)">não identificado</span>'}</td>
     <td>${esc(a.dispositivo||'—')}${a.so?(' · '+esc(a.so)):''}</td>
     <td style="font-family:monospace;font-size:.74rem">${esc(a.mac||'—')}</td>
-    <td><button class="btnG btnPerigo" style="padding:6px 10px"
-      onclick="bloquear('${esc(a.mac||'')}','${esc(li.t||'')}','${esc(String(li.n||'').replace(/'/g,''))}')">🚫 Bloquear</button></td></tr>`;}).join('')}
+    <td style="display:flex;gap:6px;flex-wrap:wrap">${acoesLead}
+      <button class="btnG btnPerigo" style="padding:6px 9px"
+      onclick="bloquear('${esc(a.mac||'')}','${esc(li.t||'')}','${esc(String(li.n||'').replace(/'/g,''))}')">🚫</button></td></tr>`;}).join('')}
   </tbody></table></div>`;
+}
+// ⭐ marca/desmarca VIP direto da lista de conectados
+async function alternarVip(pid,novo){
+  const {error}=await sb.from('portal_pessoas').update({status:novo}).eq('id',pid);
+  if(error) return toast('Erro: '+error.message,true);
+  const p=(pessoas||[]).find(x=>x.id===pid); if(p) p.status=novo;
+  toast(novo==='vip'?'Marcado como VIP ⭐':'VIP removido');
+  carregarConectados();
+}
+// ✏️ (edição agora abre o editor completo — ver abrirEditorPessoa acima)
+// 📊 resumo de visitas do aparelho/pessoa
+function historicoConectado(pid){
+  const p=(pessoas||[]).find(x=>x.id===pid); if(!p) return toast('Cadastro não encontrado',true);
+  const cat={novo:'Novo',recorrente:'Recorrente',saudade:'Saudade (sumido)',inativo:'Inativo'}[p.categoria]||p.categoria||'—';
+  const linhas=[
+    `👤 ${p.nome||'—'}`,
+    `📱 ${fmtTel(p.telefone)||'—'}`,
+    `🔁 ${p.total_visitas||0} visita(s)`,
+    `🏷️ Categoria: ${cat}`,
+    p.status==='vip'?'⭐ Cliente VIP':`Status: ${p.status||'ativo'}`,
+    `📅 Primeira: ${p.primeira_visita?fmtData(p.primeira_visita):'—'}`,
+    `📅 Última: ${p.ultima_visita?fmtData(p.ultima_visita):'—'}`,
+    p.aniversario?`🎂 ${fmtData(p.aniversario)}`:'',
+  ].filter(Boolean).join('\n');
+  alert(linhas);
 }
 async function bloquear(mac,telefone,nome){
   if(!mac && !telefone) return toast('Sem MAC nem telefone pra bloquear',true);
@@ -1120,6 +1268,34 @@ function abrirEditor(id){
         <option value="43200">12 horas</option>
       </select>
       <small class="dica">Vale pra novas conexões. Sessão curta = bloqueio faz efeito mais rápido.</small></div>
+    <div class="full">
+      <label style="display:flex;align-items:center;gap:9px;cursor:pointer">
+        <input type="checkbox" id="lj_fidelidade" style="width:18px;height:18px;accent-color:var(--azul)" onchange="pvFidelidade()">
+        <span style="color:var(--texto);font-size:.86rem">🏆 Recompensar clientes fiéis com sessão mais longa</span></label>
+      <small class="dica">Só Intelbras. Quem já vem sempre <b>fica mais tempo sem precisar se recadastrar</b>.
+      O motor reconhece o aparelho e aplica a faixa certa automaticamente.</small></div>
+    <div class="full" id="lj_wrapFidelidade" style="display:none">
+      <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:10px">
+        <div><label>🆕 Novo</label>
+          <select id="lj_sessNovo">
+            <option value="">Padrão</option>
+            <option value="1800">30 min</option><option value="3600">1 hora</option>
+            <option value="7200">2 horas</option><option value="10800">3 horas</option>
+          </select></div>
+        <div><label>🔁 Recorrente</label>
+          <select id="lj_sessRec">
+            <option value="">Padrão</option>
+            <option value="3600">1 hora</option><option value="10800">3 horas</option>
+            <option value="21600">6 horas</option><option value="43200">12 horas</option>
+          </select></div>
+        <div><label>⭐ VIP</label>
+          <select id="lj_sessVip">
+            <option value="">Padrão</option>
+            <option value="10800">3 horas</option><option value="21600">6 horas</option>
+            <option value="43200">12 horas</option><option value="86400">24 horas</option>
+          </select></div>
+      </div>
+      <small class="dica">Recorrente = 3+ visitas ou categoria recorrente. VIP = marcado no perfil do cliente.</small></div>
     <div><label>Velocidade por cliente (down / up)</label>
       <div style="display:flex;gap:8px">
         <select id="lj_down">
@@ -1164,6 +1340,11 @@ function abrirEditor(id){
   lj_fundo2.value = l.cor_fundo2 || l.cor_fundo || '#12213f';
   lj_card.value = l.cor_card || '#101827';
   setSel(lj_sessao, l.session_timeout);
+  lj_fidelidade.checked = !!l.fidelidade_ativa;
+  setSel(lj_sessNovo, l.sess_novo);
+  setSel(lj_sessRec, l.sess_recorrente);
+  setSel(lj_sessVip, l.sess_vip);
+  pvFidelidade();
   setSel(lj_down, l.download_kbps);
   setSel(lj_up, l.upload_kbps);
   renderTemas('lj_temas','lj',pvLj);
@@ -1182,6 +1363,7 @@ function setSel(el,val){
   el.value=v;
 }
 function fecharEditor(){ modalBg.classList.remove('on'); edit=null; }
+function pvFidelidade(){ document.getElementById("lj_wrapFidelidade").style.display = document.getElementById("lj_fidelidade").checked?"block":"none"; }
 function sufixoDominio(){ lj_sufixo.style.display = lj_dominio.value.includes('.') ? 'none':'inline-block'; }
 function lerFormLoja(){
   return { nome:lj_nome.value, logo_url:lj_logo.value, cor:lj_cor.value, cor2:lj_cor2.value,
@@ -1238,6 +1420,10 @@ async function salvarLoja(){
       :((edit.rotacao_destinos||[]).length?edit.rotacao_destinos:['formulario','instagram','whatsapp']),
     codigo_wifi:lj_codigo.value.trim()||null, ap_secret:lj_secret.value.trim()||null,
     session_timeout: lj_sessao.value===''?null:Number(lj_sessao.value),
+    fidelidade_ativa: lj_fidelidade.checked,
+    sess_novo: lj_sessNovo.value===''?null:Number(lj_sessNovo.value),
+    sess_recorrente: lj_sessRec.value===''?null:Number(lj_sessRec.value),
+    sess_vip: lj_sessVip.value===''?null:Number(lj_sessVip.value),
     download_kbps: lj_down.value===''?null:Number(lj_down.value),
     upload_kbps: lj_up.value===''?null:Number(lj_up.value),
     valor_mensal:lj_valor.value?Number(lj_valor.value):null,
