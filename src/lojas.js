@@ -189,6 +189,25 @@ function limparNome(v) {
   return limpo.length >= 2 ? limpo : null;
 }
 
+// Busca o histórico da pessoa (status/categoria/visitas) para a sessão
+// escalonada por fidelidade. Casa por telefone; devolve {} se não achar.
+// FAIL-SOFT: qualquer erro -> null (cai no timeout padrão).
+async function fidelidadeInfo(loja, mac, telefoneOuCyid) {
+  if (!loja || !loja.id) return null;
+  const tel = String(telefoneOuCyid || '').replace(/\D/g, '');
+  try {
+    if (tel && tel.length >= 10) {
+      const url = `${SUPABASE_URL}/rest/v1/portal_pessoas`
+        + `?loja_id=eq.${encodeURIComponent(loja.id)}`
+        + `&telefone=eq.${encodeURIComponent(tel)}`
+        + `&select=status,categoria,total_visitas&limit=1`;
+      const r = await fetch(url, { headers: H });
+      if (r.ok) { const rows = await r.json(); if (rows && rows[0]) return rows[0]; }
+    }
+  } catch (e) { /* silencioso */ }
+  return {};
+}
+
 // grava um lead coletado pelo formulário (isolado por loja)
 // Além do JSONB `dados` (histórico), preenche as colunas planas usadas
 // pelo CRM (portal_pessoas) — nome, telefone e o consentimento.
@@ -263,7 +282,7 @@ function limparCache(host) {
 
 module.exports = {
   lojaPorDominio, lojaPorSlug, validarCodigoDaLoja,
-  registrarAcesso, registrarLead, limparCache,
+  registrarAcesso, registrarLead, limparCache, fidelidadeInfo,
   visitaDispositivo, marcarCadastrado, lerUA,
   estaBloqueado,
 };
