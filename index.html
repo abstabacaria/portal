@@ -295,6 +295,10 @@ tr:last-child td{border-bottom:0}
           <button class="btnG" style="margin-left:auto;padding:4px 10px;font-size:.75rem" onclick="document.getElementById('acessosHojeCard').style.display='none'">✕ fechar</button></h3>
         <div id="acessosHoje"></div>
       </div>
+      <div class="card" id="receitaCupomCard" style="margin:0 0 16px;display:none">
+        <h3 style="margin:0 0 4px">🎟️ Receita atribuída ao Wi-Fi</h3>
+        <div id="receitaCupom"></div>
+      </div>
       <div class="graficos">
         <div class="card gCard g-8"><h3>Visitas — últimos 14 dias</h3><canvas id="ch14"></canvas></div>
         <div class="card gCard g-4"><h3>Base por categoria</h3><canvas id="chCat"></canvas></div>
@@ -439,7 +443,7 @@ tr:last-child td{border-bottom:0}
    CONFIG
 ========================================================= */
 const SUPABASE_URL = 'https://iekxuehdrxsimqtfejxm.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlla3h1ZWhkcnhzaW1xdGZlanhtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1MDk0NzAsImV4cCI6MjA5MTA4NTQ3MH0.61zaRoTBK2XorXgAcGXcsN8yOY0MTRS4bIJ_X4vPjyA';
+const SUPABASE_ANON_KEY = 'COLE_A_ANON_KEY_AQUI';
 const EDGE_CRIAR_USUARIO = SUPABASE_URL + '/functions/v1/smart-responder';
 
 if (!SUPABASE_ANON_KEY || SUPABASE_ANON_KEY === 'COLE_AQUI_SUA_ANON_KEY') {
@@ -593,8 +597,38 @@ async function carregarAcessosHoje(){
     +'</tbody></table></div>';
 }
 
+// Card de receita atribuída — o argumento anti-churn ("42× sua mensalidade")
+async function carregarReceitaCupom(){
+  const card=document.getElementById('receitaCupomCard'); if(!card||!lojaAtual) return;
+  // só mostra se a loja usa cupom
+  if(!lojaAtual.cupom_ativo){ card.style.display='none'; return; }
+  let data; try{ const r=await sb.rpc('portal_receita_atribuida',{p_loja:lojaAtual.id}); data=r.data; }catch(e){ return; }
+  if(!data){ card.style.display='none'; return; }
+  const box=document.getElementById('receitaCupom');
+  const mens=Number(lojaAtual.mensalidade||0);
+  const mult=(mens>0 && data.mes_valor>0)?Math.round(data.mes_valor/mens):null;
+  const fmt=v=>'R$ '+Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const nomeAcao={redeem:'Baixa',force:'Liberado',renew:'Renovado'};
+  box.innerHTML=`
+    <div style="display:flex;gap:24px;flex-wrap:wrap;align-items:flex-end;margin:6px 0 2px">
+      <div><div style="font-family:'Sora';font-size:2rem;font-weight:800;letter-spacing:-.02em">${fmt(data.mes_valor)}</div>
+        <div style="color:var(--fraco);font-size:.8rem">esse mês · ${data.mes_qtd} resgate(s)</div></div>
+      <div><div style="font-family:'Sora';font-size:1.3rem;font-weight:700">${fmt(data.hoje_valor)}</div>
+        <div style="color:var(--fraco);font-size:.8rem">hoje · ${data.hoje_qtd}</div></div>
+      ${mult?`<div style="margin-left:auto;text-align:right"><div style="font-family:'Sora';font-size:1.5rem;font-weight:800;color:#22c55e">${mult}×</div><div style="color:var(--fraco);font-size:.78rem">o que você paga de mensalidade</div></div>`:''}
+    </div>
+    ${(data.eventos&&data.eventos.length)?`<div style="margin-top:14px;border-top:1px solid var(--borda);padding-top:12px">
+      ${data.eventos.map(e=>`<div style="display:flex;align-items:center;gap:8px;padding:5px 0;font-size:.82rem">
+        <span style="width:7px;height:7px;border-radius:50%;background:#22c55e;flex:0 0 7px"></span>
+        <span><b>${esc(e.code||'')}</b> · ${nomeAcao[e.action]||e.action}${e.amount?(' · '+fmt(e.amount)):''}</span>
+        <span style="margin-left:auto;color:var(--fraco);font-size:.72rem">${e.quando?fmtData(e.quando):''}</span></div>`).join('')}
+    </div>`:'<div style="color:var(--fraco);font-size:.82rem;margin-top:8px">Nenhum resgate ainda. Os cupons dados baixa no balcão aparecem aqui.</div>'}`;
+  card.style.display='block';
+}
+
 async function carregarDashboard(){
   carregarAcessosHoje();
+  carregarReceitaCupom();
   const { data, error } = await sb.rpc('portal_dashboard', { p_loja: lojaAtual.id });
   if (error){ console.error(error); return; }
   const d=data, cresc = d.mes_anterior>0 ? Math.round((d.mes_atual-d.mes_anterior)/d.mes_anterior*100) : null;
@@ -1491,6 +1525,37 @@ function abrirEditor(id){
         <option value="0">Só no X</option><option value="3">3s</option><option value="5">5s</option>
         <option value="8">8s</option><option value="10">10s</option>
       </select></div>
+
+    <div class="secao">🎟️ Cupom de boas-vindas</div>
+    <div class="full">
+      <label style="display:flex;align-items:center;gap:9px;cursor:pointer">
+        <input type="checkbox" id="lj_cupomAtivo" style="width:18px;height:18px;accent-color:var(--azul)" onchange="pvLj()">
+        <span style="color:var(--texto);font-size:.86rem">Emitir cupom quando o cliente se cadastra</span></label>
+      <small class="dica">O cliente ganha um código único no portal. O balcão dá baixa e o painel mostra a receita gerada.</small></div>
+    <div class="full" id="lj_wrapCupom">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div><label>Tipo de oferta</label>
+          <select id="lj_cupomTipo">
+            <option value="percent">% de desconto</option>
+            <option value="amount">R$ de desconto</option>
+            <option value="gift">Brinde</option>
+            <option value="bogo">Compre 1 leve 2</option>
+          </select></div>
+        <div><label>Valor</label><input id="lj_cupomValor" type="number" placeholder="10"></div>
+        <div><label>Compra mínima (R$)</label><input id="lj_cupomMin" type="number" placeholder="opcional"></div>
+        <div><label>Validade (horas)</label><input id="lj_cupomValidade" type="number" placeholder="168"></div>
+      </div>
+      <label style="margin-top:12px">Regras (aparece no cupom)</label>
+      <input id="lj_cupomRegras" placeholder="Não acumulativo. 1 por cliente.">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px">
+        <div><label>🔑 PIN do balcão (4 dígitos)</label><input id="lj_balcaoPin" maxlength="4" inputmode="numeric" placeholder="ex: 4820"></div>
+        <div><label>Valor na baixa</label>
+          <select id="lj_balcaoPedirValor">
+            <option value="true">Pedir valor da compra</option>
+            <option value="false">Não pedir</option>
+          </select></div>
+      </div>
+      <small class="dica">Link do balcão: <b>seudominio/v/slug</b> · O atendente entra com o PIN e valida cupons.</small></div>
     <div class="full"><label>Logo</label>
       <div class="logoUp" onclick="escolherLogo('lj_logo',pvLj)"><div id="lj_logoBox"></div></div>
       <input type="hidden" id="lj_logo" value="${esc(l.logo_url)}"></div>
@@ -1625,6 +1690,14 @@ function abrirEditor(id){
   lj_popupAtivo.checked = !!l.popup_ativo;
   lj_popupTipo.value = l.popup_tipo || 'imagem';
   setSel(lj_popupSegs, l.popup_segundos);
+  lj_cupomAtivo.checked = !!l.cupom_ativo;
+  lj_cupomTipo.value = l.cupom_tipo || 'percent';
+  lj_cupomValor.value = l.cupom_valor ?? '';
+  lj_cupomMin.value = l.cupom_min ?? '';
+  lj_cupomValidade.value = l.cupom_validade_h ?? 168;
+  lj_cupomRegras.value = l.cupom_regras || '';
+  lj_balcaoPin.value = l.balcao_pin || '';
+  lj_balcaoPedirValor.value = String(l.balcao_pedir_valor !== false);
   lj_vcardTel.value = l.vcard_telefone || '';
   lj_vcardNome.value = l.vcard_nome || l.nome || '';
   lj_fundo.value = l.cor_fundo || '#0a0f1e';
@@ -1662,6 +1735,13 @@ function lerFormLoja(){
     popup_ativo:lj_popupAtivo.checked, popup_tipo:lj_popupTipo.value,
     popup_url:lj_popupUrl.value, popup_link:lj_popupLink.value,
     popup_segundos:Number(lj_popupSegs.value||0),
+    cupom_ativo:lj_cupomAtivo.checked, cupom_tipo:lj_cupomTipo.value,
+    cupom_valor:lj_cupomValor.value===''?null:Number(lj_cupomValor.value),
+    cupom_min:lj_cupomMin.value===''?null:Number(lj_cupomMin.value),
+    cupom_validade_h:lj_cupomValidade.value===''?168:Number(lj_cupomValidade.value),
+    cupom_regras:lj_cupomRegras.value.trim()||null,
+    balcao_pin:lj_balcaoPin.value.replace(/\D/g,'')||null,
+    balcao_pedir_valor:lj_balcaoPedirValor.value==='true',
     destino_tipo:lj_destino.value, instagram:lj_insta.value.replace('@',''),
     whatsapp_link:lj_wpp.value, google_review_url:lj_google.value,
     form_titulo:lj_formTitulo.value, botao_txt:lj_botao.value, form_campos:colherCampos('lj'),
@@ -1681,6 +1761,7 @@ function pvLj(){
   lj_wrapForm.style.display   = l.destino_tipo==='formulario'?'block':'none';
   lj_wrapRot.style.display    = lj_rotAtiva.checked?'block':'none';
   document.getElementById('lj_wrapPopup').style.display = lj_popupAtivo.checked?'block':'none';
+  document.getElementById('lj_wrapCupom').style.display = lj_cupomAtivo.checked?'block':'none';
   lj_wrapVcard.style.display  = lj_vcardAtivo.checked?'block':'none';
   lj_wrapVcard2.style.display = lj_vcardAtivo.checked?'block':'none';
   pvLoja.innerHTML = preview(l);
@@ -1713,6 +1794,9 @@ async function salvarLoja(){
     popup_ativo:f.popup_ativo, popup_tipo:f.popup_tipo,
     popup_url:f.popup_url.trim()||null, popup_link:f.popup_link.trim()||null,
     popup_segundos:f.popup_segundos,
+    cupom_ativo:f.cupom_ativo, cupom_tipo:f.cupom_tipo, cupom_valor:f.cupom_valor,
+    cupom_min:f.cupom_min, cupom_validade_h:f.cupom_validade_h, cupom_regras:f.cupom_regras,
+    balcao_pin:f.balcao_pin, balcao_pedir_valor:f.balcao_pedir_valor,
     vcard_ativo:f.vcard_ativo, vcard_telefone:f.vcard_telefone||null, vcard_nome:f.vcard_nome.trim()||null,
     cor_fundo:f.cor_fundo, cor_fundo2:f.cor_fundo2, cor_card:f.cor_card,
     rotacao_ativa:f.rotacao_ativa, recadastro_meses:f.recadastro_meses,
