@@ -12,6 +12,7 @@ const { renderPortal, renderResult, renderPronto, renderPrivacidade, montarVcard
 
 const app = express();
 app.use(express.urlencoded({ extended: false }));
+app.use(express.json());
 
 // Parser de cookie leve (evita dependência extra).
 app.use((req, _res, next) => {
