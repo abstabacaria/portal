@@ -230,6 +230,10 @@ tr:last-child td{border-bottom:0}
 .pf-hi span{display:block;font-family:'Sora';font-size:1.05rem;font-weight:700;color:var(--texto);margin-bottom:3px}
 @media(max-width:520px){.pf-grid{grid-template-columns:1fr}.pf-hist{grid-template-columns:repeat(2,1fr)}}
 .crop-prop.on{background:var(--azul);color:#fff;border-color:var(--azul)}
+.kpi-click{cursor:pointer;transition:transform .12s,border-color .12s}
+.kpi-click:hover{transform:translateY(-2px);border-color:var(--azul)}
+#acessosHojeCard.flash{animation:cardflash 1.1s ease}
+@keyframes cardflash{0%,100%{box-shadow:none}30%{box-shadow:0 0 0 2px var(--azul),0 0 26px rgba(14,165,233,.4)}}
 </style>
 </head>
 <body>
@@ -531,6 +535,14 @@ const ICO={
 
 // Registro de acessos de HOJE: quem passou pelo portal hoje (cadastro novo
 // ou recorrente que voltou), com nome, telefone e horário.
+// Clique no KPI "Visitas hoje" → rola até a lista e pisca o card
+function irParaAcessosHoje(){
+  const card=document.getElementById('acessosHojeCard');
+  if(!card) return;
+  card.scrollIntoView({behavior:'smooth',block:'center'});
+  card.classList.remove('flash'); void card.offsetWidth; card.classList.add('flash');
+}
+
 async function carregarAcessosHoje(){
   const box=document.getElementById('acessosHoje'); if(!box) return;
   const qtd=document.getElementById('acessosHojeQtd');
@@ -579,11 +591,11 @@ async function carregarDashboard(){
   if (error){ console.error(error); return; }
   const d=data, cresc = d.mes_anterior>0 ? Math.round((d.mes_atual-d.mes_anterior)/d.mes_anterior*100) : null;
   kpis.innerHTML = [
-    [ICO.hoje,'Visitas hoje',d.hoje],[ICO.mes,'Visitas no mês',d.mes_atual,cresc],
+    [ICO.hoje,'Visitas hoje',d.hoje,null,'irParaAcessosHoje()'],[ICO.mes,'Visitas no mês',d.mes_atual,cresc],
     [ICO.unicos,'Visitantes únicos',d.unicos],[ICO.rec,'Clientes recorrentes',d.recorrentes],
     [ICO.novos,'Novos cadastros (30d)',d.novos_30d],[ICO.base,'Base total (CRM)',d.total_leads]
-  ].map(([ic,l,v,dl])=>`<div class="card kpi"><div class="ic">${ic}</div>
-    <div class="v">${(v??0).toLocaleString('pt-BR')}</div><div class="l">${l}</div>
+  ].map(([ic,l,v,dl,click])=>`<div class="card kpi${click?' kpi-click':''}"${click?` onclick="${click}" title="Ver a lista"`:''}><div class="ic">${ic}</div>
+    <div class="v">${(v??0).toLocaleString('pt-BR')}</div><div class="l">${l}${click?' <span style="opacity:.6">›</span>':''}</div>
     ${dl!=null?`<span class="delta ${dl>=0?'up':'down'}">${dl>=0?'↑':'↓'} ${Math.abs(dl)}% vs mês anterior</span>`:''}</div>`).join('');
 
   const A='#0ea5e9', C='#22d3ee';
