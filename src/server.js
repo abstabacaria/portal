@@ -368,7 +368,7 @@ app.post('/auth', async (req, res) => {
             if (pid) {
               const cup = await cuponsMod.emitirCupom(loja.id, pid, null);
               if (cup && cup.code) {
-                res.cookie('cyc', cup.code, { maxAge: 5 * 60 * 1000, httpOnly: false });
+                res.setHeader('Set-Cookie', 'cyc='+encodeURIComponent(cup.code)+'; Max-Age=300; Path=/');
               }
             }
           } catch (e) { console.error('[cupom emit]', e.message); }
@@ -445,7 +445,7 @@ app.get('/pronto', async (req, res) => {
         }, marca, destino);
       }
     } catch (e) {}
-    res.clearCookie('cyc');
+    res.setHeader('Set-Cookie', 'cyc=; Max-Age=0; Path=/');
   }
   res.send(renderPronto({ marca, destinoUrl: url, rotulo: rotuloDoDestino(destino, marca), cupomHtml }));
 });
