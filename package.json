@@ -1,7 +1,7 @@
 {
   "name": "conectay-portal",
-  "version": "2.1.0",
-  "description": "ConectaY — Captive Portal Externo (Intelbras Zeus OS / AP 360) multi-loja",
+  "version": "2.8.0",
+  "description": "ConectaY — Captive Portal Externo (Intelbras Zeus OS / AP 310-360) multi-loja",
   "main": "src/server.js",
   "type": "commonjs",
   "scripts": {

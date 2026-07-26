@@ -6,9 +6,9 @@ const { validateCode, logAccess, getMetrics } = require('./db');
 const {
   lojaPorDominio, lojaPorSlug, validarCodigoDaLoja,
   registrarAcesso, registrarLead, visitaDispositivo, marcarCadastrado,
-  estaBloqueado, fidelidadeInfo,
+  estaBloqueado, fidelidadeInfo, pessoaIdPorTelefone,
 } = require('./lojas');
-const { renderPortal, renderResult, renderPronto, renderPrivacidade, montarVcard } = require('./views');
+const { renderPortal, renderResult, renderPronto, renderPrivacidade, montarVcard, renderCupomHtml } = require('./views');
 
 const app = express();
 app.use(express.urlencoded({ extended: false }));
@@ -359,6 +359,20 @@ app.post('/auth', async (req, res) => {
         // marca o aparelho como cadastrado (portal inteligente) — cookie OU mac
         const cyid = req.cookies.cyid || req.body.cyid || null;
         try { marcarCadastrado(loja, ap.mac, telefoneLead, cyid); } catch (e) {}
+        // CUPOM: se a loja emite cupom de boas-vindas, gera e guarda o código
+        // num cookie curto pro /pronto exibir o cartão.
+        if (loja && loja.cupom_ativo && telefoneLead) {
+          try {
+            const cuponsMod = require('./cupons');
+            const pid = await pessoaIdPorTelefone(loja.id, telefoneLead);
+            if (pid) {
+              const cup = await cuponsMod.emitirCupom(loja.id, pid, null);
+              if (cup && cup.code) {
+                res.cookie('cyc', cup.code, { maxAge: 5 * 60 * 1000, httpOnly: false });
+              }
+            }
+          } catch (e) { console.error('[cupom emit]', e.message); }
+        }
       }
     }
 
@@ -417,7 +431,23 @@ app.get('/pronto', async (req, res) => {
   const marca = marcaDaLoja(loja);
   const destino = String(req.query.d || marca.destinoTipo || 'instagram');
   const url = urlDoDestino(loja, marca, req.headers.host || '', destino) || 'https://conectay.com.br';
-  res.send(renderPronto({ marca, destinoUrl: url, rotulo: rotuloDoDestino(destino, marca) }));
+  // cupom emitido no /auth vem por cookie curto
+  let cupomHtml = '';
+  const code = req.cookies && req.cookies.cyc;
+  if (code && loja && loja.cupom_ativo) {
+    try {
+      const cuponsMod = require('./cupons');
+      const info = await cuponsMod.consultarCupom(loja.id, code);
+      if (info && info.resultado === 'active') {
+        cupomHtml = renderCupomHtml({
+          code: info.code, offer_kind: info.offer_kind, offer_value: info.offer_value,
+          min_purchase: info.min_purchase, expires_at: info.expires_at,
+        }, marca, destino);
+      }
+    } catch (e) {}
+    res.clearCookie('cyc');
+  }
+  res.send(renderPronto({ marca, destinoUrl: url, rotulo: rotuloDoDestino(destino, marca), cupomHtml }));
 });
 
 // ---------- Cartão de contato (.vcf) ----------
@@ -437,7 +467,7 @@ app.get('/contato.vcf', async (req, res) => {
 });
 
 // Saúde do serviço (útil pra monitorar na VPS).
-app.get('/health', (req, res) => res.json({ ok: true, servico: 'conectay-portal', versao: '2.7.0', ts: Date.now() }));
+app.get('/health', (req, res) => res.json({ ok: true, servico: 'conectay-portal', versao: '2.8.0', ts: Date.now() }));
 
 // Página que abre o APP do Instagram, com estratégia POR PLATAFORMA:
 //   ANDROID → intent:// (único esquema que o navegador do captive aceita;
@@ -532,6 +562,57 @@ app.get('/api/metrics', async (req, res) => {
     console.error('[metrics] Erro:', err.message);
     return res.status(500).json({ error: 'Falha ao obter métricas' });
   }
+});
+
+// ============================================================
+// CUPONS — tela de balcão (/v/:slug) + API de validação/baixa
+// ============================================================
+const cupons = require('./cupons');
+const ipDe = (req) => (req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+
+// Tela do balcão: o atendente valida e dá baixa. Protegida por PIN.
+app.get('/v/:slug', async (req, res) => {
+  try {
+    const loja = await cupons.lojaPorSlugCupom(req.params.slug);
+    if (!loja) return res.status(404).send(renderResult({ ok: false, marca: {}, title: 'Loja não encontrada', msg: 'Confira o link do balcão.' }));
+    res.send(renderBalcao(loja));
+  } catch (e) {
+    console.error('[balcao]', e.message);
+    res.status(500).send('Erro ao abrir o balcão.');
+  }
+});
+
+// valida o PIN do atendente
+app.post('/api/balcao/:slug/pin', async (req, res) => {
+  const loja = await cupons.lojaPorSlugCupom(req.params.slug);
+  if (!loja) return res.status(404).json({ ok: false });
+  const pin = String((req.body && req.body.pin) || '');
+  if (!loja.balcao_pin || pin !== loja.balcao_pin) return res.status(401).json({ ok: false, erro: 'PIN incorreto' });
+  return res.json({ ok: true, loja: { nome: loja.nome, pedir_valor: loja.balcao_pedir_valor } });
+});
+
+// consulta um código
+app.get('/api/balcao/:slug/consultar', async (req, res) => {
+  try {
+    const loja = await cupons.lojaPorSlugCupom(req.params.slug);
+    if (!loja) return res.status(404).json({ resultado: 'nao_encontrado' });
+    const out = await cupons.consultarCupom(loja.id, String(req.query.code || ''));
+    res.json(out);
+  } catch (e) { res.status(500).json({ erro: e.message }); }
+});
+
+// dá baixa (transacional no banco)
+app.post('/api/balcao/:slug/baixa', async (req, res) => {
+  try {
+    const loja = await cupons.lojaPorSlugCupom(req.params.slug);
+    if (!loja) return res.status(404).json({ ok: false });
+    const b = req.body || {};
+    const out = await cupons.darBaixa(loja.id, String(b.code || ''), {
+      amount: b.amount, actor: b.actor, force: b.force, renew: b.renew,
+      ip: ipDe(req), ua: req.headers['user-agent'] || '',
+    });
+    res.status(out && out.ok ? 200 : 409).json(out);
+  } catch (e) { res.status(500).json({ ok: false, erro: e.message }); }
 });
 
 app.listen(PORT, () => {

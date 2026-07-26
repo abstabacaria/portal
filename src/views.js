@@ -110,6 +110,22 @@ function layout({ title, body, marca }) {
   .banner-aviso{ background:linear-gradient(135deg,${t.cor},${t.cor2}); color:#fff; font-weight:700;
     font-size:14px; text-align:center; padding:12px 14px; border-radius:12px; margin:0 0 18px;
     box-shadow:0 6px 18px ${t.cor}44; line-height:1.4; position:relative; z-index:1 }
+  .cupom{ background:#fff; border:1.5px solid rgba(23,21,18,.12); border-radius:20px;
+    overflow:hidden; position:relative; margin:4px 0 16px; text-align:center; color:#171512 }
+  .cupom-top{ background:oklch(.88 .11 88); padding:22px 20px 20px }
+  .cupom-eyebrow{ font-family:ui-monospace,monospace; font-size:11.5px; text-transform:uppercase;
+    letter-spacing:.14em; color:oklch(.42 .07 88); margin-bottom:6px }
+  .cupom-valor{ font-size:40px; font-weight:800; letter-spacing:-.03em; line-height:1 }
+  .cupom-cond{ font-size:13px; font-weight:600; color:oklch(.4 .06 88); margin-top:6px }
+  .cupom-pic{ border-top:2px dashed rgba(23,21,18,.2); position:relative; height:0 }
+  .cupom-pic::before,.cupom-pic::after{ content:''; position:absolute; top:-11px; width:22px; height:22px;
+    border-radius:50%; background:${t.bg || '#FAF8F5'} }
+  .cupom-pic::before{ left:-11px } .cupom-pic::after{ right:-11px }
+  .cupom-base{ padding:18px 20px 20px }
+  .cupom-rot{ font-family:ui-monospace,monospace; font-size:11px; text-transform:uppercase;
+    letter-spacing:.1em; color:rgba(23,21,18,.5); margin-bottom:8px }
+  .cupom-code{ font-family:ui-monospace,monospace; font-size:30px; font-weight:700; letter-spacing:.1em }
+  .cupom-val{ font-size:12.5px; font-weight:600; color:rgba(23,21,18,.5); margin-top:10px }
   .popup-bg{ position:fixed; inset:0; background:rgba(0,0,0,.82); backdrop-filter:blur(4px);
     z-index:200; display:flex; align-items:center; justify-content:center; padding:20px;
     animation:popfade .25s ease }
@@ -514,7 +530,7 @@ function renderResult({ ok, title, msg, link, marca }) {
 // ATUALIZADO: no Android, destino Instagram abre o APP via intent:// —
 // tentativa automática + botão como garantia (o mini-navegador do captive
 // pode bloquear navegação automática pra apps externos).
-function renderPronto({ marca, destinoUrl, rotulo }) {
+function renderPronto({ marca, destinoUrl, rotulo, cupomHtml }) {
   marca = marca || {};
   const logo = marca.logo || LOGO;
   const nome = marca.nome || 'Wi-Fi';
@@ -534,6 +550,7 @@ function renderPronto({ marca, destinoUrl, rotulo }) {
     <div class="logo">${(logo && !logo.endsWith('/static/logo.png')) ? `<img src="${escapeAttr(logo)}" alt="${escapeAttr(nome)}">` : `<div class="logo-nome">${escapeAttr(nome)}</div>`}</div>
     <h1>✅ Internet liberada!</h1>
     <p class="sub">Aproveite. Salve nosso contato pra receber as novidades em primeira mão.</p>
+    ${cupomHtml || ''}
     <a class="vcard" href="/contato.vcf" download>📇 Salvar o contato da ${escapeAttr(nome)}</a>
     <a class="igbtn" id="btnDest" style="text-decoration:none;margin-top:14px" href="${escapeAttr(destinoUrl)}">${escapeAttr(rotulo)}</a>
     <div class="hint" id="hintDest"></div>
@@ -642,4 +659,187 @@ function montarVcard(loja) {
   return l.join('\r\n');
 }
 
-module.exports = { renderPortal, renderResult, renderPronto, renderPrivacidade, montarVcard, lerCampos };
+// ============================================================
+// BALCÃO — tela onde o atendente valida e dá baixa nos cupons.
+// Tema escuro, PIN de acesso, os 5 resultados. Tudo client-side
+// falando com /api/balcao/:slug/*.
+// ============================================================
+function renderBalcao(loja) {
+  const slug = escapeAttr(loja.slug);
+  const nome = escapeAttr(loja.nome || 'Loja');
+  return `<!doctype html><html lang="pt-BR"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Balcão — ${nome}</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{font-family:-apple-system,"Segoe UI",Roboto,Arial,sans-serif;background:#171512;color:#FAF8F5;min-height:100vh;padding:20px}
+  .wrap{max-width:460px;margin:0 auto}
+  .cab{display:flex;align-items:center;gap:12px;margin-bottom:20px}
+  .cab .av{width:40px;height:40px;border-radius:11px;background:#FAF8F5;color:#171512;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;overflow:hidden}
+  .cab .av img{width:100%;height:100%;object-fit:cover}
+  .cab h1{font-size:17px;font-weight:800}.cab .sub{font-size:12px;color:rgba(250,248,245,.5)}
+  label{display:block;font-size:11.5px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;color:rgba(250,248,245,.5);margin:14px 0 7px}
+  input{width:100%;background:rgba(250,248,245,.06);border:1.5px solid rgba(250,248,245,.18);border-radius:12px;padding:14px;color:#FAF8F5;font-size:16px}
+  input:focus{outline:none;border-color:rgba(250,248,245,.5)}
+  .cod{font-family:ui-monospace,"JetBrains Mono",monospace;font-size:18px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+  .btn{width:100%;background:#FAF8F5;color:#171512;border:0;border-radius:12px;padding:15px;font-weight:800;font-size:15.5px;cursor:pointer;margin-top:12px}
+  .btn:disabled{background:rgba(250,248,245,.14);color:rgba(250,248,245,.4);cursor:not-allowed}
+  .btn-amber{background:oklch(.88 .11 88);color:#171512}
+  .btn-line{background:transparent;border:1.5px dashed rgba(250,248,245,.3);color:#FAF8F5}
+  .res{margin-top:18px;animation:rise .3s ease-out}
+  @keyframes rise{from{transform:translateY(10px);opacity:0}to{transform:none;opacity:1}}
+  .card{border-radius:14px;padding:16px 18px;margin-top:14px}
+  .card-amber{background:oklch(.88 .11 88);color:#171512}
+  .card-ok{background:oklch(.55 .11 155);color:#fff}
+  .card-line{border:1.5px solid rgba(250,248,245,.18)}
+  .card .big{font-size:19px;font-weight:800}.card .mid{font-size:15px;font-weight:700;margin-top:4px}
+  .card .meta{font-size:12.5px;opacity:.85;margin-top:6px;line-height:1.5}
+  .rodape{display:flex;gap:12px;margin-top:26px;padding-top:16px;border-top:1px solid rgba(250,248,245,.12)}
+  .rodape div{flex:1;text-align:center}.rodape .n{font-size:19px;font-weight:800}.rodape .l{font-size:11px;color:rgba(250,248,245,.4)}
+  .rs{display:flex;align-items:center}.rs .rr{position:relative;left:0}
+  .val{display:flex;align-items:center;gap:0;margin-top:12px;background:rgba(250,248,245,.06);border:1.5px solid rgba(250,248,245,.18);border-radius:12px;overflow:hidden}
+  .val span{padding:0 14px;font-weight:700;color:rgba(250,248,245,.6)}
+  .val input{border:0;background:transparent;border-radius:0}
+  .hide{display:none}
+  .erro{color:oklch(.7 .17 27);font-size:13px;margin-top:8px}
+  .pin-box{max-width:280px;margin:60px auto 0;text-align:center}
+  .pin-box input{text-align:center;font-size:28px;letter-spacing:.3em;font-family:ui-monospace,monospace}
+</style></head><body>
+<div class="wrap">
+  <!-- PIN -->
+  <div id="telaPin" class="pin-box">
+    <div class="cab" style="justify-content:center">
+      <div class="av">${loja.logo_url ? `<img src="${escapeAttr(loja.logo_url)}">` : nome.slice(0,2).toUpperCase()}</div>
+    </div>
+    <h1 style="font-size:19px;margin-bottom:6px">${nome}</h1>
+    <p style="color:rgba(250,248,245,.5);font-size:13px;margin-bottom:18px">Balcão — digite o PIN do atendente</p>
+    <input id="pin" class="cod" inputmode="numeric" maxlength="4" placeholder="••••">
+    <button class="btn" onclick="entrar()">Entrar</button>
+    <div id="pinErro" class="erro"></div>
+  </div>
+
+  <!-- BALCÃO -->
+  <div id="telaBalcao" class="hide">
+    <div class="cab">
+      <div class="av">${loja.logo_url ? `<img src="${escapeAttr(loja.logo_url)}">` : nome.slice(0,2).toUpperCase()}</div>
+      <div><h1>Validar cupom</h1><div class="sub" id="subAtend">${nome}</div></div>
+    </div>
+    <label>Código do cupom</label>
+    <input id="code" class="cod" placeholder="CY-XXXX" autocomplete="off">
+    <button class="btn" onclick="consultar()">Ver cupom</button>
+    <div id="resultado"></div>
+    <div class="rodape">
+      <div><div class="n" id="rHoje">0</div><div class="l">resgates hoje</div></div>
+      <div><div class="n" id="rVal">R$ 0</div><div class="l">vendas hoje</div></div>
+    </div>
+  </div>
+</div>
+<script>
+  var SLUG=${JSON.stringify(loja.slug)};
+  var ATEND=null, PEDIR_VALOR=true, ATUAL=null;
+  var codeUp=document.getElementById('code');
+  if(codeUp) codeUp.addEventListener('input',function(){ this.value=this.value.toUpperCase(); });
+
+  async function entrar(){
+    var pin=document.getElementById('pin').value.trim();
+    if(pin.length<4){ document.getElementById('pinErro').textContent='Digite os 4 dígitos.'; return; }
+    var r=await fetch('/api/balcao/'+SLUG+'/pin',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({pin:pin})});
+    if(!r.ok){ document.getElementById('pinErro').textContent='PIN incorreto.'; return; }
+    var d=await r.json();
+    ATEND=pin; PEDIR_VALOR=!!d.loja.pedir_valor;
+    try{ document.cookie='balcao_pin='+pin+';max-age=43200;path=/'; }catch(e){}
+    document.getElementById('telaPin').classList.add('hide');
+    document.getElementById('telaBalcao').classList.remove('hide');
+    atualizarRodape();
+  }
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  function ofertaTxt(k,v){ if(k==='percent')return v+'% OFF'; if(k==='amount')return 'R$ '+v+' OFF'; if(k==='gift')return 'Brinde'; if(k==='bogo')return 'Compre 1 leve 2'; return v; }
+  function fmtDT(s){ if(!s)return '—'; var d=new Date(s); return d.toLocaleDateString('pt-BR')+' '+d.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}); }
+
+  async function consultar(){
+    var code=document.getElementById('code').value.trim();
+    if(!code){ return; }
+    var box=document.getElementById('resultado'); box.innerHTML='<div class="res" style="color:rgba(250,248,245,.5);padding:14px">Buscando…</div>';
+    var r=await fetch('/api/balcao/'+SLUG+'/consultar?code='+encodeURIComponent(code));
+    var d=await r.json(); ATUAL=d; render(d,code);
+  }
+  function render(d,code){
+    var box=document.getElementById('resultado'); var nome=d.lead?esc(d.lead.nome||'Cliente'):'Cliente';
+    if(d.resultado==='active'){
+      var valorInput = PEDIR_VALOR ? '<div class="val"><span>R$</span><input id="valor" inputmode="decimal" placeholder="0,00" oninput="chkValor()"></div>' : '';
+      box.innerHTML='<div class="res"><div class="card card-amber">'
+        +'<div class="big">'+ofertaTxt(d.offer_kind,d.offer_value)+'</div>'
+        +'<div class="mid">'+nome+'</div>'
+        +'<div class="meta">'+(d.min_purchase?('Mín. R$ '+d.min_purchase+' · '):'')+'vence '+fmtDT(d.expires_at)+'</div>'
+        +'</div>'+valorInput
+        +'<button id="btnBaixa" class="btn" '+(PEDIR_VALOR?'disabled':'')+' onclick="baixa(false,false)">Dar baixa no cupom</button></div>';
+    } else if(d.resultado==='redeemed'){
+      box.innerHTML='<div class="res"><div class="card card-line">'
+        +'<div class="big">Já resgatado</div>'
+        +'<div class="meta">Baixa em '+fmtDT(d.redeemed_at)+(d.redeemed_by?(' · '+esc(d.redeemed_by)):'')+(d.redeemed_amount?(' · R$ '+d.redeemed_amount):'')+'</div>'
+        +'</div><button class="btn btn-line" onclick="baixa(true,false)">Liberar mesmo assim</button></div>';
+    } else if(d.resultado==='expired'){
+      box.innerHTML='<div class="res"><div class="card card-line">'
+        +'<div class="big">Vencido</div><div class="meta">Venceu '+fmtDT(d.expires_at)+'</div>'
+        +'</div><button class="btn btn-amber" onclick="baixa(false,true)">Renovar por hoje e dar baixa</button></div>';
+    } else if(d.resultado==='cancelled'){
+      box.innerHTML='<div class="res"><div class="card card-line"><div class="big">Cupom cancelado</div></div></div>';
+    } else {
+      box.innerHTML='<div class="res"><div class="card card-line"><div class="big">Não encontrado</div>'
+        +'<div class="meta">Confira o código digitado.</div></div></div>';
+    }
+  }
+  function chkValor(){ var v=document.getElementById('valor').value.replace(/[^0-9.,]/g,''); var b=document.getElementById('btnBaixa'); if(b) b.disabled = !(v && parseFloat(v.replace(',','.'))>0); }
+  async function baixa(force,renew){
+    var code=document.getElementById('code').value.trim();
+    var amount=null; var vi=document.getElementById('valor');
+    if(vi){ var v=vi.value.replace(/[^0-9.,]/g,'').replace(',','.'); amount=v?parseFloat(v):null; }
+    var body={code:code,actor:'PIN '+ATEND,force:force,renew:renew,amount:amount};
+    var r=await fetch('/api/balcao/'+SLUG+'/baixa',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+    var d=await r.json();
+    var box=document.getElementById('resultado');
+    if(d.ok){
+      box.innerHTML='<div class="res"><div class="card card-ok"><div class="big">Baixa feita ✓</div>'
+        +(amount?('<div class="meta">R$ '+amount.toFixed(2).replace(".",",")+' registrado</div>'):'')
+        +'</div><button class="btn btn-line" onclick="reset()">Validar outro</button></div>';
+      atualizarRodape();
+    } else {
+      // conflito (já resgatado por outro caixa) — re-renderiza o estado atual
+      render(d,code);
+    }
+  }
+  function reset(){ document.getElementById('code').value=''; document.getElementById('resultado').innerHTML=''; document.getElementById('code').focus(); }
+  async function atualizarRodape(){
+    try{
+      var r=await fetch('/api/balcao/'+SLUG+'/consultar?code=__stats__'); // fallback simples: usa receita via endpoint dedicado se existir
+    }catch(e){}
+  }
+</script>
+</body></html>`;
+}
+
+// Cartão do cupom exibido no portal (passo final, dentro do renderPronto).
+function renderCupomHtml(cupom, marca, t) {
+  if (!cupom || !cupom.code) return '';
+  const primeiro = (marca.nome || '').split(' ')[0] || 'Você';
+  const oferta = cupom.offer_kind === 'percent' ? `${cupom.offer_value}% OFF`
+    : cupom.offer_kind === 'amount' ? `R$ ${cupom.offer_value} OFF`
+    : cupom.offer_kind === 'gift' ? 'BRINDE' : 'COMPRE 1 LEVE 2';
+  const venc = cupom.expires_at ? new Date(cupom.expires_at).toLocaleDateString('pt-BR') : '';
+  return `
+    <div class="cupom">
+      <div class="cupom-top">
+        <div class="cupom-eyebrow">Seu presente</div>
+        <div class="cupom-valor">${escapeAttr(oferta)}</div>
+        ${cupom.min_purchase ? `<div class="cupom-cond">nas compras acima de R$ ${escapeAttr(String(cupom.min_purchase))}</div>` : ''}
+      </div>
+      <div class="cupom-pic"></div>
+      <div class="cupom-base">
+        <div class="cupom-rot">mostre no caixa</div>
+        <div class="cupom-code">${escapeAttr(cupom.code)}</div>
+        ${venc ? `<div class="cupom-val">válido até ${escapeAttr(venc)}</div>` : ''}
+      </div>
+    </div>`;
+}
+
+module.exports = { renderPortal, renderResult, renderPronto, renderPrivacidade, montarVcard, lerCampos, renderBalcao, renderCupomHtml };

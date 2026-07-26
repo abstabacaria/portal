@@ -208,6 +208,19 @@ async function fidelidadeInfo(loja, mac, telefoneOuCyid) {
   return {};
 }
 
+// resolve o id da pessoa (CRM) pelo telefone, dentro da loja
+async function pessoaIdPorTelefone(lojaId, telefone) {
+  const tel = String(telefone || '').replace(/\D/g, '');
+  if (!tel || tel.length < 10) return null;
+  try {
+    const url = `${SUPABASE_URL}/rest/v1/portal_pessoas`
+      + `?loja_id=eq.${encodeURIComponent(lojaId)}&telefone=eq.${encodeURIComponent(tel)}&select=id&limit=1`;
+    const r = await fetch(url, { headers: H });
+    if (r.ok) { const rows = await r.json(); if (rows && rows[0]) return rows[0].id; }
+  } catch (e) {}
+  return null;
+}
+
 // grava um lead coletado pelo formulário (isolado por loja)
 // Além do JSONB `dados` (histórico), preenche as colunas planas usadas
 // pelo CRM (portal_pessoas) — nome, telefone e o consentimento.
@@ -284,5 +297,5 @@ module.exports = {
   lojaPorDominio, lojaPorSlug, validarCodigoDaLoja,
   registrarAcesso, registrarLead, limparCache, fidelidadeInfo,
   visitaDispositivo, marcarCadastrado, lerUA,
-  estaBloqueado,
+  estaBloqueado, pessoaIdPorTelefone,
 };
