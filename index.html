@@ -286,6 +286,10 @@ tr:last-child td{border-bottom:0}
 
     <section class="aba ativa" id="aba-dashboard">
       <div class="kpis" id="kpis"></div>
+      <div class="card" id="acessosHojeCard" style="margin:0 0 16px">
+        <h3 style="margin:0 0 12px">📋 Acessos de hoje <span id="acessosHojeQtd" style="color:var(--fraco);font-weight:400"></span></h3>
+        <div id="acessosHoje"></div>
+      </div>
       <div class="graficos">
         <div class="card gCard g-8"><h3>Visitas — últimos 14 dias</h3><canvas id="ch14"></canvas></div>
         <div class="card gCard g-4"><h3>Base por categoria</h3><canvas id="chCat"></canvas></div>
@@ -525,7 +529,52 @@ const ICO={
   novos:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="10" cy="8" r="3.4"/><path d="M3.5 20c.8-3.4 3.2-5.3 6.5-5.3M17 14v6M14 17h6"/></svg>',
   base:'<svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><ellipse cx="12" cy="5.5" rx="8" ry="3"/><path d="M4 5.5v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6M4 11.5v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/></svg>'};
 
+// Registro de acessos de HOJE: quem passou pelo portal hoje (cadastro novo
+// ou recorrente que voltou), com nome, telefone e horário.
+async function carregarAcessosHoje(){
+  const box=document.getElementById('acessosHoje'); if(!box) return;
+  const qtd=document.getElementById('acessosHojeQtd');
+  box.innerHTML='<div style="color:var(--fraco);padding:14px;text-align:center">Carregando…</div>';
+  const hoje=new Date(); hoje.setHours(0,0,0,0);
+  const desde=hoje.toISOString();
+  // leads de hoje já trazem nome+telefone+hora; agrupa por telefone (1 linha por pessoa)
+  const {data:lds,error}=await sb.from('portal_leads')
+    .select('nome,telefone,criado_em,mac')
+    .eq('loja_id',lojaAtual.id).gte('criado_em',desde)
+    .order('criado_em',{ascending:false}).limit(500);
+  if(error){ box.innerHTML='<div style="color:var(--fraco);padding:14px">Erro ao carregar.</div>'; return; }
+  // mapa telefone -> pessoa (pra saber se é novo ou recorrente e nº de visitas)
+  const porTel={}; try{ (pessoas||[]).forEach(p=>{ if(p.telefone) porTel[p.telefone]=p; }); }catch(e){}
+  const vistos=new Set(), linhas=[];
+  for(const x of (lds||[])){
+    const tel=(x.telefone||'').replace(/\D/g,'');
+    const chave=tel||('mac_'+x.mac);
+    if(vistos.has(chave)) continue; vistos.add(chave);
+    const p=porTel[tel];
+    linhas.push({
+      nome:x.nome||'(sem nome)', tel, hora:x.criado_em,
+      recorrente: p ? (p.categoria==='recorrente'||p.status==='vip'||(p.total_visitas||0)>=2) : false,
+      vip: p&&p.status==='vip'
+    });
+  }
+  qtd.textContent = linhas.length ? `· ${linhas.length} pessoa(s)` : '';
+  if(!linhas.length){
+    box.innerHTML='<div style="color:var(--fraco);padding:20px;text-align:center">Nenhum acesso registrado hoje ainda.</div>';
+    return;
+  }
+  box.innerHTML=`<div class="tWrap"><table><thead><tr>
+    <th>Hora</th><th>Cliente</th><th>WhatsApp</th><th>Tipo</th></tr></thead><tbody>
+    ${linhas.map(a=>`<tr>
+      <td style="white-space:nowrap">${fmtHora(a.hora)}</td>
+      <td><b>${esc(a.nome)}</b>${a.vip?' <span class="badge b-vip" style="font-size:.6rem">VIP</span>':''}</td>
+      <td>${a.tel?`<a target="_blank" href="https://wa.me/55${a.tel}">${fmtTel(a.tel)}</a>`:'<span style="color:var(--fraco)">—</span>'}</td>
+      <td>${a.recorrente?'<span style="color:var(--azul)">🔁 Recorrente</span>':'<span style="color:#22c55e">🆕 Novo</span>'}</td>
+    </tr>`).join('')}
+  </tbody></table></div>`;
+}
+
 async function carregarDashboard(){
+  carregarAcessosHoje();
   const { data, error } = await sb.rpc('portal_dashboard', { p_loja: lojaAtual.id });
   if (error){ console.error(error); return; }
   const d=data, cresc = d.mes_anterior>0 ? Math.round((d.mes_atual-d.mes_anterior)/d.mes_anterior*100) : null;
@@ -737,7 +786,7 @@ function exportarVcf(){
   if(!lista.length) return toast('Nenhum lead nos filtros atuais',true);
   const marca=(lojaAtual.nome||'').slice(0,18);
   const vcf=lista.map(p=>{
-    const nome=((p.nome||'Cliente').replace(/[\r\n;]/g,' ').trim())+' · '+marca;
+    const nome=((p.nome||'Cliente').replace(/[\r\n;]/g,' ').trim())+' ('+marca+')';
     const l=['BEGIN:VCARD','VERSION:3.0',`N:;${nome};;;`,`FN:${nome}`,
              `TEL;TYPE=CELL:+55${p.telefone}`,`NOTE:${p.categoria} · ${p.total_visitas} visita(s) · ConectaY`];
     if(p.aniversario && /^\d{4}-\d{2}-\d{2}$/.test(p.aniversario)) l.push(`BDAY:${p.aniversario}`);
