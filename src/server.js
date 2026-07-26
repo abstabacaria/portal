@@ -8,7 +8,7 @@ const {
   registrarAcesso, registrarLead, visitaDispositivo, marcarCadastrado,
   estaBloqueado, fidelidadeInfo, pessoaIdPorTelefone,
 } = require('./lojas');
-const { renderPortal, renderResult, renderPronto, renderPrivacidade, montarVcard, renderCupomHtml } = require('./views');
+const { renderPortal, renderResult, renderPronto, renderPrivacidade, montarVcard, renderCupomHtml, renderBalcao } = require('./views');
 
 const app = express();
 app.use(express.urlencoded({ extended: false }));
@@ -368,7 +368,7 @@ app.post('/auth', async (req, res) => {
             if (pid) {
               const cup = await cuponsMod.emitirCupom(loja.id, pid, null);
               if (cup && cup.code) {
-                res.setHeader('Set-Cookie', 'cyc='+encodeURIComponent(cup.code)+'; Max-Age=300; Path=/');
+                res.setHeader('Set-Cookie', `cyc=${encodeURIComponent(cup.code)}; Max-Age=300; Path=/`);
               }
             }
           } catch (e) { console.error('[cupom emit]', e.message); }
@@ -578,7 +578,7 @@ app.get('/v/:slug', async (req, res) => {
     res.send(renderBalcao(loja));
   } catch (e) {
     console.error('[balcao]', e.message);
-    res.status(500).send('Erro ao abrir o balcão.');
+    res.status(500).send('Erro ao abrir o balcão: ' + e.message);
   }
 });
 
