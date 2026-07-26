@@ -229,6 +229,7 @@ tr:last-child td{border-bottom:0}
 .pf-hi{text-align:center;background:var(--vidro);border:1px solid var(--borda);border-radius:11px;padding:11px 6px;font-size:.68rem;color:var(--fraco)}
 .pf-hi span{display:block;font-family:'Sora';font-size:1.05rem;font-weight:700;color:var(--texto);margin-bottom:3px}
 @media(max-width:520px){.pf-grid{grid-template-columns:1fr}.pf-hist{grid-template-columns:repeat(2,1fr)}}
+.crop-prop.on{background:var(--azul);color:#fff;border-color:var(--azul)}
 </style>
 </head>
 <body>
@@ -394,11 +395,40 @@ tr:last-child td{border-bottom:0}
 
 <div class="toast" id="toast"></div>
 
+<!-- ===== EDITOR DE RECORTE DO POP-UP ===== -->
+<div class="modalBg" id="modalCrop">
+  <div class="modal" style="max-width:400px">
+    <div class="cab"><h2>✂️ Ajustar imagem</h2><button class="x" onclick="fecharCrop()">×</button></div>
+    <div style="padding:18px 20px">
+      <div style="display:flex;gap:6px;justify-content:center;margin-bottom:12px">
+        <button class="btnG crop-prop on" data-p="9:16" onclick="ajustarProp('9:16')">📱 Stories</button>
+        <button class="btnG crop-prop" data-p="1:1" onclick="ajustarProp('1:1')">⬛ Quadrado</button>
+        <button class="btnG crop-prop" data-p="livre" onclick="ajustarProp('livre')">🖼️ Original</button>
+      </div>
+      <div style="display:flex;justify-content:center">
+        <canvas id="cropCanvas"
+          onmousedown="cropDown(event)" onmousemove="cropMove(event)" onmouseup="cropUp()" onmouseleave="cropUp()"
+          ontouchstart="cropDown(event)" ontouchmove="cropMove(event)" ontouchend="cropUp()"
+          style="border-radius:12px;cursor:grab;touch-action:none;background:#000"></canvas>
+      </div>
+      <div style="margin-top:14px">
+        <label style="font-size:.72rem;color:var(--mudo)">Zoom</label>
+        <input type="range" min="1" max="3" step="0.02" value="1" oninput="cropZoom(this.value)" style="width:100%">
+      </div>
+      <small class="dica" style="text-align:center;display:block">Arraste pra posicionar · use o zoom pra aproximar.</small>
+    </div>
+    <div class="pe">
+      <button class="btnP" style="margin:0;max-width:200px" onclick="confirmarCrop()">Usar esta imagem</button>
+      <button class="btnG" onclick="fecharCrop()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
+
 <script>
 /* =========================================================
    CONFIG
 ========================================================= */
-
 const SUPABASE_URL = 'https://iekxuehdrxsimqtfejxm.supabase.co';
 const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlla3h1ZWhkcnhzaW1xdGZlanhtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1MDk0NzAsImV4cCI6MjA5MTA4NTQ3MH0.61zaRoTBK2XorXgAcGXcsN8yOY0MTRS4bIJ_X4vPjyA';
 const EDGE_CRIAR_USUARIO = SUPABASE_URL + '/functions/v1/smart-responder';
@@ -921,35 +951,124 @@ function preview(l){
 /* =========================================================
    UPLOAD DE LOGO (comprime e guarda em logo_url)
 ========================================================= */
-// Sobe imagem/vídeo do pop-up pro Supabase Storage (bucket 'portal-popups')
-// e preenche o campo de URL. Requer o bucket público criado (ver migração 010).
+// Sobe imagem/vídeo do pop-up pro Supabase Storage (bucket 'portal-popups').
+// Imagem passa pelo editor de recorte antes; vídeo sobe direto.
 function uploadPopup(pfx){
   const tipo=document.getElementById(pfx+'_popupTipo').value;
   const inp=document.createElement('input'); inp.type='file';
   inp.accept = tipo==='video' ? 'video/*' : 'image/*';
   inp.onchange=async ()=>{
     const f=inp.files[0]; if(!f) return;
-    const limite = tipo==='video' ? 15 : 5;
-    if(f.size > limite*1024*1024) return toast('Arquivo muito grande (máx '+limite+' MB)',true);
-    toast('Enviando…');
-    try{
-      const lojaId = (typeof lojaAtual!=='undefined'&&lojaAtual)?lojaAtual.id:'x';
-      const ext=(f.name.split('.').pop()||'bin').toLowerCase().replace(/[^a-z0-9]/g,'');
-      const path='loja'+lojaId+'/popup_'+Date.now()+'.'+ext;
-      const {error}=await sb.storage.from('portal-popups').upload(path,f,{upsert:true,contentType:f.type});
-      if(error){
-        if(/bucket|not found|does not exist/i.test(error.message))
-          return toast('Crie o bucket "portal-popups" no Supabase Storage (público) — ou use a URL.',true);
-        return toast('Erro no upload: '+error.message,true);
-      }
-      const {data}=sb.storage.from('portal-popups').getPublicUrl(path);
-      document.getElementById(pfx+'_popupUrl').value=data.publicUrl;
-      if(typeof pvAp==='function' && pfx==='ap') pvAp();
-      if(typeof pvLj==='function' && pfx==='lj') pvLj();
-      toast('Enviado ✓ — lembre de salvar');
-    }catch(e){ toast('Falha: '+e.message,true); }
+    if(tipo==='video'){
+      if(f.size > 15*1024*1024) return toast('Vídeo muito grande (máx 15 MB)',true);
+      return enviarPopup(pfx, f, 'mp4');
+    }
+    // imagem -> abre o editor de crop
+    if(f.size > 12*1024*1024) return toast('Imagem muito grande (máx 12 MB)',true);
+    const fr=new FileReader();
+    fr.onload=()=>abrirCropPopup(pfx, fr.result);
+    fr.readAsDataURL(f);
   };
   inp.click();
+}
+
+// sobe um Blob/File já pronto pro Storage e preenche a URL
+async function enviarPopup(pfx, blob, ext){
+  toast('Enviando…');
+  try{
+    const lojaId = (typeof lojaAtual!=='undefined'&&lojaAtual)?lojaAtual.id:'x';
+    const path='loja'+lojaId+'/popup_'+Date.now()+'.'+ext;
+    const {error}=await sb.storage.from('portal-popups').upload(path,blob,{upsert:true,contentType:blob.type||('image/'+ext)});
+    if(error){
+      if(/bucket|not found|does not exist/i.test(error.message))
+        return toast('Crie o bucket "portal-popups" no Supabase Storage (público) — ou use a URL.',true);
+      return toast('Erro no upload: '+error.message,true);
+    }
+    const {data}=sb.storage.from('portal-popups').getPublicUrl(path);
+    document.getElementById(pfx+'_popupUrl').value=data.publicUrl;
+    if(typeof pvAp==='function' && pfx==='ap') pvAp();
+    if(typeof pvLj==='function' && pfx==='lj') pvLj();
+    toast('Enviado ✓ — lembre de salvar');
+  }catch(e){ toast('Falha: '+e.message,true); }
+}
+
+// ---- Editor de recorte (crop) do pop-up ----
+let _crop={img:null,pfx:null,prop:'9:16',escala:1,dx:0,dy:0,arrast:false,lx:0,ly:0};
+function abrirCropPopup(pfx, dataUrl){
+  const img=new Image();
+  img.onload=()=>{
+    _crop.img=img; _crop.pfx=pfx; _crop.prop='9:16'; _crop.escala=1; _crop.dx=0; _crop.dy=0;
+    document.getElementById('modalCrop').classList.add('on');
+    setTimeout(()=>{ ajustarProp('9:16'); }, 30);
+  };
+  img.src=dataUrl;
+}
+function propToRatio(p){ return p==='1:1'?1 : p==='9:16'?9/16 : p==='16:9'?16/9 : (_crop.img?_crop.img.width/_crop.img.height:1); }
+function ajustarProp(p){
+  _crop.prop=p;
+  document.querySelectorAll('.crop-prop').forEach(b=>b.classList.toggle('on', b.dataset.p===p));
+  const cv=document.getElementById('cropCanvas');
+  const maxW=Math.min(320, window.innerWidth-80);
+  const ratio=propToRatio(p);
+  // canvas com a proporção alvo
+  if(ratio>=1){ cv.width=maxW; cv.height=Math.round(maxW/ratio); }
+  else { cv.height=Math.min(420, window.innerHeight*0.5); cv.width=Math.round(cv.height*ratio); }
+  // encaixa a imagem cobrindo o canvas (escala mínima = cover)
+  const im=_crop.img;
+  _crop.escalaMin=Math.max(cv.width/im.width, cv.height/im.height);
+  _crop.escala=_crop.escalaMin;
+  _crop.dx=(cv.width - im.width*_crop.escala)/2;
+  _crop.dy=(cv.height - im.height*_crop.escala)/2;
+  desenharCrop();
+}
+function desenharCrop(){
+  const cv=document.getElementById('cropCanvas'), ctx=cv.getContext('2d'), im=_crop.img;
+  ctx.clearRect(0,0,cv.width,cv.height);
+  ctx.fillStyle='#000'; ctx.fillRect(0,0,cv.width,cv.height);
+  ctx.drawImage(im,_crop.dx,_crop.dy,im.width*_crop.escala,im.height*_crop.escala);
+}
+function cropZoom(v){
+  const cv=document.getElementById('cropCanvas'), im=_crop.img;
+  const cx=cv.width/2, cy=cv.height/2;
+  const antes=_crop.escala;
+  _crop.escala=Math.max(_crop.escalaMin, _crop.escalaMin*parseFloat(v));
+  // mantém o centro
+  _crop.dx=cx-(cx-_crop.dx)*(_crop.escala/antes);
+  _crop.dy=cy-(cy-_crop.dy)*(_crop.escala/antes);
+  limitarCrop(); desenharCrop();
+}
+function limitarCrop(){
+  const cv=document.getElementById('cropCanvas'), im=_crop.img;
+  const w=im.width*_crop.escala, h=im.height*_crop.escala;
+  if(_crop.dx>0)_crop.dx=0; if(_crop.dy>0)_crop.dy=0;
+  if(_crop.dx<cv.width-w)_crop.dx=cv.width-w;
+  if(_crop.dy<cv.height-h)_crop.dy=cv.height-h;
+}
+function cropDown(e){ _crop.arrast=true; const p=e.touches?e.touches[0]:e; _crop.lx=p.clientX; _crop.ly=p.clientY; }
+function cropMove(e){
+  if(!_crop.arrast)return; e.preventDefault();
+  const p=e.touches?e.touches[0]:e;
+  _crop.dx+=p.clientX-_crop.lx; _crop.dy+=p.clientY-_crop.ly;
+  _crop.lx=p.clientX; _crop.ly=p.clientY;
+  limitarCrop(); desenharCrop();
+}
+function cropUp(){ _crop.arrast=false; }
+function fecharCrop(){ document.getElementById('modalCrop').classList.remove('on'); _crop.img=null; }
+function confirmarCrop(){
+  const cv=document.getElementById('cropCanvas'), im=_crop.img;
+  // renderiza em alta resolução (o dobro do canvas, teto sensato)
+  const ratio=propToRatio(_crop.prop);
+  const outW = ratio>=1 ? 1080 : Math.round(1080*ratio);
+  const outH = ratio>=1 ? Math.round(1080/ratio) : 1080;
+  const fator=outW/cv.width;
+  const oc=document.createElement('canvas'); oc.width=outW; oc.height=outH;
+  const octx=oc.getContext('2d');
+  octx.fillStyle='#000'; octx.fillRect(0,0,outW,outH);
+  octx.drawImage(im, _crop.dx*fator, _crop.dy*fator, im.width*_crop.escala*fator, im.height*_crop.escala*fator);
+  oc.toBlob(blob=>{
+    fecharCrop();
+    enviarPopup(_crop.pfx, blob, 'jpg');
+  }, 'image/jpeg', 0.88);
 }
 
 function escolherLogo(destinoInputId, previewFn){
