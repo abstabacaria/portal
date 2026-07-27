@@ -78,11 +78,13 @@ function extractApParams(src) {
 // histórico do aparelho/pessoa. Retorna segundos ou null (usa o padrão).
 function sessaoPorFidelidade(loja, info) {
   if (!loja || !loja.fidelidade_ativa || !info) return null;
+  // VIP tem prioridade máxima
   if (info.status === 'vip' && loja.sess_vip > 0) return loja.sess_vip;
-  const recorrente = info.status === 'vip' || info.categoria === 'recorrente'
-    || (info.total_visitas || info.visitas || 0) >= 3;
+  // recorrente: categoria recorrente OU 3+ visitas
+  const recorrente = info.categoria === 'recorrente' || (info.total_visitas || info.visitas || 0) >= 3;
   if (recorrente && loja.sess_recorrente > 0) return loja.sess_recorrente;
-  if ((info.novo || info.conhecido === false || true) && loja.sess_novo > 0) return loja.sess_novo;
+  // demais (novos/desconhecidos) usam sess_novo se configurado
+  if (loja.sess_novo > 0) return loja.sess_novo;
   return null;
 }
 
@@ -468,7 +470,7 @@ app.get('/contato.vcf', async (req, res) => {
 });
 
 // Saúde do serviço (útil pra monitorar na VPS).
-app.get('/health', (req, res) => res.json({ ok: true, servico: 'conectay-portal', versao: '2.8.0', ts: Date.now() }));
+app.get('/health', (req, res) => res.json({ ok: true, servico: 'conectay-portal', versao: '2.9.0', ts: Date.now() }));
 
 // Página que abre o APP do Instagram, com estratégia POR PLATAFORMA:
 //   ANDROID → intent:// (único esquema que o navegador do captive aceita;
