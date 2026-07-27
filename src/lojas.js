@@ -194,8 +194,18 @@ function limparNome(v) {
 // FAIL-SOFT: qualquer erro -> null (cai no timeout padrão).
 async function fidelidadeInfo(loja, mac, telefoneOuCyid) {
   if (!loja || !loja.id) return null;
-  const tel = String(telefoneOuCyid || '').replace(/\D/g, '');
+  let tel = String(telefoneOuCyid || '').replace(/\D/g, '');
   try {
+    // Se não veio telefone (pessoa reconectando sem preencher form),
+    // tenta descobrir o telefone pelo MAC via portal_leads.
+    if ((!tel || tel.length < 10) && mac) {
+      const urlLead = `${SUPABASE_URL}/rest/v1/portal_leads`
+        + `?loja_id=eq.${encodeURIComponent(loja.id)}`
+        + `&mac=eq.${encodeURIComponent(mac)}`
+        + `&select=telefone&order=criado_em.desc&limit=1`;
+      const rl = await fetch(urlLead, { headers: H });
+      if (rl.ok) { const lrows = await rl.json(); if (lrows && lrows[0] && lrows[0].telefone) tel = String(lrows[0].telefone).replace(/\D/g, ''); }
+    }
     if (tel && tel.length >= 10) {
       const url = `${SUPABASE_URL}/rest/v1/portal_pessoas`
         + `?loja_id=eq.${encodeURIComponent(loja.id)}`
