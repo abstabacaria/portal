@@ -1138,14 +1138,28 @@ async function acessosRecentes(desde){
 }
 async function carregarConectados(){
   if(!lojaAtual) return;
-  const seg = (lojaAtual.session_timeout>0) ? lojaAtual.session_timeout : 10800;
-  const rot = seg>=3600 ? (Math.round(seg/3600)+'h') : (Math.round(seg/60)+'min');
-  infoConectados.textContent = `Aparelhos que autenticaram nas últimas ${rot} (janela da sessão da loja). Lista aproximada: o aparelho pode já ter saído do local.`;
-  const desde = new Date(Date.now()-seg*1000).toISOString();
+  const agora = Date.now();
+  // janela ampla de busca (6h) pra pegar até sessões longas de VIP;
+  // o filtro real é feito pela duração de cada sessão abaixo.
+  const JANELA_BUSCA = 6*3600*1000;
+  infoConectados.textContent = 'Aparelhos com sessão ativa agora (estimado pela duração concedida). Some quando a sessão expira.';
+  const desde = new Date(agora - JANELA_BUSCA).toISOString();
   const {rows,col}=await acessosRecentes(desde);
-  // 1 linha por aparelho (MAC), a mais recente
+  const timeoutPadrao = (lojaAtual.session_timeout>0) ? lojaAtual.session_timeout : 10800;
+  // 1 linha por aparelho (MAC), a mais recente, E só se a sessão ainda está válida
   const vistos=new Set(), lista=[];
-  for(const a of rows){ const k=a.mac||('__'+(a.id??Math.random())); if(vistos.has(k)) continue; vistos.add(k); lista.push(a); }
+  for(const a of rows){
+    const k=a.mac||('__'+(a.id??Math.random()));
+    if(vistos.has(k)) continue;
+    vistos.add(k);
+    // duração da sessão: a registrada (sessao_seg) ou o padrão da loja
+    const durSeg = (a.sessao_seg>0) ? a.sessao_seg : timeoutPadrao;
+    const inicio = col ? new Date(a[col]).getTime() : agora;
+    const fim = inicio + durSeg*1000;
+    if(fim <= agora) continue; // sessão já expirou → não está mais "conectado"
+    a._restaSeg = Math.round((fim - agora)/1000);
+    lista.push(a);
+  }
   // cruza MAC → lead (nome/telefone) pra identificar quem é
   const mapa={};
   try{
@@ -1160,11 +1174,12 @@ async function carregarConectados(){
   }catch(e){}
   Object.values(mapa).forEach(m=>{ const p=m.t?porTel[m.t]:null; if(p){ m.pid=p.id; m.status=p.status||'ativo'; m.visitas=p.total_visitas; } });
   if(!lista.length){
-    tabelaConectados.innerHTML='<div class="card vazio"><span class="emj">📡</span>Nenhum aparelho autenticou na janela atual.</div>';
+    tabelaConectados.innerHTML='<div class="card vazio"><span class="emj">📡</span>Nenhum aparelho com sessão ativa agora.</div>';
     return;
   }
+  const fmtResta=s=> s>=3600 ? (Math.floor(s/3600)+'h'+(Math.round((s%3600)/60)?(' '+Math.round((s%3600)/60)+'min'):'')) : (Math.max(1,Math.round(s/60))+'min');
   tabelaConectados.innerHTML=`<div class="tWrap"><table><thead><tr>
-    <th>Quando</th><th>Cliente</th><th>Aparelho</th><th>MAC</th><th>Ações</th></tr></thead><tbody>
+    <th>Entrou</th><th>Resta</th><th>Cliente</th><th>Aparelho</th><th>MAC</th><th>Ações</th></tr></thead><tbody>
   ${lista.map(a=>{ const li=mapa[a.mac]||{};
     const ehVip = li.status==='vip';
     const acoesLead = li.pid ? `
@@ -1175,6 +1190,7 @@ async function carregarConectados(){
       <button class="btnG" style="padding:6px 9px" title="Histórico de visitas"
         onclick="historicoConectado(${li.pid})">📊</button>` : '';
     return `<tr><td>${fmtHora(col?a[col]:null)}</td>
+    <td><span style="color:#22c55e;font-weight:600;font-size:.82rem">${fmtResta(a._restaSeg)}</span></td>
     <td>${li.n?('<b>'+esc(li.n)+'</b>'+(ehVip?' <span class="badge b-vip" style="font-size:.6rem">VIP</span>':'')+'<br>'):''}${li.t?('<a target="_blank" href="https://wa.me/55'+li.t+'">'+fmtTel(li.t)+'</a>'):'<span style="color:var(--fraco)">não identificado</span>'}</td>
     <td>${esc(a.dispositivo||'—')}${a.so?(' · '+esc(a.so)):''}</td>
     <td style="font-family:monospace;font-size:.74rem">${esc(a.mac||'—')}</td>
