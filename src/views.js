@@ -299,7 +299,13 @@ function renderPortal({ ap, instagram, autoCode, error, marca }) {
   const body = `
     ${(marca.bannerAtivo && marca.mensagem) ? `<div class="banner-aviso">${escapeAttr(marca.mensagem)}</div>` : ''}
     <div class="logo">${(logo && !logo.endsWith('/static/logo.png')) ? `<img src="${escapeAttr(logo)}" alt="${escapeAttr(nome)}">` : `<div class="logo-nome">${escapeAttr(nome)}</div>`}</div>
-    <h1>${marca.voltou ? 'Que bom te ver de novo!' : 'Wi-Fi liberado'}</h1>
+    <h1>${
+      marca.clienteNome
+        ? (marca.clienteVip
+            ? `⭐ Olá, ${escapeAttr(marca.clienteNome)}!`
+            : `Que bom te ver, ${escapeAttr(marca.clienteNome)}!`)
+        : (marca.voltou ? 'Que bom te ver de novo!' : 'Wi-Fi liberado')
+    }</h1>
     <p class="sub">${subTxt}</p>
 
     ${error ? `<div class="err">${escapeAttr(error)}</div>` : ''}
