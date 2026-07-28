@@ -337,9 +337,70 @@ async function nomePorAparelho(loja, mac) {
   return null;
 }
 
+// Consulta a cota diária de uso da pessoa (por telefone).
+// Retorna { bloqueado, limite_min, usado_min, saldo_min } ou null se ilimitado.
+async function cotaHoje(loja, telefone) {
+  if (!loja || !loja.id || !telefone) return null;
+  const tel = String(telefone).replace(/\D/g, '');
+  if (tel.length < 10 || tel.length > 13) return null;
+  try {
+    const r = await fetch(`${SUPABASE_URL}/rest/v1/rpc/portal_cota_hoje`, {
+      method: 'POST', headers: H,
+      body: JSON.stringify({ p_loja: loja.id, p_telefone: tel }),
+    });
+    if (!r.ok) return null;
+    const out = await r.json();
+    return out || null;
+  } catch (e) { return null; }
+}
+
+// Descobre o telefone de um aparelho pelo MAC (pra checar cota de quem reconecta).
+async function telefonePorMac(loja, mac) {
+  if (!loja || !loja.id || !mac) return null;
+  try {
+    const url = `${SUPABASE_URL}/rest/v1/portal_leads`
+      + `?loja_id=eq.${encodeURIComponent(loja.id)}`
+      + `&mac=eq.${encodeURIComponent(mac)}`
+      + `&select=telefone&order=criado_em.desc&limit=1`;
+    const r = await fetch(url, { headers: H });
+    if (!r.ok) return null;
+    const rows = await r.json();
+    if (rows && rows[0] && rows[0].telefone) {
+      const t = String(rows[0].telefone).replace(/\D/g, '');
+      return (t.length >= 10 && t.length <= 13) ? t : null;
+    }
+  } catch (e) {}
+  return null;
+}
+
+// Grava a duração (segundos) concedida na liberação, no acesso mais recente
+// daquele MAC/loja. Usado pra somar a cota diária de uso.
+async function registrarDuracaoSessao(loja, mac, segundos) {
+  if (!loja || !loja.id || !mac || !segundos) return;
+  try {
+    // acha o acesso mais recente desse MAC hoje e grava sessao_seg
+    const url = `${SUPABASE_URL}/rest/v1/portal_acessos`
+      + `?loja_id=eq.${encodeURIComponent(loja.id)}`
+      + `&mac=eq.${encodeURIComponent(mac)}`
+      + `&sessao_seg=is.null`
+      + `&order=criado_em.desc&limit=1`;
+    const r = await fetch(url, { headers: H });
+    if (!r.ok) return;
+    const rows = await r.json();
+    if (rows && rows[0] && rows[0].id) {
+      await fetch(`${SUPABASE_URL}/rest/v1/portal_acessos?id=eq.${rows[0].id}`, {
+        method: 'PATCH',
+        headers: { ...H, Prefer: 'return=minimal' },
+        body: JSON.stringify({ sessao_seg: Math.round(segundos) }),
+      });
+    }
+  } catch (e) { /* silencioso */ }
+}
+
 module.exports = {
   lojaPorDominio, lojaPorSlug, validarCodigoDaLoja,
   registrarAcesso, registrarLead, limparCache, fidelidadeInfo,
   visitaDispositivo, marcarCadastrado, lerUA,
   estaBloqueado, pessoaIdPorTelefone, nomePorAparelho,
+  cotaHoje, telefonePorMac, registrarDuracaoSessao,
 };
