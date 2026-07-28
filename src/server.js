@@ -398,10 +398,13 @@ app.post('/auth', async (req, res) => {
 
     // Sessão por fidelidade (só Intelbras): busca o histórico do aparelho/pessoa
     // e escala o tempo. Falha silenciosa -> cai no timeout padrão da loja.
+    // IMPORTANTE: só passamos telefoneLead como telefone. O cyid é um hash
+    // (não é telefone) — se passado aqui, vira lixo numérico e sabota a busca
+    // por MAC. Sem telefone, o fidelidadeInfo descobre a pessoa pelo MAC.
     let sessOverride = null;
     if (loja && loja.fidelidade_ativa) {
       try {
-        const info = await fidelidadeInfo(loja, ap.mac, telefoneLead || req.cookies.cyid);
+        const info = await fidelidadeInfo(loja, ap.mac, telefoneLead || null);
         sessOverride = sessaoPorFidelidade(loja, info);
       } catch (e) {}
     }
@@ -470,7 +473,7 @@ app.get('/contato.vcf', async (req, res) => {
 });
 
 // Saúde do serviço (útil pra monitorar na VPS).
-app.get('/health', (req, res) => res.json({ ok: true, servico: 'conectay-portal', versao: '2.9.0', ts: Date.now() }));
+app.get('/health', (req, res) => res.json({ ok: true, servico: 'conectay-portal', versao: '2.9.1', ts: Date.now() }));
 
 // Página que abre o APP do Instagram, com estratégia POR PLATAFORMA:
 //   ANDROID → intent:// (único esquema que o navegador do captive aceita;
