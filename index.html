@@ -2191,7 +2191,7 @@ async function salvarLoja(){
     rotacao_destinos:f.rotacao_ativa?['formulario',...f.rotacao_destinos]
       :((edit.rotacao_destinos||[]).length?edit.rotacao_destinos:['formulario','instagram','whatsapp']),
     codigo_wifi:lj_codigo.value.trim()||null, ap_secret:lj_secret.value.trim()||null,
-    session_timeout: lj_sessao.value===''?null:Number(lj_sessao.value),
+    session_timeout: lj_fidelidade.checked ? null : (lj_sessao.value===''?null:Number(lj_sessao.value)),
     fidelidade_ativa: lj_fidelidade.checked,
     sess_novo: lj_sessNovo.value===''?null:Number(lj_sessNovo.value),
     sess_recorrente: lj_sessRec.value===''?null:Number(lj_sessRec.value),
