@@ -995,6 +995,8 @@ function abrirEditorPessoa(id){
         <select id="pf_cat">
           ${cats.map(c=>`<option value="${c}" ${p.categoria===c?'selected':''}>${c}</option>`).join('')}
         </select></div>
+      <div><label>⏱️ Limite diário <small style="color:var(--fraco)">(horas, vazio = ilimitado)</small></label>
+        <input id="pf_limite" value="${p.limite_diario_min!=null?(p.limite_diario_min/60):''}" placeholder="ex: 4" inputmode="decimal"></div>
       <div class="pf-full"><label>Tags <small style="color:var(--fraco)">(separe por vírgula)</small></label>
         <input id="pf_tags" value="${esc((p.tags||[]).join(', '))}" placeholder="fiel, indicação, atacado"></div>
       <div class="pf-full"><label>Observações</label>
@@ -1038,6 +1040,7 @@ async function salvarEditorPessoa(){
     categoria:document.getElementById('pf_cat').value,
     tags:document.getElementById('pf_tags').value.split(',').map(t=>t.trim()).filter(Boolean),
     observacoes:document.getElementById('pf_obs').value.trim()||null,
+    limite_diario_min:(function(){ const v=document.getElementById('pf_limite').value.trim().replace(',','.'); const h=parseFloat(v); return (v===''||isNaN(h)||h<=0)?null:Math.round(h*60); })(),
   };
   const {error}=await sb.from('portal_pessoas').update(upd).eq('id',pessoaEdit.id);
   if(error) return toast('Erro: '+error.message,true);
