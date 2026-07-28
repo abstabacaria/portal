@@ -584,10 +584,26 @@ async function iniciar(){
     lojaAtual = lojas.find(l=>String(l.id)===String(eu.loja_id)) || lojas[0] || null;
     nomeLojaFixo.textContent = lojaAtual ? lojaAtual.nome : '';
   }
-  if (lojaAtual) await carregarTudo();
+  if (lojaAtual) { aplicarPermissoes(); await carregarTudo(); }
+}
+// ===== Permissões por plano: cupom só pra Pro/Premium (admin vê tudo) =====
+function lojaTemCupom(l){
+  if(!l) return false;
+  if(eu && eu.papel==='admin') return true; // admin sempre vê
+  const p=String(l.plano||'').toLowerCase();
+  return p.includes('pro') || p.includes('premium');
+}
+function aplicarPermissoes(){
+  const nav=document.getElementById('navCupons');
+  if(nav) nav.style.display = lojaTemCupom(lojaAtual) ? 'flex' : 'none';
+  // se a aba cupons está aberta mas a loja não tem, volta pro dashboard
+  if(!lojaTemCupom(lojaAtual) && document.getElementById('aba-cupons') && document.getElementById('aba-cupons').classList.contains('ativa')){
+    irAba('dashboard');
+  }
 }
 function trocarLoja(){
   lojaAtual = lojas.find(l=>String(l.id)===seletorLoja.value);
+  aplicarPermissoes();
   carregarTudo();
 }
 async function carregarTudo(){
