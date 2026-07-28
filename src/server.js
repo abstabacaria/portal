@@ -7,6 +7,7 @@ const {
   lojaPorDominio, lojaPorSlug, validarCodigoDaLoja,
   registrarAcesso, registrarLead, visitaDispositivo, marcarCadastrado,
   estaBloqueado, fidelidadeInfo, pessoaIdPorTelefone, nomePorAparelho,
+  cotaHoje, telefonePorMac, registrarDuracaoSessao,
 } = require('./lojas');
 const { renderPortal, renderResult, renderPronto, renderPrivacidade, montarVcard, renderCupomHtml, renderBalcao } = require('./views');
 
@@ -396,6 +397,31 @@ app.post('/auth', async (req, res) => {
       }
     }
 
+    // ---- Cota diária de uso (limite por pessoa, reset à meia-noite) ----
+    // Telefone: do form (telefoneLead) ou, se reconectou sem form, pelo MAC.
+    // Se estourou a cota, não libera. Se tem saldo, limita a duração da sessão.
+    let cotaSaldoSeg = null; // null = sem limite; senão, segundos restantes hoje
+    try {
+      let telCota = telefoneLead;
+      if ((!telCota || String(telCota).replace(/\D/g, '').length < 10) && ap.mac) {
+        telCota = await telefonePorMac(loja, ap.mac);
+      }
+      if (telCota) {
+        const cota = await cotaHoje(loja, telCota);
+        if (cota && cota.limite_min != null) {
+          if (cota.bloqueado) {
+            await logAccess({ ...base, result: 'denied', reason: 'Cota diária esgotada' });
+            return res.send(renderResult({
+              ok: false, marca,
+              title: 'Seu tempo de hoje acabou',
+              msg: `Você já usou seu limite de ${cota.limite_min} min de Wi-Fi hoje. O acesso volta amanhã. 😊`,
+            }));
+          }
+          cotaSaldoSeg = Math.max(0, (cota.saldo_min || 0) * 60);
+        }
+      }
+    } catch (e) { /* falha silenciosa: não bloqueia por erro de cota */ }
+
     // Liberado! Registra e manda o navegador de volta ao AP para soltar a internet.
     await logAccess({ ...base, result: 'granted', reason: outcome.reason });
 
@@ -425,6 +451,21 @@ app.post('/auth', async (req, res) => {
         sessOverride = sessaoPorFidelidade(loja, info);
       } catch (e) {}
     }
+
+    // Cota: se a pessoa tem saldo limitado hoje, a sessão não pode passar dele.
+    // A sessão efetiva vira o MENOR entre o tempo normal e o saldo restante.
+    const timeoutBase = (sessOverride && sessOverride > 0)
+      ? sessOverride
+      : (parseInt(loja && loja.session_timeout, 10) || parseInt(SESSION_TIMEOUT, 10));
+    if (cotaSaldoSeg != null) {
+      sessOverride = Math.max(60, Math.min(timeoutBase, cotaSaldoSeg)); // mínimo 1 min
+    }
+
+    // Registra a duração concedida (pra somar a cota do dia). Não espera.
+    try {
+      const segConcedido = (sessOverride && sessOverride > 0) ? sessOverride : timeoutBase;
+      registrarDuracaoSessao(loja, ap.mac, segConcedido);
+    } catch (e) {}
 
     const releaseUrl = buildReleaseUrl(ap, loja, sessOverride);
     // NÃO apagamos o cookie do AP aqui: se a pessoa voltar e tocar de novo,
@@ -490,7 +531,7 @@ app.get('/contato.vcf', async (req, res) => {
 });
 
 // Saúde do serviço (útil pra monitorar na VPS).
-app.get('/health', (req, res) => res.json({ ok: true, servico: 'conectay-portal', versao: '2.9.3', ts: Date.now() }));
+app.get('/health', (req, res) => res.json({ ok: true, servico: 'conectay-portal', versao: '2.10.0', ts: Date.now() }));
 
 // Página que abre o APP do Instagram, com estratégia POR PLATAFORMA:
 //   ANDROID → intent:// (único esquema que o navegador do captive aceita;
