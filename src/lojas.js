@@ -136,22 +136,24 @@ function lerUA(ua = '') {
 
 // Registra o acesso marcado por loja (não derruba o fluxo se falhar).
 // Aceita a assinatura antiga (loja, mac, dispositivo) e a nova com user-agent.
-async function registrarAcesso(loja, mac, dispositivo, userAgent, ip) {
+async function registrarAcesso(loja, mac, dispositivo, userAgent, ip, sessaoSeg) {
   if (!loja) return;
   try {
     const ua = lerUA(userAgent);
+    const corpo = {
+      loja_id: loja.id,
+      slug: loja.slug,
+      mac: mac || null,
+      dispositivo: dispositivo || ua.dispositivo || null,
+      so: userAgent ? ua.so : null,
+      user_agent: userAgent ? String(userAgent).slice(0, 500) : null,
+      ip: ip || null,
+    };
+    if (sessaoSeg && sessaoSeg > 0) corpo.sessao_seg = Math.round(sessaoSeg);
     await fetch(`${SUPABASE_URL}/rest/v1/portal_acessos`, {
       method: 'POST',
       headers: { ...H, Prefer: 'return=minimal' },
-      body: JSON.stringify({
-        loja_id: loja.id,
-        slug: loja.slug,
-        mac: mac || null,
-        dispositivo: dispositivo || ua.dispositivo || null,
-        so: userAgent ? ua.so : null,
-        user_agent: userAgent ? String(userAgent).slice(0, 500) : null,
-        ip: ip || null,
-      }),
+      body: JSON.stringify(corpo),
     });
   } catch (e) {
     /* silencioso de propósito */
