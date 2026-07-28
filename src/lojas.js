@@ -195,10 +195,13 @@ function limparNome(v) {
 async function fidelidadeInfo(loja, mac, telefoneOuCyid) {
   if (!loja || !loja.id) return null;
   let tel = String(telefoneOuCyid || '').replace(/\D/g, '');
+  // telefone brasileiro tem 10 a 13 dígitos. Qualquer coisa fora disso
+  // (ex.: números soltos de um hash cyid) NÃO é telefone — descarta.
+  if (tel.length < 10 || tel.length > 13) tel = '';
   try {
-    // Se não veio telefone (pessoa reconectando sem preencher form),
-    // tenta descobrir o telefone pelo MAC via portal_leads.
-    if ((!tel || tel.length < 10) && mac) {
+    // Se não veio telefone válido (pessoa reconectando sem preencher form),
+    // descobre o telefone pelo MAC via portal_leads.
+    if (!tel && mac) {
       const urlLead = `${SUPABASE_URL}/rest/v1/portal_leads`
         + `?loja_id=eq.${encodeURIComponent(loja.id)}`
         + `&mac=eq.${encodeURIComponent(mac)}`
