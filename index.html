@@ -421,6 +421,32 @@ tr:last-child td{border-bottom:0}
 
 <div class="toast" id="toast"></div>
 
+<!-- ===== MODAL: gerar cupom manual pro WhatsApp ===== -->
+<div class="modalBg" id="modalCupomManual">
+  <div class="modal" style="max-width:380px">
+    <div class="cab"><h2>🎟️ Gerar cupom</h2><button class="x" onclick="fecharCupomManual()">×</button></div>
+    <div style="padding:20px 22px">
+      <p style="color:var(--fraco);font-size:.84rem;margin-bottom:16px">Escolha a oferta deste cupom. Ele vai junto na mensagem do WhatsApp com um código único.</p>
+      <label>Tipo de oferta</label>
+      <select id="cmTipo" onchange="cmAtualizaValor()">
+        <option value="percent">% de desconto</option>
+        <option value="amount">R$ de desconto</option>
+        <option value="gift">Brinde</option>
+        <option value="bogo">Compre 1 leve 2</option>
+      </select>
+      <div id="cmValorWrap"><label style="margin-top:12px">Valor</label>
+        <input id="cmValor" type="number" placeholder="10"></div>
+      <label style="margin-top:12px">Validade (horas)</label>
+      <input id="cmValidade" type="number" placeholder="168">
+      <small class="dica">168h = 7 dias. O código é válido nesse prazo.</small>
+    </div>
+    <div class="pe">
+      <button class="btnP" id="cmBtnGerar" style="margin:0;max-width:220px" onclick="gerarCupomManual()">Gerar e abrir WhatsApp</button>
+      <button class="btnG" onclick="fecharCupomManual()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== EDITOR DE RECORTE DO POP-UP ===== -->
 <div class="modalBg" id="modalCrop">
   <div class="modal" style="max-width:400px">
@@ -1125,39 +1151,58 @@ function renderDisparos(){
       <span style="color:var(--fraco);font-size:.82rem"> · ${fmtTel(d.telefone)} · ${d.total_visitas||0} visita(s)</span>
       <span class="badge b-${d.categoria}" style="margin-left:6px">${d.categoria}</span>
       <div class="msg">${esc(d.mensagem)}</div></div>
-    ${(lojaAtual&&lojaAtual.cupom_ativo)?`<button class="btnZap" style="background:oklch(.7 .13 85);color:#171512" onclick="enviarComCupom(${d.id},'${encodeURIComponent(d.telefone)}','${encodeURIComponent(d.mensagem)}','${encodeURIComponent(d.nome||'')}',this)">🎟️ Cupom + Zap</button>`:''}
+    ${(lojaAtual&&lojaAtual.balcao_pin)?`<button class="btnZap" style="background:oklch(.7 .13 85);color:#171512" onclick="abrirCupomManual(${d.id},'${encodeURIComponent(d.telefone)}','${encodeURIComponent(d.mensagem)}','${encodeURIComponent(d.nome||'')}')">🎟️ Cupom + Zap</button>`:''}
     <a class="btnZap" target="_blank" href="https://wa.me/55${d.telefone}?text=${encodeURIComponent(d.mensagem)}"
        onclick="setTimeout(()=>marcarEnviado(${d.id}),400)">Abrir WhatsApp</a>
     <button class="btnOk" onclick="marcarEnviado(${d.id})">✓ Enviado</button></div>`).join('');
 }
-// Gera um cupom único pra este cliente, anexa na mensagem e abre o WhatsApp.
-async function enviarComCupom(dispId, telEnc, msgEnc, nomeEnc, btn){
-  if(!lojaAtual||!lojaAtual.cupom_ativo){ toast('Cupom não está ativo nesta loja'); return; }
-  const tel=decodeURIComponent(telEnc), msg=decodeURIComponent(msgEnc), nome=decodeURIComponent(nomeEnc);
-  const txtOrig=btn.textContent; btn.textContent='Gerando…'; btn.disabled=true;
+// Cupom manual: abre popup pra escolher a oferta, depois gera e manda no zap.
+let _cupomCtx=null;
+function abrirCupomManual(dispId, telEnc, msgEnc, nomeEnc){
+  _cupomCtx={ dispId, tel:decodeURIComponent(telEnc), msg:decodeURIComponent(msgEnc), nome:decodeURIComponent(nomeEnc) };
+  // valores padrão vindos da loja (só como sugestão)
+  const o=lojaAtual||{};
+  document.getElementById('cmTipo').value = o.cupom_tipo||'percent';
+  document.getElementById('cmValor').value = o.cupom_valor??10;
+  document.getElementById('cmValidade').value = o.cupom_validade_h??168;
+  cmAtualizaValor();
+  document.getElementById('modalCupomManual').classList.add('on');
+}
+function fecharCupomManual(){ document.getElementById('modalCupomManual').classList.remove('on'); _cupomCtx=null; }
+function cmAtualizaValor(){
+  // brinde e bogo não usam valor numérico
+  const t=document.getElementById('cmTipo').value;
+  const wrap=document.getElementById('cmValorWrap');
+  if(wrap) wrap.style.display = (t==='gift'||t==='bogo')?'none':'block';
+}
+async function gerarCupomManual(){
+  if(!_cupomCtx||!lojaAtual) return;
+  const tipo=document.getElementById('cmTipo').value;
+  const valor=Number(document.getElementById('cmValor').value||0);
+  const validade=Number(document.getElementById('cmValidade').value||168);
+  if((tipo==='percent'||tipo==='amount') && valor<=0){ toast('Informe o valor da oferta'); return; }
+  const btn=document.getElementById('cmBtnGerar'); const txt=btn.textContent; btn.textContent='Gerando…'; btn.disabled=true;
   try{
-    // acha (ou cria) a pessoa pelo telefone pra vincular o cupom
+    const tl=(_cupomCtx.tel||'').replace(/\D/g,'');
     let pid=null;
-    const tl=(tel||'').replace(/\D/g,'');
     const {data:pes}=await sb.from('portal_pessoas').select('id').eq('loja_id',lojaAtual.id).eq('telefone',tl).limit(1);
     if(pes&&pes[0]) pid=pes[0].id;
-    // emite o cupom (a RPC reaproveita se já houver ativo)
-    const {data:cup,error}=await sb.rpc('portal_emitir_cupom',{p_loja:lojaAtual.id,p_pessoa:pid,p_lead:null});
-    if(error||!cup||!cup.code){ toast('Erro ao gerar cupom'); btn.textContent=txtOrig; btn.disabled=false; return; }
-    // monta a oferta em texto
-    const o=lojaAtual;
-    const oferta = o.cupom_tipo==='percent'?(o.cupom_valor+'% de desconto')
-      : o.cupom_tipo==='amount'?('R$ '+o.cupom_valor+' de desconto')
-      : o.cupom_tipo==='gift'?'um brinde':'compre 1 leve 2';
+    const {data:cup,error}=await sb.rpc('portal_emitir_cupom_manual',{
+      p_loja:lojaAtual.id, p_pessoa:pid, p_tipo:tipo, p_valor:valor, p_validade_h:validade, p_min:null });
+    if(error||!cup||!cup.code){ toast('Erro ao gerar: '+(error&&error.message||'')); btn.textContent=txt; btn.disabled=false; return; }
+    const oferta = tipo==='percent'?(valor+'% de desconto')
+      : tipo==='amount'?('R$ '+valor+' de desconto')
+      : tipo==='gift'?'um brinde':'compre 1 leve 2';
     const venc = cup.expires_at?(' Válido até '+new Date(cup.expires_at).toLocaleDateString('pt-BR')+'.'):'';
-    // mensagem = a original + o cupom
-    const msgFinal = msg + '\n\n🎟️ E olha só: você ganhou '+oferta+'! É só mostrar este código no balcão:\n\n*'+cup.code+'*'+venc;
-    // abre o WhatsApp
+    const msgFinal = _cupomCtx.msg + '\n\n🎟️ E olha só: você ganhou '+oferta+'! É só mostrar este código no balcão:\n\n*'+cup.code+'*'+venc;
     window.open('https://wa.me/55'+tl+'?text='+encodeURIComponent(msgFinal),'_blank');
     toast('Cupom '+cup.code+' gerado ✓');
-    setTimeout(()=>marcarEnviado(dispId),400);
-  }catch(e){ toast('Erro: '+e.message); btn.textContent=txtOrig; btn.disabled=false; }
+    const did=_cupomCtx.dispId;
+    fecharCupomManual();
+    setTimeout(()=>marcarEnviado(did),400);
+  }catch(e){ toast('Erro: '+e.message); btn.textContent=txt; btn.disabled=false; }
 }
+
 async function marcarEnviado(id){
   const {error}=await sb.from('portal_disparos').update({status:'enviado',enviado_em:new Date().toISOString()}).eq('id',id);
   if(error) return toast('Erro: '+error.message,true);
