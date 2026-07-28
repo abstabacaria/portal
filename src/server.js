@@ -7,7 +7,7 @@ const {
   lojaPorDominio, lojaPorSlug, validarCodigoDaLoja,
   registrarAcesso, registrarLead, visitaDispositivo, marcarCadastrado,
   estaBloqueado, fidelidadeInfo, pessoaIdPorTelefone, nomePorAparelho,
-  cotaHoje, telefonePorMac, registrarDuracaoSessao,
+  cotaHoje, telefonePorMac,
 } = require('./lojas');
 const { renderPortal, renderResult, renderPronto, renderPrivacidade, montarVcard, renderCupomHtml, renderBalcao } = require('./views');
 
@@ -361,10 +361,7 @@ app.post('/auth', async (req, res) => {
       return res.send(renderPortal({ ap, instagram: marca.instagram, autoCode: marca.autoCode, error: `${outcome.reason}.`, marca }));
     }
 
-    // registra o acesso (não espera, não derruba se falhar)
-    try {
-      registrarAcesso(loja, ap.mac, null, req.headers['user-agent'] || '', ap.ip);
-    } catch (e) {}
+    // (o acesso é registrado mais adiante, junto com a duração da sessão)
 
     // modo formulário: coleta os campos lead_* e salva como lead da loja
     let telefoneLead = null;
@@ -461,10 +458,10 @@ app.post('/auth', async (req, res) => {
       sessOverride = Math.max(60, Math.min(timeoutBase, cotaSaldoSeg)); // mínimo 1 min
     }
 
-    // Registra a duração concedida (pra somar a cota do dia). Não espera.
+    // Registra o acesso JÁ com a duração concedida (uma operação só, sem corrida).
     try {
       const segConcedido = (sessOverride && sessOverride > 0) ? sessOverride : timeoutBase;
-      registrarDuracaoSessao(loja, ap.mac, segConcedido);
+      registrarAcesso(loja, ap.mac, null, req.headers['user-agent'] || '', ap.ip, segConcedido);
     } catch (e) {}
 
     const releaseUrl = buildReleaseUrl(ap, loja, sessOverride);
@@ -531,7 +528,7 @@ app.get('/contato.vcf', async (req, res) => {
 });
 
 // Saúde do serviço (útil pra monitorar na VPS).
-app.get('/health', (req, res) => res.json({ ok: true, servico: 'conectay-portal', versao: '2.10.0', ts: Date.now() }));
+app.get('/health', (req, res) => res.json({ ok: true, servico: 'conectay-portal', versao: '2.10.1', ts: Date.now() }));
 
 // Página que abre o APP do Instagram, com estratégia POR PLATAFORMA:
 //   ANDROID → intent:// (único esquema que o navegador do captive aceita;
