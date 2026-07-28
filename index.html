@@ -421,6 +421,36 @@ tr:last-child td{border-bottom:0}
 
 <div class="toast" id="toast"></div>
 
+<!-- ===== MODAL: gerar cupom AVULSO (nome + telefone opcional) ===== -->
+<div class="modalBg" id="modalCupomAvulso">
+  <div class="modal" style="max-width:400px">
+    <div class="cab"><h2>➕ Gerar cupom avulso</h2><button class="x" onclick="fecharCupomAvulso()">×</button></div>
+    <div style="padding:20px 22px">
+      <p style="color:var(--fraco);font-size:.84rem;margin-bottom:16px">Crie um cupom no nome de alguém na hora. Se informar o WhatsApp, dá pra enviar direto.</p>
+      <label style="margin-top:0">Nome do cliente *</label>
+      <input id="avNome" placeholder="Ex: Maria Silva">
+      <label style="margin-top:12px">WhatsApp <small style="color:var(--fraco)">(opcional)</small></label>
+      <input id="avTel" placeholder="(21) 99999-9999" inputmode="numeric">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px">
+        <div><label style="margin-top:0">Tipo de oferta</label>
+          <select id="avTipo" onchange="avAtualizaValor()">
+            <option value="percent">% de desconto</option>
+            <option value="amount">R$ de desconto</option>
+            <option value="gift">Brinde</option>
+            <option value="bogo">Compre 1 leve 2</option>
+          </select></div>
+        <div id="avValorWrap"><label style="margin-top:0">Valor</label><input id="avValor" type="number" placeholder="10"></div>
+      </div>
+      <label style="margin-top:12px">Validade (horas)</label>
+      <input id="avValidade" type="number" placeholder="168">
+    </div>
+    <div class="pe">
+      <button class="btnP" id="avBtnGerar" style="margin:0;max-width:230px" onclick="gerarCupomAvulso()">Gerar cupom</button>
+      <button class="btnG" onclick="fecharCupomAvulso()">Cancelar</button>
+    </div>
+  </div>
+</div>
+
 <!-- ===== MODAL: gerar cupom manual pro WhatsApp ===== -->
 <div class="modalBg" id="modalCupomManual">
   <div class="modal" style="max-width:380px">
@@ -650,7 +680,7 @@ async function carregarAbaCupons(){
   let receita={hoje_valor:0,hoje_qtd:0,mes_valor:0,mes_qtd:0,eventos:[]};
   try{ const {data}=await sb.rpc('portal_receita_atribuida',{p_loja:l.id}); if(data) receita=data; }catch(e){}
   let cupons=[];
-  try{ const {data}=await sb.from('portal_cupons').select('code,offer_kind,offer_value,status,expires_at,redeemed_at,redeemed_amount,pessoa_id').eq('loja_id',l.id).order('created_at',{ascending:false}).limit(200); cupons=data||[]; }catch(e){}
+  try{ const {data}=await sb.from('portal_cupons').select('code,offer_kind,offer_value,status,expires_at,redeemed_at,redeemed_amount,pessoa_id,nome_avulso').eq('loja_id',l.id).order('created_at',{ascending:false}).limit(200); cupons=data||[]; }catch(e){}
   const porPid={}; try{ (pessoas||[]).forEach(p=>porPid[p.id]=p.nome); }catch(e){}
   const mens=Number(l.mensalidade||0);
   const mult=(mens>0 && receita.mes_valor>0)?Math.round(receita.mes_valor/mens):null;
@@ -724,19 +754,22 @@ async function carregarAbaCupons(){
       +(ativo?('<div><span style="color:var(--fraco);font-size:.78rem">Oferta do Wi-Fi</span><br><b>'+ofertaTxt(l.cupom_tipo,l.cupom_valor)+'</b></div>'
       +'<div><span style="color:var(--fraco);font-size:.78rem">Validade</span><br><b>'+(l.cupom_validade_h||168)+'h</b></div>'):'')
       +'</div></div>'):'')
-    // ---- LISTA ----
-    +(ativo?('<div class="card">'
-      +'<h3 style="margin:0 0 12px">\u{1F39F}\uFE0F Cupons emitidos <span style="color:var(--fraco);font-weight:400;font-size:.85rem">\u00b7 '+cupons.length+'</span></h3>'
+    // ---- LISTA + GERADOR AVULSO (aparece se há PIN) ----
+    +((l.balcao_pin)?('<div class="card">'
+      +'<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;margin-bottom:12px">'
+      +'<h3 style="margin:0">\u{1F39F}\uFE0F Cupons emitidos <span style="color:var(--fraco);font-weight:400;font-size:.85rem">\u00b7 '+cupons.length+'</span></h3>'
+      +'<button class="btnP" style="margin:0;max-width:190px" onclick="abrirCupomAvulso()">\u2795 Gerar cupom avulso</button>'
+      +'</div>'
       +(cupons.length? '<div class="tWrap"><table><thead><tr><th>C\u00f3digo</th><th>Cliente</th><th>Oferta</th><th>Status</th><th>Valor</th></tr></thead><tbody>'
         +cupons.map(c=>'<tr>'
           +'<td style="font-family:monospace;font-weight:600">'+esc(c.code)+'</td>'
-          +'<td>'+esc(porPid[c.pessoa_id]||'\u2014')+'</td>'
+          +'<td>'+esc(porPid[c.pessoa_id]||c.nome_avulso||'\u2014')+'</td>'
           +'<td>'+ofertaTxt(c.offer_kind,c.offer_value)+'</td>'
           +'<td>'+statusBadge(c)+'</td>'
           +'<td>'+(c.redeemed_amount?fmt(c.redeemed_amount):'<span style="color:var(--fraco)">\u2014</span>')+'</td>'
           +'</tr>').join('')
         +'</tbody></table></div>'
-        : '<div style="color:var(--fraco);padding:20px;text-align:center">Nenhum cupom emitido ainda. Quando um cliente se cadastrar no portal, o cupom aparece aqui.</div>')
+        : '<div style="color:var(--fraco);padding:20px;text-align:center">Nenhum cupom emitido ainda. Gere um avulso acima, ou aguarde os clientes se cadastrarem no portal.</div>')
       +'</div>'):'');
 }
 function toggleCupomBox(){
@@ -1219,6 +1252,62 @@ function renderDisparos(){
        onclick="setTimeout(()=>marcarEnviado(${d.id}),400)">Abrir WhatsApp</a>
     <button class="btnOk" onclick="marcarEnviado(${d.id})">✓ Enviado</button></div>`).join('');
 }
+// ===== Gerador de cupom AVULSO (nome digitado na hora) =====
+function abrirCupomAvulso(){
+  const o=lojaAtual||{};
+  document.getElementById('avNome').value='';
+  document.getElementById('avTel').value='';
+  document.getElementById('avTipo').value = o.cupom_tipo||'percent';
+  document.getElementById('avValor').value = o.cupom_valor??10;
+  document.getElementById('avValidade').value = o.cupom_validade_h??168;
+  avAtualizaValor();
+  document.getElementById('modalCupomAvulso').classList.add('on');
+}
+function fecharCupomAvulso(){ document.getElementById('modalCupomAvulso').classList.remove('on'); }
+function avAtualizaValor(){
+  const t=document.getElementById('avTipo').value;
+  const w=document.getElementById('avValorWrap');
+  if(w) w.style.display=(t==='gift'||t==='bogo')?'none':'block';
+}
+async function gerarCupomAvulso(){
+  if(!lojaAtual) return;
+  const nome=(document.getElementById('avNome').value||'').trim();
+  const tel=(document.getElementById('avTel').value||'').replace(/\D/g,'');
+  const tipo=document.getElementById('avTipo').value;
+  const valor=Number(document.getElementById('avValor').value||0);
+  const validade=Number(document.getElementById('avValidade').value||168);
+  if(!nome){ toast('Informe o nome do cliente'); return; }
+  if((tipo==='percent'||tipo==='amount') && valor<=0){ toast('Informe o valor da oferta'); return; }
+  const btn=document.getElementById('avBtnGerar'); const txt=btn.textContent; btn.textContent='Gerando…'; btn.disabled=true;
+  try{
+    // se informou telefone, tenta achar a pessoa (pra vincular ao CRM)
+    let pid=null;
+    if(tel && tel.length>=10){
+      const {data:pes}=await sb.from('portal_pessoas').select('id').eq('loja_id',lojaAtual.id).eq('telefone',tel).limit(1);
+      if(pes&&pes[0]) pid=pes[0].id;
+    }
+    const {data:cup,error}=await sb.rpc('portal_emitir_cupom_manual',{
+      p_loja:lojaAtual.id, p_pessoa:pid, p_tipo:tipo, p_valor:valor, p_validade_h:validade, p_min:null, p_nome:nome });
+    if(error||!cup||!cup.code){ toast('Erro ao gerar: '+(error&&error.message||'')); btn.textContent=txt; btn.disabled=false; return; }
+    const oferta = tipo==='percent'?(valor+'% de desconto')
+      : tipo==='amount'?('R$ '+valor+' de desconto')
+      : tipo==='gift'?'um brinde':'compre 1 leve 2';
+    const venc = cup.expires_at?(' Válido até '+new Date(cup.expires_at).toLocaleDateString('pt-BR')+'.'):'';
+    // se tem telefone, oferece mandar no zap; senão, só mostra o código
+    if(tel && tel.length>=10){
+      const msg='Oi '+nome+'! 🎟️ Você ganhou '+oferta+' na '+(lojaAtual.nome||'nossa loja')+'! É só mostrar este código no balcão:\n\n*'+cup.code+'*'+venc;
+      window.open('https://wa.me/55'+tel+'?text='+encodeURIComponent(msg),'_blank');
+      toast('Cupom '+cup.code+' gerado — WhatsApp aberto ✓');
+    } else {
+      toast('Cupom '+cup.code+' gerado ✓');
+      // mostra o código num alert simples pra copiar/anotar
+      setTimeout(()=>alert('Cupom gerado para '+nome+':\n\n'+cup.code+'\n\n'+oferta+venc),200);
+    }
+    fecharCupomAvulso();
+    carregarAbaCupons(); // atualiza a lista
+  }catch(e){ toast('Erro: '+e.message); btn.textContent=txt; btn.disabled=false; }
+}
+
 // Cupom manual: abre popup pra escolher a oferta, depois gera e manda no zap.
 let _cupomCtx=null;
 function abrirCupomManual(dispId, telEnc, msgEnc, nomeEnc){
