@@ -2045,7 +2045,13 @@ function abrirEditor(id){
     <div class="secao">💰 Cobrança <small style="color:var(--fraco);font-weight:400">(controle interno)</small></div>
     <div><label>Valor mensal (R$)</label><input id="lj_valor" type="number" step="0.01" value="${l.valor_mensal??''}"></div>
     <div><label>Dia do vencimento</label><input id="lj_diavenc" type="number" min="1" max="31" value="${l.dia_vencimento??''}"></div>
-    <div><label>Plano</label><input id="lj_plano" value="${esc(l.plano)}" placeholder="Básico / Pro"></div>
+    <div><label>Plano</label>
+      <select id="lj_plano">
+        <option value="Básico">Básico</option>
+        <option value="Pro">Pro 🎟️</option>
+        <option value="Premium">Premium 🎟️</option>
+      </select>
+      <small class="dica">Pro e Premium liberam o módulo de Cupons pro cliente.</small></div>
     <div><label>Status do pagamento</label>
       <select id="lj_statusPg">
         <option value="">—</option><option value="em dia">em dia</option>
@@ -2054,6 +2060,9 @@ function abrirEditor(id){
 
   lj_destino.value = l.destino_tipo || 'instagram';
   lj_statusPg.value = l.status_pagamento || '';
+  // plano: mapeia valores antigos (mensal, básico...) pro seletor fixo
+  (function(){ const p=String(l.plano||'').toLowerCase();
+    lj_plano.value = p.includes('premium')?'Premium' : p.includes('pro')?'Pro' : 'Básico'; })();
   lj_rotAtiva.checked = !!l.rotacao_ativa;
   lj_recad.value = String(l.recadastro_meses||0);
   (function(){ const sel=l.rotacao_destinos||['instagram','whatsapp'];
