@@ -455,11 +455,12 @@ tr:last-child td{border-bottom:0}
 /* =========================================================
    CONFIG
 ========================================================= */
-const SUPABASE_URL = 'https://iekxuehdrxsimqtfejxm.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlla3h1ZWhkcnhzaW1xdGZlanhtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1MDk0NzAsImV4cCI6MjA5MTA4NTQ3MH0.61zaRoTBK2XorXgAcGXcsN8yOY0MTRS4bIJ_X4vPjyA';
+const CFG = window.CONECTAY || {};
+const SUPABASE_URL = CFG.url || 'https://iekxuehdrxsimqtfejxm.supabase.co';
+const SUPABASE_ANON_KEY = CFG.anonKey || '';
 const EDGE_CRIAR_USUARIO = SUPABASE_URL + '/functions/v1/smart-responder';
 
-if (!SUPABASE_ANON_KEY || SUPABASE_ANON_KEY === 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlla3h1ZWhkcnhzaW1xdGZlanhtIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzU1MDk0NzAsImV4cCI6MjA5MTA4NTQ3MH0.61zaRoTBK2XorXgAcGXcsN8yOY0MTRS4bIJ_X4vPjyA') {
+if (!SUPABASE_ANON_KEY || SUPABASE_ANON_KEY === 'COLE_AQUI_SUA_ANON_KEY') {
   document.addEventListener('DOMContentLoaded', () => {
     const e = document.getElementById('loginErro');
     if (e) { e.textContent = 'Falta colar a anon key no arquivo config.js.'; e.style.display = 'block'; }
@@ -1124,9 +1125,38 @@ function renderDisparos(){
       <span style="color:var(--fraco);font-size:.82rem"> · ${fmtTel(d.telefone)} · ${d.total_visitas||0} visita(s)</span>
       <span class="badge b-${d.categoria}" style="margin-left:6px">${d.categoria}</span>
       <div class="msg">${esc(d.mensagem)}</div></div>
+    ${(lojaAtual&&lojaAtual.cupom_ativo)?`<button class="btnZap" style="background:oklch(.7 .13 85);color:#171512" onclick="enviarComCupom(${d.id},'${encodeURIComponent(d.telefone)}','${encodeURIComponent(d.mensagem)}','${encodeURIComponent(d.nome||'')}',this)">🎟️ Cupom + Zap</button>`:''}
     <a class="btnZap" target="_blank" href="https://wa.me/55${d.telefone}?text=${encodeURIComponent(d.mensagem)}"
        onclick="setTimeout(()=>marcarEnviado(${d.id}),400)">Abrir WhatsApp</a>
     <button class="btnOk" onclick="marcarEnviado(${d.id})">✓ Enviado</button></div>`).join('');
+}
+// Gera um cupom único pra este cliente, anexa na mensagem e abre o WhatsApp.
+async function enviarComCupom(dispId, telEnc, msgEnc, nomeEnc, btn){
+  if(!lojaAtual||!lojaAtual.cupom_ativo){ toast('Cupom não está ativo nesta loja'); return; }
+  const tel=decodeURIComponent(telEnc), msg=decodeURIComponent(msgEnc), nome=decodeURIComponent(nomeEnc);
+  const txtOrig=btn.textContent; btn.textContent='Gerando…'; btn.disabled=true;
+  try{
+    // acha (ou cria) a pessoa pelo telefone pra vincular o cupom
+    let pid=null;
+    const tl=(tel||'').replace(/\D/g,'');
+    const {data:pes}=await sb.from('portal_pessoas').select('id').eq('loja_id',lojaAtual.id).eq('telefone',tl).limit(1);
+    if(pes&&pes[0]) pid=pes[0].id;
+    // emite o cupom (a RPC reaproveita se já houver ativo)
+    const {data:cup,error}=await sb.rpc('portal_emitir_cupom',{p_loja:lojaAtual.id,p_pessoa:pid,p_lead:null});
+    if(error||!cup||!cup.code){ toast('Erro ao gerar cupom'); btn.textContent=txtOrig; btn.disabled=false; return; }
+    // monta a oferta em texto
+    const o=lojaAtual;
+    const oferta = o.cupom_tipo==='percent'?(o.cupom_valor+'% de desconto')
+      : o.cupom_tipo==='amount'?('R$ '+o.cupom_valor+' de desconto')
+      : o.cupom_tipo==='gift'?'um brinde':'compre 1 leve 2';
+    const venc = cup.expires_at?(' Válido até '+new Date(cup.expires_at).toLocaleDateString('pt-BR')+'.'):'';
+    // mensagem = a original + o cupom
+    const msgFinal = msg + '\n\n🎟️ E olha só: você ganhou '+oferta+'! É só mostrar este código no balcão:\n\n*'+cup.code+'*'+venc;
+    // abre o WhatsApp
+    window.open('https://wa.me/55'+tl+'?text='+encodeURIComponent(msgFinal),'_blank');
+    toast('Cupom '+cup.code+' gerado ✓');
+    setTimeout(()=>marcarEnviado(dispId),400);
+  }catch(e){ toast('Erro: '+e.message); btn.textContent=txtOrig; btn.disabled=false; }
 }
 async function marcarEnviado(id){
   const {error}=await sb.from('portal_disparos').update({status:'enviado',enviado_em:new Date().toISOString()}).eq('id',id);
