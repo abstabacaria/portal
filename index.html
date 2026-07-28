@@ -303,10 +303,6 @@ tr:last-child td{border-bottom:0}
           <button class="btnG" style="margin-left:auto;padding:4px 10px;font-size:.75rem" onclick="document.getElementById('acessosHojeCard').style.display='none'">✕ fechar</button></h3>
         <div id="acessosHoje"></div>
       </div>
-      <div class="card" id="receitaCupomCard" style="margin:0 0 16px;display:none">
-        <h3 style="margin:0 0 4px">🎟️ Receita atribuída ao Wi-Fi</h3>
-        <div id="receitaCupom"></div>
-      </div>
       <div class="graficos">
         <div class="card gCard g-8"><h3>Visitas — últimos 14 dias</h3><canvas id="ch14"></canvas></div>
         <div class="card gCard g-4"><h3>Base por categoria</h3><canvas id="chCat"></canvas></div>
@@ -886,7 +882,6 @@ async function carregarReceitaCupom(){
 
 async function carregarDashboard(){
   carregarAcessosHoje();
-  carregarReceitaCupom();
   const { data, error } = await sb.rpc('portal_dashboard', { p_loja: lojaAtual.id });
   if (error){ console.error(error); return; }
   const d=data, cresc = d.mes_anterior>0 ? Math.round((d.mes_atual-d.mes_anterior)/d.mes_anterior*100) : null;
