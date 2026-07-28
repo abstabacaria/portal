@@ -6,7 +6,7 @@ const { validateCode, logAccess, getMetrics } = require('./db');
 const {
   lojaPorDominio, lojaPorSlug, validarCodigoDaLoja,
   registrarAcesso, registrarLead, visitaDispositivo, marcarCadastrado,
-  estaBloqueado, fidelidadeInfo, pessoaIdPorTelefone,
+  estaBloqueado, fidelidadeInfo, pessoaIdPorTelefone, nomePorAparelho,
 } = require('./lojas');
 const { renderPortal, renderResult, renderPronto, renderPrivacidade, montarVcard, renderCupomHtml, renderBalcao } = require('./views');
 
@@ -240,6 +240,19 @@ app.get('/', async (req, res) => {
       marca.voltou = !!info.conhecido && info.destino !== 'formulario';
     }
   }
+
+  // Saudação personalizada: se reconhece o aparelho, busca o primeiro nome
+  // pra saudar ("Bem-vindo de volta, X!"). Só pra quem NÃO é novo.
+  try {
+    if (p.mac) {
+      const quem = await nomePorAparelho(loja, p.mac);
+      if (quem && quem.nome) {
+        marca.clienteNome = String(quem.nome).trim().split(/\s+/)[0]; // só o primeiro nome
+        marca.clienteVip = quem.status === 'vip';
+        marca.voltou = true; // reconhecido = já veio antes
+      }
+    }
+  } catch (e) {}
 
   // guarda o cyid na tela pra reenviar no POST /auth (a mini-janela do captive
   // portal nem sempre devolve cookie no POST, então mandamos também num campo)
@@ -477,7 +490,7 @@ app.get('/contato.vcf', async (req, res) => {
 });
 
 // Saúde do serviço (útil pra monitorar na VPS).
-app.get('/health', (req, res) => res.json({ ok: true, servico: 'conectay-portal', versao: '2.9.2', ts: Date.now() }));
+app.get('/health', (req, res) => res.json({ ok: true, servico: 'conectay-portal', versao: '2.9.3', ts: Date.now() }));
 
 // Página que abre o APP do Instagram, com estratégia POR PLATAFORMA:
 //   ANDROID → intent:// (único esquema que o navegador do captive aceita;
