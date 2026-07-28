@@ -700,10 +700,20 @@ async function carregarAbaCupons(){
       +'<div style="color:var(--fraco);font-size:.8rem">hoje \u00b7 '+receita.hoje_qtd+'</div></div>'
       +(mult?'<div style="margin-left:auto;text-align:right"><div style="font-family:\'Sora\';font-size:1.6rem;font-weight:800;color:#22c55e">'+mult+'\u00d7</div><div style="color:var(--fraco);font-size:.78rem">sua mensalidade</div></div>':'')
       +'</div></div>'):'')
-    // ---- BALCAO ----
-    +(ativo?('<div class="card" style="margin-bottom:16px">'
+    // ---- BALCAO + VALIDADOR NATIVO (aparece se há PIN configurado) ----
+    +((l.balcao_pin)?('<div class="card" style="margin-bottom:16px">'
       +'<h3 style="margin:0 0 10px">\u{1F3EA} Balc\u00e3o \u2014 validar cupons</h3>'
-      +'<p style="color:var(--fraco);font-size:.85rem;margin-bottom:12px">Abra este link no celular do caixa. O atendente entra com o PIN e d\u00e1 baixa nos cupons \u2014 sem ver a base de clientes.</p>'
+      +'<p style="color:var(--fraco);font-size:.85rem;margin-bottom:14px">Valide um cupom aqui mesmo, ou passe o link pro celular do caixa (com PIN, sem ver a base de clientes).</p>'
+      // validador nativo
+      +'<div style="background:var(--vidro2);border:1px solid var(--borda);border-radius:12px;padding:14px;margin-bottom:14px">'
+      +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:flex-end">'
+      +'<div style="flex:1;min-width:140px"><label style="margin-top:0">C\u00f3digo do cupom</label>'
+      +'<input id="valCode" placeholder="CY-XXXX" style="text-transform:uppercase;font-family:monospace;font-size:1rem" onkeydown="if(event.key===\'Enter\')consultarCupomNativo()"></div>'
+      +'<button class="btnG" onclick="consultarCupomNativo()">\u{1F50D} Consultar</button>'
+      +'</div>'
+      +'<div id="valResultado" style="margin-top:12px"></div>'
+      +'</div>'
+      // link pro celular do caixa
       +'<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">'
       +'<input readonly value="https://'+esc(linkBalcao)+'" id="cupBalcaoUrl" style="flex:1;min-width:220px;font-size:.85rem">'
       +'<button class="btnG" onclick="copiarBalcao()">\u{1F4CB} Copiar link</button>'
@@ -711,8 +721,8 @@ async function carregarAbaCupons(){
       +'</div>'
       +'<div style="display:flex;gap:20px;margin-top:14px;flex-wrap:wrap">'
       +'<div><span style="color:var(--fraco);font-size:.78rem">PIN do atendente</span><br><b style="font-family:\'Sora\';font-size:1.2rem;letter-spacing:.15em">'+esc(l.balcao_pin||'\u2014')+'</b></div>'
-      +'<div><span style="color:var(--fraco);font-size:.78rem">Oferta atual</span><br><b>'+ofertaTxt(l.cupom_tipo,l.cupom_valor)+'</b></div>'
-      +'<div><span style="color:var(--fraco);font-size:.78rem">Validade</span><br><b>'+(l.cupom_validade_h||168)+'h</b></div>'
+      +(ativo?('<div><span style="color:var(--fraco);font-size:.78rem">Oferta do Wi-Fi</span><br><b>'+ofertaTxt(l.cupom_tipo,l.cupom_valor)+'</b></div>'
+      +'<div><span style="color:var(--fraco);font-size:.78rem">Validade</span><br><b>'+(l.cupom_validade_h||168)+'h</b></div>'):'')
       +'</div></div>'):'')
     // ---- LISTA ----
     +(ativo?('<div class="card">'
@@ -755,6 +765,59 @@ async function salvarCupomCliente(){
     carregarAbaCupons();
   }catch(e){ toast('Erro ao salvar'); }
 }
+// ===== Validador nativo de cupom (dentro da aba, pro dono) =====
+async function consultarCupomNativo(){
+  const code=(document.getElementById('valCode').value||'').trim();
+  const box=document.getElementById('valResultado');
+  if(!code){ box.innerHTML=''; return; }
+  if(!lojaAtual){ return; }
+  box.innerHTML='<div style="color:var(--fraco);font-size:.85rem">Consultando…</div>';
+  let r; try{ const res=await sb.rpc('portal_consultar_cupom',{p_loja:lojaAtual.id,p_code:code}); r=res.data; }
+  catch(e){ box.innerHTML='<div style="color:var(--erro)">Erro na consulta</div>'; return; }
+  if(!r){ box.innerHTML='<div style="color:var(--erro)">Sem resposta</div>'; return; }
+  const fmt=v=>'R$ '+Number(v||0).toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+  const ofertaTxt=(k,v)=> k==='percent'?v+'% OFF':k==='amount'?'R$ '+v+' OFF':k==='gift'?'Brinde':k==='bogo'?'Leve 2':v;
+  const nome = r.lead&&r.lead.nome?r.lead.nome:'—';
+  if(r.resultado==='active'){
+    const pedeValor = lojaAtual.balcao_pedir_valor!==false;
+    box.innerHTML='<div style="border:1px solid #22c55e;background:rgba(34,197,94,.08);border-radius:10px;padding:12px">'
+      +'<div style="color:#22c55e;font-weight:700;margin-bottom:6px">✓ Cupom válido</div>'
+      +'<div style="font-size:.88rem;line-height:1.7"><b>'+esc(r.code)+'</b> · '+ofertaTxt(r.offer_kind,r.offer_value)+'<br>Cliente: '+esc(nome)+'</div>'
+      +(pedeValor?'<div style="margin-top:10px"><label style="margin-top:0">Valor da compra (R$)</label><input id="valAmount" type="number" placeholder="50" style="max-width:160px"></div>':'')
+      +'<button class="btnP" style="margin-top:12px;max-width:200px" onclick="darBaixaNativa(\''+esc(r.code)+'\')">Dar baixa ✓</button>'
+      +'</div>';
+  } else {
+    const msg={redeemed:['#0ea5e9','Já resgatado'],expired:['#f59e0b','Vencido'],cancelled:['var(--fraco)','Cancelado'],nao_encontrado:['var(--erro)','Não encontrado']};
+    const par=msg[r.resultado]||['var(--erro)',r.resultado];
+    box.innerHTML='<div style="border:1px solid '+par[0]+';border-radius:10px;padding:12px;color:'+par[0]+'">'
+      +'<b>'+par[1]+'</b>'+(r.code?(' · '+esc(r.code)):'')
+      +(r.resultado==='redeemed'&&r.redeemed_at?('<div style="font-size:.8rem;color:var(--fraco);margin-top:4px">Baixa em '+new Date(r.redeemed_at).toLocaleString('pt-BR')+'</div>'):'')
+      +'</div>';
+  }
+}
+async function darBaixaNativa(code){
+  if(!lojaAtual) return;
+  const amtEl=document.getElementById('valAmount');
+  const amount = amtEl ? Number(amtEl.value||0) : null;
+  const box=document.getElementById('valResultado');
+  try{
+    const {data,error}=await sb.rpc('portal_dar_baixa',{p_loja:lojaAtual.id,p_code:code,p_amount:amount||null,p_actor:'painel',p_force:false,p_renew:false});
+    if(error){ toast('Erro: '+error.message); return; }
+    if(data && data.ok===true){
+      box.innerHTML='<div style="border:1px solid #22c55e;background:rgba(34,197,94,.12);border-radius:10px;padding:14px;text-align:center">'
+        +'<div style="font-size:1.6rem">✅</div><div style="color:#22c55e;font-weight:700">Baixa realizada!</div>'
+        +(amount?('<div style="font-size:.85rem;color:var(--fraco);margin-top:4px">'+('R$ '+Number(amount).toLocaleString('pt-BR',{minimumFractionDigits:2}))+'</div>'):'')+'</div>';
+      document.getElementById('valCode').value='';
+      toast('Cupom '+code+' baixado ✓');
+      carregarAbaCupons(); // atualiza receita e lista
+    } else if(data && data.resultado==='ja_resgatado'){
+      toast('Esse cupom já foi resgatado');
+    } else {
+      toast('Não foi possível dar baixa: '+(data&&data.resultado||''));
+    }
+  }catch(e){ toast('Erro: '+e.message); }
+}
+
 function copiarBalcao(){
   const el=document.getElementById('cupBalcaoUrl'); if(!el) return;
   el.select(); try{ document.execCommand('copy'); toast('Link copiado'); }catch(e){ navigator.clipboard&&navigator.clipboard.writeText(el.value).then(()=>toast('Link copiado')); }
