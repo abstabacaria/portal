@@ -95,8 +95,12 @@ function sessaoPorFidelidade(loja, info) {
 function buildReleaseUrl(p, loja, sessOverride) {
   const ts = p.ts || String(Math.floor(Date.now() / 1000));
   const userContext = `${p.user_hash}|${ts}`;
-  const token = AP_SECRET
-    ? crypto.createHmac('sha256', AP_SECRET).update(userContext).digest('hex')
+  // usa o segredo DA LOJA (mesmo que o AP foi configurado), com fallback global.
+  // Assinar com o global quando a loja tem segredo próprio faz o AP rejeitar
+  // a liberação (assinatura não bate) — portal abre mas não navega.
+  const segredo = (loja && loja.ap_secret) ? loja.ap_secret : AP_SECRET;
+  const token = segredo
+    ? crypto.createHmac('sha256', segredo).update(userContext).digest('hex')
     : '';
 
   const params = new URLSearchParams();
@@ -423,7 +427,7 @@ app.post('/auth', async (req, res) => {
         if (req.body.go === 'instagram' || req.body.go === 'form') {
           ap2.continue = 'https://' + (req.headers.host || '') + '/ig';
         }
-        return res.redirect(302, buildReleaseUrl(ap2));  // libera assim mesmo
+        return res.redirect(302, buildReleaseUrl(ap2, (typeof loja !== 'undefined' ? loja : null)));  // libera assim mesmo
       }
     } catch {}
     return res.redirect(302, '/ig');
@@ -473,7 +477,7 @@ app.get('/contato.vcf', async (req, res) => {
 });
 
 // Saúde do serviço (útil pra monitorar na VPS).
-app.get('/health', (req, res) => res.json({ ok: true, servico: 'conectay-portal', versao: '2.9.1', ts: Date.now() }));
+app.get('/health', (req, res) => res.json({ ok: true, servico: 'conectay-portal', versao: '2.9.2', ts: Date.now() }));
 
 // Página que abre o APP do Instagram, com estratégia POR PLATAFORMA:
 //   ANDROID → intent:// (único esquema que o navegador do captive aceita;
