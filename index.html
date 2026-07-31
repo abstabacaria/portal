@@ -944,26 +944,86 @@ function desenhar(id,tipo,dados){
 
 /* ---------------- Leads ---------------- */
 async function carregarLeads(){
-  const { data } = await sb.from('portal_pessoas').select('*')
-    .eq('loja_id', lojaAtual.id).order('ultima_visita',{ascending:false}).limit(2000);
+  // ordena por chegada (criado_em). Se a coluna não existir, cai em ultima_visita.
+  let data=null;
+  for(const col of ['criado_em','created_at','ultima_visita']){
+    const res=await sb.from('portal_pessoas').select('*')
+      .eq('loja_id', lojaAtual.id).order(col,{ascending:false}).limit(2000);
+    if(!res.error){ data=res.data; break; }
+  }
   pessoas = data || []; renderLeads();
 }
+let leadsSelecionados = new Set();
 function renderLeads(){
   const q=(fBusca.value||'').toLowerCase(), cat=fCat.value, st=fStatus.value;
   const lista=pessoas.filter(p=>(!q||(p.nome||'').toLowerCase().includes(q)||(p.telefone||'').includes(q))
     &&(!cat||p.categoria===cat)&&(!st||p.status===st));
   if(!lista.length){ tabelaLeads.innerHTML='<div class="card vazio"><span class="emj">🔍</span>Nenhum lead encontrado.</div>'; return; }
-  tabelaLeads.innerHTML=`<div class="tWrap"><table><thead><tr><th>Nome</th><th>WhatsApp</th><th>Visitas</th>
-    <th>Última</th><th>Categoria</th><th>Status</th><th>Tags</th><th></th></tr></thead><tbody>
-    ${lista.map(p=>`<tr><td><b>${esc(p.nome)||'—'}</b>${(p.aniversario)?' 🎂':''}</td>
-    <td><a href="https://wa.me/55${p.telefone}" target="_blank">${fmtTel(p.telefone)}</a></td>
-    <td>${p.total_visitas}</td><td>${p.ultima_visita?fmtData(p.ultima_visita):'—'}</td>
-    <td><span class="badge b-${p.categoria}">${p.categoria}</span></td>
-    <td><span class="badge b-${p.status||'ativo'}">${p.status||'ativo'}</span></td>
-    <td>${(p.tags||[]).map(t=>`<span class="tag">${esc(t)}</span>`).join('')||'—'}</td>
-    <td><button class="btnG" style="padding:6px 10px" onclick="editarPessoa(${p.id})">✏️</button></td></tr>`).join('')}
+  const nSel = lista.filter(p=>leadsSelecionados.has(p.id)).length;
+  const todosMarcados = nSel===lista.length && lista.length>0;
+  tabelaLeads.innerHTML=`
+    <div id="barraSelLeads" style="display:${nSel>0?'flex':'none'};align-items:center;gap:12px;background:var(--vidro2);border:1px solid var(--borda);border-radius:10px;padding:10px 14px;margin-bottom:12px;flex-wrap:wrap">
+      <b style="color:var(--azul)">${nSel} selecionado(s)</b>
+      <button class="btnP" style="margin:0;max-width:210px" onclick="salvarContatosSelecionados()">📇 Salvar contatos (vCard)</button>
+      <button class="btnG" onclick="marcarLeadsSalvos()">✓ Marcar como já salvos</button>
+      <button class="btnG" onclick="limparSelecaoLeads()">Limpar seleção</button>
+    </div>
+    <div class="tWrap"><table><thead><tr>
+    <th style="width:34px"><input type="checkbox" ${todosMarcados?'checked':''} onclick="alternarTodosLeads(this.checked)" title="Marcar/desmarcar todos" style="width:17px;height:17px;accent-color:var(--azul);cursor:pointer"></th>
+    <th>Nome</th><th>WhatsApp</th><th>Chegou</th><th>Visitas</th>
+    <th>Categoria</th><th>Salvo?</th><th></th></tr></thead><tbody>
+    ${lista.map(p=>{
+      const jaSalvo=(p.tags||[]).includes('salvo');
+      return `<tr style="${leadsSelecionados.has(p.id)?'background:rgba(14,165,233,.06)':''}">
+      <td><input type="checkbox" ${leadsSelecionados.has(p.id)?'checked':''} onclick="alternarLead(${p.id},this.checked)" style="width:17px;height:17px;accent-color:var(--azul);cursor:pointer"></td>
+      <td><b>${esc(p.nome)||'—'}</b>${(p.aniversario)?' 🎂':''}</td>
+      <td><a href="https://wa.me/55${p.telefone}" target="_blank">${fmtTel(p.telefone)}</a></td>
+      <td style="font-size:.8rem;color:var(--fraco)">${p.criado_em?fmtDataHora(p.criado_em):(p.ultima_visita?fmtData(p.ultima_visita):'—')}</td>
+      <td>${p.total_visitas}</td>
+      <td><span class="badge b-${p.categoria}">${p.categoria}</span></td>
+      <td>${jaSalvo?'<span style="color:#22c55e;font-weight:600;font-size:.8rem">✓ Salvo</span>':'<span style="color:var(--fraco);font-size:.8rem">—</span>'}</td>
+      <td><button class="btnG" style="padding:6px 10px" onclick="editarPessoa(${p.id})">✏️</button></td></tr>`;}).join('')}
     </tbody></table></div>`;
 }
+function alternarLead(id,marcado){ if(marcado)leadsSelecionados.add(id); else leadsSelecionados.delete(id); renderLeads(); }
+function alternarTodosLeads(marcar){
+  const q=(fBusca.value||'').toLowerCase(), cat=fCat.value, st=fStatus.value;
+  const lista=pessoas.filter(p=>(!q||(p.nome||'').toLowerCase().includes(q)||(p.telefone||'').includes(q))&&(!cat||p.categoria===cat)&&(!st||p.status===st));
+  if(marcar) lista.forEach(p=>leadsSelecionados.add(p.id)); else lista.forEach(p=>leadsSelecionados.delete(p.id));
+  renderLeads();
+}
+function limparSelecaoLeads(){ leadsSelecionados.clear(); renderLeads(); }
+// marca os selecionados com a tag 'salvo'
+async function marcarLeadsSalvos(){
+  const ids=[...leadsSelecionados]; if(!ids.length) return;
+  for(const id of ids){
+    const p=pessoas.find(x=>x.id===id); if(!p) continue;
+    const tags=Array.from(new Set([...(p.tags||[]),'salvo']));
+    try{ await sb.from('portal_pessoas').update({tags}).eq('id',id); p.tags=tags; }catch(e){}
+  }
+  toast(ids.length+' marcado(s) como salvo ✓');
+  leadsSelecionados.clear(); renderLeads();
+}
+// gera um arquivo vCard com os contatos selecionados pra importar no celular
+function salvarContatosSelecionados(){
+  const ids=[...leadsSelecionados]; if(!ids.length){ toast('Selecione ao menos um contato'); return; }
+  let vcf='';
+  for(const id of ids){
+    const p=pessoas.find(x=>x.id===id); if(!p||!p.telefone) continue;
+    const nome=(p.nome||'Cliente').trim();
+    vcf+='BEGIN:VCARD\nVERSION:3.0\n'
+       + 'FN:'+nome+'\n'
+       + 'TEL;TYPE=CELL:+55'+p.telefone+'\n'
+       + 'NOTE:Lead '+(lojaAtual.nome||'ConectaY')+'\n'
+       + 'END:VCARD\n';
+  }
+  const blob=new Blob([vcf],{type:'text/vcard'});
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a'); a.href=url; a.download='contatos_'+(lojaAtual.slug||'leads')+'.vcf';
+  document.body.appendChild(a); a.click(); a.remove(); URL.revokeObjectURL(url);
+  toast(ids.length+' contato(s) exportado(s) ✓');
+}
+const fmtDataHora=d=>{ try{ const dt=new Date(d); return dt.toLocaleDateString('pt-BR',{day:'2-digit',month:'2-digit'})+' '+dt.toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}); }catch(e){ return '—'; } };
 const fmtTel=t=>t&&t.length>=10?`(${t.slice(0,2)}) ${t.slice(2,-4)}-${t.slice(-4)}`:t;
 const fmtData=d=>{const[a,m,x]=d.split('-');return `${x}/${m}/${a.slice(2)}`};
 
@@ -1142,7 +1202,7 @@ async function carregarConectados(){
   // janela ampla de busca (6h) pra pegar até sessões longas de VIP;
   // o filtro real é feito pela duração de cada sessão abaixo.
   const JANELA_BUSCA = 6*3600*1000;
-  infoConectados.textContent = 'Aparelhos com sessão ativa agora (estimado pela duração concedida). Some quando a sessão expira.';
+  infoConectados.textContent = 'Aparelhos com sessão ativa (estimado pela duração concedida). Some quando a sessão expira — não detecta a saída antecipada do local.';
   const desde = new Date(agora - JANELA_BUSCA).toISOString();
   const {rows,col}=await acessosRecentes(desde);
   const timeoutPadrao = (lojaAtual.session_timeout>0) ? lojaAtual.session_timeout : 10800;
